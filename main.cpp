@@ -32,6 +32,16 @@ public:
         int index = x + y * width;
         data[index] = color;
     }
+
+    int save(std::string filename) {
+        uint8_t image_raw[3 * width * height];
+        for(int i = 0; i < width * height; i ++) {
+            image_raw[3 * i] = data[i].r;
+            image_raw[3 * i + 1] = data[i].g;
+            image_raw[3 * i + 2] = data[i].b;
+        }
+        return stbi_write_tga(filename.c_str(), width, height, 3, image_raw);
+    }
 };
 
 
@@ -43,11 +53,5 @@ int main() {
     }
 
     // Save image.
-    uint8_t image_raw[3 * 100 * 100];
-    for(int i = 0; i < 100 * 100; i ++) {
-        image_raw[3 * i] = image.data[i].r;
-        image_raw[3 * i + 1] = image.data[i].g;
-        image_raw[3 * i + 2] = image.data[i].b;
-    }
-    stbi_write_tga("test.tga", 100, 100, 3, image_raw);
+    image.save("test.tga");
 }
