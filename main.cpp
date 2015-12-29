@@ -7,51 +7,51 @@
 
 struct Color {
     uint8_t r;
-    uint8_t b;
     uint8_t g;
+    uint8_t b;
 };
 
-const Color WHITE = { 255, 255, 255 };
-const Color RED = { 255, 0, 0 };
+constexpr Color WHITE = { 255, 255, 255 };
+constexpr Color RED = { 255, 0, 0 };
 
 class Image {
 public:
+    const size_t width;
+    const size_t height;
+
+    Image(size_t width, size_t height):
+        width(width),
+        height(height),
+        data_(width * height, WHITE)
+    {}
+
+    Color& operator()(size_t x, size_t y) {
+        return data_[x + y * width];
+    }
+
+    const Color& operator()(size_t x, size_t y) const {
+        return data_[x + y * width];
+    }
+
+    int save(const std::string& filename) {
+        return stbi_write_tga(filename.c_str(), width, height, 3, &data_[0]);
+    }
+
+private:
     // The pixels are stored left-to-right and top-to-bottom.
     // 0,0 is top left and width -1 , height -1 is bottom right.
-    std::vector<Color> data;
-    const int width;
-    const int height;
-
-    Image(int width, int height):
-        data(width * height, WHITE),
-        width(width),
-        height(height) {}
-
-    void set(int x, int y, Color color) {
-        //TODO: Asserts for 0 < x < width and 0 < y < height
-        int index = x + y * width;
-        data[index] = color;
-    }
-
-    int save(std::string filename) {
-        uint8_t image_raw[3 * width * height];
-        for(int i = 0; i < width * height; i ++) {
-            image_raw[3 * i] = data[i].r;
-            image_raw[3 * i + 1] = data[i].g;
-            image_raw[3 * i + 2] = data[i].b;
-        }
-        return stbi_write_tga(filename.c_str(), width, height, 3, image_raw);
-    }
+    std::vector<Color> data_;
 };
 
 
 int main() {
     // Image with red diagonal
-    Image image = Image(100, 100);
+    Image image(100, 100);
     for(int i = 0; i < 100; i++) {
-        image.set(i, i, RED);
+        image(i, i) = RED;
     }
 
     // Save image.
     image.save("test.tga");
+    return 0;
 }
