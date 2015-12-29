@@ -98,12 +98,12 @@ CREDITS:
       github:Chribba
       Guillaume Chereau
       github:jry2
-      
+
 LICENSE
 
 This software is in the public domain. Where that dedication is not
 recognized, you are granted a perpetual, irrevocable license to copy,
-distribute, and modify this file as you see fit.      
+distribute, and modify this file as you see fit.
 
 */
 
@@ -795,7 +795,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
    {
       // compute adler32 on input
-      unsigned int k=0, s1=1, s2=0;
+      unsigned int s1=1, s2=0;
       int blocklen = (int) (data_len % 5552);
       j=0;
       while (j < data_len) {
