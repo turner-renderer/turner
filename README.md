@@ -3,6 +3,7 @@ Prototype implementations of unbiased renderers.
 
 ## Next
 
+* Ray Casting
 * Ray Tracer
 * Path Tracer with Monte Carlo Sampling
 * Metropolis Light Transport
