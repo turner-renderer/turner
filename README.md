@@ -1,6 +1,8 @@
 # Renderer
 Prototype implementations of unbiased renderers.
 
+![Produced by our simple raycaster](scenes/cube.png)
+
 ## Next
 
 * Ray Casting
