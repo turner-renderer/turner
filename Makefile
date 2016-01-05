@@ -2,7 +2,7 @@ CC=c++
 CXXFLAGS=-std=c++1y -Wall -O0 -g -Ilib/assimp/include
 LDFLAGS=-Llib/assimp/lib -lassimp
 
-all: renderer test_assimp
+all: renderer test_assimp raycaster
 
 renderer: main.o
 	$(CXX) $(CXXFLAGS) $< -o $@
@@ -15,7 +15,7 @@ bootstrap:
 	make -C lib/assimp
 
 clean:
-	rm -rf *.o renderer test_assimp *.dSYM genfiles
+	rm -rf *.o renderer test_assimp *.dSYM genfiles raycaster
 
 distclean: clean
 	cd lib/assimp && git clean -df && git reset --hard && rm -r CMakeCache.txt

@@ -1,47 +1,11 @@
 #include "lib/intersection.h"
+#include "lib/output.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 
 #include <iostream>
-
-
-std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
-    return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const aiString& str) {
-    return os << str.C_Str();
-}
-
-std::ostream& operator<<(std::ostream& os, const aiNode& node) {
-    os << "Node(name=" << node.mName;
-
-    if (node.mNumChildren > 0) {
-        os << ", children=[";
-        for (size_t i = 0; i < node.mNumChildren; ++i) {
-            os << *node.mChildren[i];
-            if (i + 1 != node.mNumChildren) {
-                os << ", ";
-            }
-        }
-        os << "]";
-    }
-    return os << ")";
-}
-
-std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
-    for (size_t i = 0; i < mesh.mNumFaces; ++i) {
-        const auto& face = mesh.mFaces[i];
-        os << "---" << std::endl;
-        for (size_t j = 0; j < face.mNumIndices; ++j) {
-            os << mesh.mVertices[face.mIndices[j]] << std::endl;
-        }
-    }
-    return os;
-}
-
 
 
 int main(int argc, char const *argv[])
@@ -81,6 +45,28 @@ int main(int argc, char const *argv[])
         for (size_t i = 0; i < cube->mNumMeshes; ++i) {
             std::cout << *scene->mMeshes[cube->mMeshes[i]] << std::endl;
         }
+
+        std::cout << cube->mTransformation << std::endl;
+
+        aiVector3D x = cube->mTransformation * scene->mMeshes[0]->mVertices[0];
+    }
+
+    std::cout << scene->mRootNode->mTransformation << std::endl;
+
+    auto nodeCam = scene->mRootNode->FindNode("Camera");
+    if (nodeCam != nullptr) {
+        std::cout << nodeCam->mTransformation << std::endl;
+    }
+
+    auto camera = scene->mCameras[0];
+    if (camera != nullptr) {
+        std::cout << "Aspect: " << camera->mAspect << std::endl;
+        std::cout << "mClipPlaneFar: " << camera->mClipPlaneFar << std::endl;
+        std::cout << "mClipPlaneNear: " << camera->mClipPlaneNear << std::endl;
+        std::cout << "mHorizontalFOV: " << camera->mHorizontalFOV << std::endl;
+        std::cout << "mLookAt: " << camera->mLookAt << std::endl;
+        std::cout << "mPosition: " << camera->mPosition << std::endl;
+        std::cout << "mUp: " << camera->mUp << std::endl;
     }
 
     // compute intersections
