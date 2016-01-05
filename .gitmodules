@@ -1,0 +1,6 @@
+[submodule "lib/assimp"]
+	path = lib/assimp
+	url = https://github.com/assimp/assimp
+[submodule "lib/catch"]
+	path = lib/catch
+	url = https://github.com/philsquared/Catch

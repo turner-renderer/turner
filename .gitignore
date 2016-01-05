@@ -29,3 +29,7 @@
 
 # Others
 notes
+
+*.dSYM
+renderer
+test_assimp
