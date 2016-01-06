@@ -38,6 +38,7 @@ int main(int argc, char const *argv[])
 
     std::cout << "Hierarchie" << std::endl;
     std::cout << *scene->mRootNode << std::endl;
+    std::cout << scene->mRootNode->mTransformation << std::endl;
 
     auto cube = scene->mRootNode->FindNode("Cube");
     if (cube != nullptr) {
@@ -47,19 +48,15 @@ int main(int argc, char const *argv[])
         }
 
         std::cout << cube->mTransformation << std::endl;
-
-        aiVector3D x = cube->mTransformation * scene->mMeshes[0]->mVertices[0];
     }
-
-    std::cout << scene->mRootNode->mTransformation << std::endl;
 
     auto nodeCam = scene->mRootNode->FindNode("Camera");
     if (nodeCam != nullptr) {
         std::cout << nodeCam->mTransformation << std::endl;
     }
 
-    auto camera = scene->mCameras[0];
-    if (camera != nullptr) {
+    if (scene->mNumCameras > 0) {
+        auto camera = scene->mCameras[0];
         std::cout << "Aspect: " << camera->mAspect << std::endl;
         std::cout << "mClipPlaneFar: " << camera->mClipPlaneFar << std::endl;
         std::cout << "mClipPlaneNear: " << camera->mClipPlaneNear << std::endl;
@@ -69,18 +66,5 @@ int main(int argc, char const *argv[])
         std::cout << "mUp: " << camera->mUp << std::endl;
     }
 
-    // compute intersections
-    std::cout << "Intersections" << std::endl;
-    auto res = ray_plane_intersection(
-        aiVector3D(0, 0, 0), aiVector3D(1, 0, 0),
-        aiVector3D(10, 1, 1), aiVector3D(1, 0, 0));
-    std::cout << res << std::endl;
-
-    res = ray_triangle_intersection(
-        aiVector3D(0.5, 0.5, -0.5), aiVector3D(0, 0, 1),
-        aiVector3D(-1, 0, 0), aiVector3D(1, 0, 0), aiVector3D(0, 1, 0));
-    std::cout << res << std::endl;
-
-    // We're done. Everything will be cleaned up by the importer destructor
     return 0;
 }

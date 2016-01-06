@@ -11,7 +11,7 @@ std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
     os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << " " << mat.a4 << "]\n";
     os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << " " << mat.b4 << "]\n";
     os << "[" << mat.c1 << " " << mat.c2 << " " << mat.c3 << " " << mat.c4 << "]\n";
-    os << "[" << mat.d1 << " " << mat.d2 << " " << mat.d3 << " " << mat.d4 << "]\n";
+    os << "[" << mat.d1 << " " << mat.d2 << " " << mat.d3 << " " << mat.d4 << "]";
     return os;
 }
 

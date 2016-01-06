@@ -33,3 +33,4 @@ notes
 *.dSYM
 renderer
 test_assimp
+.DS_Store

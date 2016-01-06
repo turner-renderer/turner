@@ -25,15 +25,14 @@ aiVector3D raster2cam(
 
 float ray_node_intersection(
     const aiRay& ray,
-    const aiScene* scene, const aiNode& node)
+    const aiScene& scene, const aiNode& node)
 {
     float min_r = -1;
 
     for (int i = 0; i < node.mNumMeshes; ++i) {
-        const auto& mesh = *scene->mMeshes[node.mMeshes[i]];
+        const auto& mesh = *scene.mMeshes[node.mMeshes[i]];
         const auto& T = node.mTransformation;
 
-        // std::cout << "Ray " << ray << std::endl;
         for (int i = 0; i < mesh.mNumFaces; ++i) {
             const auto& face = mesh.mFaces[i];
             assert(face.mNumIndices == 3);
@@ -42,22 +41,9 @@ float ray_node_intersection(
             auto V1 = T * mesh.mVertices[face.mIndices[1]];
             auto V2 = T * mesh.mVertices[face.mIndices[2]];
 
-            // aiVector3D t(0, 0, 0);
-
-
-            // TODO: hack
-
             auto r = ray_triangle_intersection(
                 ray.pos, ray.pos + ray.dir,
                 V0, V1, V2);
-
-            // if (ray.dir.y == 0) {
-            //     std::cout << "Face " << V0 << "; " << V1 << "; " << V2
-            //               << " --> " << r << std::endl ;
-            // }
-
-
-            // std::cout << "r " << r << std::endl;
 
             if (r < 0) {
                 continue;
@@ -71,6 +57,26 @@ float ray_node_intersection(
 
     return min_r;
 }
+
+float ray_nodes_intersection(
+    const aiRay& ray,
+    const aiScene& scene, const std::vector<aiNode*>& nodes)
+{
+    float min_r = -1;
+    for (auto node : nodes) {
+        auto r = ray_node_intersection(ray, scene, *node);
+        if (r < 0) {
+            continue;
+        }
+
+        if (min_r < 0 || r < min_r) {
+            min_r = r;
+        }
+    }
+
+    return min_r;
+}
+
 
 
 int main(int argc, char const *argv[])
@@ -104,7 +110,8 @@ int main(int argc, char const *argv[])
     assert(cam.mUp == aiVector3D(0, 1, 0));
     assert(cam.mLookAt == aiVector3D(0, 0, -1));
     if (cam.mAspect == 0) {
-        cam.mAspect = 16.f/9.f;
+        // cam.mAspect = 16.f/9.f;
+        cam.mAspect = 1.f;
     }
 
     std::cerr << cam << std::endl;
@@ -116,9 +123,17 @@ int main(int argc, char const *argv[])
     auto* camNode = scene->mRootNode->FindNode("Camera");
     assert(camNode != nullptr);
     const auto& CT = camNode->mTransformation;
+    std::cerr << "Cam Trafo: " << CT << std::endl;
 
-    const auto& cube = scene->mRootNode->FindNode("Cube");
-    assert(cube != nullptr);
+    std::vector<aiNode*> geometry_nodes;
+    for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
+        auto node = scene->mRootNode->mChildren[i];
+        if (node->mNumMeshes > 0) {
+            std::cerr << "DEBUG: " << "Adding new geometry node: "
+                      << node->mName << std::endl;
+            geometry_nodes.push_back(node);
+        }
+    }
 
     // TODO:
     // 1. Use blender directly (Done)
@@ -126,20 +141,20 @@ int main(int argc, char const *argv[])
     // 3. Find better constants and interpolation of colors. (Done)
     // 4. Refactor code and move everything into functions.
 
-    auto pos = CT * aiVector3D(0, 0, 0);
+    auto cam_pos = CT * aiVector3D(0, 0, 0);
     std::vector<int> grayscale;
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            auto dir = raster2cam(cam, aiVector2D(x, y), width, height);
-            dir = (CT * dir - pos).Normalize();
+            auto cam_dir = raster2cam(cam, aiVector2D(x, y), width, height);
+            cam_dir = (CT * cam_dir - cam_pos).Normalize();
 
-            float dist = ray_node_intersection(
-                aiRay(pos, std::move(dir)), scene, *cube);
+            float dist = ray_nodes_intersection(
+                aiRay(cam_pos, std::move(cam_dir)), *scene, geometry_nodes);
 
             if (dist < 0) {
                 grayscale.push_back(0);
             } else {
-                grayscale.push_back(dist * 100.f);
+                grayscale.push_back(dist);
             }
         }
     }
