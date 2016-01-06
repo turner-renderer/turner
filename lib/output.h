@@ -7,6 +7,10 @@ std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
 
+std::ostream& operator<<(std::ostream& os, const aiColor4D& c) {
+    return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ")";
+}
+
 std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
     os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << " " << mat.a4 << "]\n";
     os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << " " << mat.b4 << "]\n";

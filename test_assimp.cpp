@@ -40,14 +40,52 @@ int main(int argc, char const *argv[])
     std::cout << *scene->mRootNode << std::endl;
     std::cout << scene->mRootNode->mTransformation << std::endl;
 
-    auto cube = scene->mRootNode->FindNode("Cube");
-    if (cube != nullptr) {
-        std::cout << "List faces of the cube" << std::endl;
-        for (size_t i = 0; i < cube->mNumMeshes; ++i) {
-            std::cout << *scene->mMeshes[cube->mMeshes[i]] << std::endl;
+    for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
+        const auto& node = *scene->mRootNode->mChildren[i];
+        std::cout << "\nList faces of " << node.mName << std::endl;
+        for (int j = 0; j < node.mNumMeshes; ++j) {
+            const auto& mesh = *scene->mMeshes[node.mMeshes[j]];
+            for (int k = 0; k < mesh.mNumFaces; ++k) {
+                const auto& face = mesh.mFaces[k];
+                for (int idx = 0; idx < face.mNumIndices; ++idx) {
+                    std::cout << mesh.mVertices[face.mIndices[idx]] << " ";
+                }
+                if (mesh.mColors[0] != nullptr) {
+                    for (int idx = 0; idx < face.mNumIndices; ++idx) {
+                        std::cout << mesh.mColors[0][face.mIndices[idx]]
+                                  << " ";
+                    }
+                }
+                std::cout << std::endl;
+            }
+
+            aiString name;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(AI_MATKEY_NAME, name);
+            std::cout << name << std::endl;
+
+            aiColor4D color;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_DIFFUSE, color);
+            std::cout << color << std::endl;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_AMBIENT, color);
+            std::cout << color << std::endl;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_SPECULAR, color);
+            std::cout << color << std::endl;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_EMISSIVE, color);
+            std::cout << color << std::endl;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_TRANSPARENT, color);
+            std::cout << color << std::endl;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_REFLECTIVE, color);
+            std::cout << color << std::endl;
+
         }
 
-        std::cout << cube->mTransformation << std::endl;
+        std::cout << "Trafo: " << node.mTransformation << std::endl;
     }
 
     auto nodeCam = scene->mRootNode->FindNode("Camera");
@@ -64,6 +102,16 @@ int main(int argc, char const *argv[])
         std::cout << "mLookAt: " << camera->mLookAt << std::endl;
         std::cout << "mPosition: " << camera->mPosition << std::endl;
         std::cout << "mUp: " << camera->mUp << std::endl;
+    }
+
+    for (int i = 0; i < scene->mNumMaterials; ++i) {
+        const auto& material = *scene->mMaterials[i];
+        std::cerr << "Material " << i << std::endl;
+        for (int j = 0; j < material.mNumProperties; ++j) {
+            const auto& prop = *material.mProperties[j];
+            std::cerr << prop.mKey << " ";
+        }
+        std::cerr << std::endl;
     }
 
     return 0;
