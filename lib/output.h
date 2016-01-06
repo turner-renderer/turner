@@ -50,3 +50,15 @@ std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
 std::ostream& operator<<(std::ostream& os, const aiRay& ray) {
     return os << ray.pos << " + t * " << ray.dir;
 }
+
+
+std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
+    return os << "Camera("
+        << "mAspect=" << cam.mAspect << " "
+        << "mClipPlaneFar=" << cam.mClipPlaneFar << " "
+        << "mClipPlaneNear=" << cam.mClipPlaneNear << " "
+        << "mHorizontalFOV=" << cam.mHorizontalFOV << " "
+        << "mLookAt=" << cam.mLookAt << " "
+        << "mPosition=" << cam.mPosition << " "
+        << "mUp=" << cam.mUp << ")";
+}

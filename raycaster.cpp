@@ -6,6 +6,7 @@
 #include <assimp/postprocess.h>     // Post processing flags
 
 #include <math.h>
+#include <vector>
 #include <iostream>
 
 
@@ -16,8 +17,8 @@ aiVector3D raster2cam(
     float delta_x = tan(cam.mHorizontalFOV / 2.);
     float delta_y = delta_x / cam.mAspect;
     return aiVector3D(
-        -delta_x * (1 - 2 * p.x / (float)w),
-        delta_y * (1 - 2 * p.y / (float)h),
+        -delta_x * (1 - 2 * p.x / static_cast<float>(w)),
+        delta_y * (1 - 2 * p.y / static_cast<float>(h)),
         -1);
 }
 
@@ -95,59 +96,76 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    assert(scene->mNumCameras == 1);
+    std::cerr << *scene->mRootNode << std::endl;
 
-    const auto& cam = *scene->mCameras[0];
+    assert(scene->mNumCameras == 1);
+    auto& cam = *scene->mCameras[0];
     assert(cam.mPosition == aiVector3D(0, 0, 0));
     assert(cam.mUp == aiVector3D(0, 1, 0));
     assert(cam.mLookAt == aiVector3D(0, 0, -1));
+    if (cam.mAspect == 0) {
+        cam.mAspect = 16.f/9.f;
+    }
+
+    std::cerr << cam << std::endl;
 
     int height = width / cam.mAspect;
 
     // raycasting
 
-    // auto& RT = scene->mRootNode->mTransformation;
-
     auto* camNode = scene->mRootNode->FindNode("Camera");
     assert(camNode != nullptr);
     const auto& CT = camNode->mTransformation;
-    std::cerr << CT << std::endl;
 
     const auto& cube = scene->mRootNode->FindNode("Cube");
     assert(cube != nullptr);
 
-    std::cout << "P2" << std::endl;
-
-    // debug
-    auto lt = CT * raster2cam(cam, aiVector2D(0, 0), width, height);
-    std::cout << "# " << lt << std::endl;
-
     // TODO:
-    // 1. Use blender directly
-    // 2. Fix camera position
-    // 3. Find better constants and interpolation of colors.
-
-    std::cout << width << " " << height << std::endl;
-    std::cout << 800 << std::endl;
+    // 1. Use blender directly (Done)
+    // 2. Fix camera position (Done)
+    // 3. Find better constants and interpolation of colors. (Done)
+    // 4. Refactor code and move everything into functions.
 
     auto pos = CT * aiVector3D(0, 0, 0);
+    std::vector<int> grayscale;
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             auto dir = raster2cam(cam, aiVector2D(x, y), width, height);
-            dir = (CT * dir).Normalize();
+            dir = (CT * dir - pos).Normalize();
 
             float dist = ray_node_intersection(
-                aiRay(pos, std::move(dir)), scene, *cube) * 100;
+                aiRay(pos, std::move(dir)), scene, *cube);
 
             if (dist < 0) {
+                grayscale.push_back(0);
+            } else {
+                grayscale.push_back(dist * 100.f);
+            }
+        }
+    }
+
+    // compute max and min values that are non-zero
+    int min_nonzero = 0, max = 0;
+    for (auto d : grayscale) {
+        if (min_nonzero == 0 || (0 < d && d < min_nonzero)) {
+            min_nonzero = d;
+        }
+        if (max == 0 || d > max) {
+            max = d;
+        }
+    }
+
+    // output image
+    std::cout << "P2" << std::endl;
+    std::cout << width << " " << height << std::endl;
+    std::cout << (max - min_nonzero + 5) << std::endl;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            auto d = grayscale.at(y*width + x);
+            if (d == 0) {
                 std::cout << 0 << " ";
             } else {
-                int d = dist;
-                if (d < 500) {
-                    std::cout << 0 <<  " ";
-                } else {
-                    std::cout << 1000 - ((d - 500) * 2) << " ";
-                }
+                std::cout << max - d + 5 << " ";
             }
         }
         std::cout << std::endl;
