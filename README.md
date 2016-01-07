@@ -5,7 +5,6 @@ Prototype implementations of unbiased renderers.
 
 ## Next
 
-* Ray Casting
 * Ray Tracer
 * Path Tracer with Monte Carlo Sampling
 * Metropolis Light Transport
@@ -13,7 +12,12 @@ Prototype implementations of unbiased renderers.
 
 ## Done
 
-:/
+### Raycasting
+
+![Cornell box rendered by our simple raycaster](scenes/cornell.png)
+
+Thanks to the help of [my friend](https://github.com/boxdot). We just use the
+distance to the eye of the camera as a light measure. So there is no real lighting.
 
 ## Thanks
 * Sean Barrett for [stb](https://github.com/nothings/stb)'s image writer
