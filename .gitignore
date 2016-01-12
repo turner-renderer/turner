@@ -32,5 +32,12 @@ notes
 
 *.dSYM
 renderer
+raycaster
+raytracer
 test_assimp
 .DS_Store
+
+*.png
+*.jpg
+*.tiff
+dna.txt
