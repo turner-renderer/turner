@@ -17,6 +17,7 @@ genfiles/$(1): genfiles/$(1).o genfiles/main_test.o
 test:: genfiles/$(1)
 	$$< ||:
 
+
 endef
 
 $(foreach test,$(TESTS),$(eval $(call GENERIC_TEST,$(test))))
