@@ -27,6 +27,7 @@ distclean: clean
 
 
 TESTS = \
-	test_intersection
+	test_intersection \
+	test_lambertian
 
 include tests/tests.mk
