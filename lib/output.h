@@ -1,3 +1,5 @@
+#include "image.h"
+
 #include <assimp/scene.h>
 
 #include <ostream>
@@ -65,4 +67,22 @@ std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
         << "mLookAt=" << cam.mLookAt << " "
         << "mPosition=" << cam.mPosition << " "
         << "mUp=" << cam.mUp << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const Image img) {
+    os << "P3" << std::endl;
+    os << img.width << " " << img.height << std::endl;
+    os << 255 << std::endl;
+    int i = 0;
+    for (auto color : img) {
+        if (i++ % img.width == 0) {
+            os << std::endl;
+        }
+
+        os << static_cast<int>(255 * color.r) << " "
+                  << static_cast<int>(255 * color.g) << " "
+                  << static_cast<int>(255 * color.b) << " ";
+    }
+
+    return os;
 }

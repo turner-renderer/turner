@@ -1,4 +1,5 @@
 #include "lib/output.h"
+#include "lib/image.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
 
@@ -179,6 +180,7 @@ int main(int argc, char const *argv[])
 
     auto cam_pos = CT * aiVector3D(0, 0, 0);
     std::vector<aiColor4D> image_data;
+    Image image(width, height);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             auto cam_dir = raster2cam(cam, aiVector2D(x, y), width, height);
@@ -188,12 +190,13 @@ int main(int argc, char const *argv[])
                 aiRay(cam_pos, std::move(cam_dir)), *scene, geometry_nodes);
 
             if (!res.intersects()) {
-                image_data.emplace_back();  // black
+                image(x, y) = aiColor4D(0, 0, 0, 1);  // black
             } else {
-                image_data.emplace_back();
+                aiColor4D color;
                 scene->mMaterials[res.mesh->mMaterialIndex]->Get(
-                    AI_MATKEY_COLOR_DIFFUSE, image_data.back());
-                image_data.back().a = res.distance;
+                    AI_MATKEY_COLOR_DIFFUSE, color);
+                color.a = res.distance;
+                image(x, y) = color;
             }
         }
     }
@@ -201,7 +204,7 @@ int main(int argc, char const *argv[])
     // compute max and min values that are non-zero
     int min_nonzero = 0, max = 0;
     float max_channel = -1;
-    for (auto color : image_data) {
+    for (auto color : image) {
         int d = static_cast<int>(color.a);
         if (min_nonzero == 0 || (0 < d && d < min_nonzero)) {
             min_nonzero = d;
@@ -223,6 +226,7 @@ int main(int argc, char const *argv[])
     int depth = max + (max - min_nonzero)/2;
 
     // output image
+    // TODO: recalc color and use std::cout << image;
     std::cout << "P3" << std::endl;
     std::cout << width << " " << height << std::endl;
     std::cout << (depth - min_nonzero) << std::endl;

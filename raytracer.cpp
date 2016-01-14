@@ -1,4 +1,5 @@
 #include "lib/output.h"
+#include "lib/image.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
 
@@ -30,10 +31,6 @@ struct NodeIntersection {
     const aiMesh* mesh;
     const aiFace* face;
 };
-
-aiColor4D to_color4d(const aiColor3D& c) {
-    return aiColor4D(c.r, c.g, c.b, 1);
-}
 
 //
 // Convert 2d raster coodinates into 3d cameras coordinates.
@@ -160,7 +157,7 @@ int main(int argc, char const *argv[])
 
     int height = width / cam.mAspect;
 
-    // raycasting
+    // raytracing
 
     auto* camNode = scene->mRootNode->FindNode("Camera");
     assert(camNode != nullptr);
@@ -198,7 +195,7 @@ int main(int argc, char const *argv[])
     // 3. Add ambient light.
     // 4. Find a nice scene (cornell box).
 
-    std::vector<aiColor4D> image_data;
+    Image image(width, height);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             auto cam_dir = raster2cam(cam, aiVector2D(x, y), width, height);
@@ -207,14 +204,15 @@ int main(int argc, char const *argv[])
             auto res = ray_nodes_intersection(
                 aiRay(cam_pos, std::move(cam_dir)), *scene, geometry_nodes);
 
-            image_data.emplace_back();  // black
+            //image_data.emplace_back();  // black
             if (!res.intersects()) {
                 continue;
             }
 
             // get material's (diffuse) color
+            aiColor4D color;
             scene->mMaterials[res.mesh->mMaterialIndex]->Get(
-                AI_MATKEY_COLOR_DIFFUSE, image_data.back());
+                AI_MATKEY_COLOR_DIFFUSE, color);
 
             // compute normal
             auto v0 = res.mesh->mVertices[res.face->mIndices[0]];
@@ -227,27 +225,15 @@ int main(int argc, char const *argv[])
             auto v_int = cam_pos + res.distance * cam_dir;
             auto light_dir = (light_pos - v_int).Normalize();
 
-            image_data.back() = lambertian(
-                light_dir, normal, image_data.back(), light_color);
+            color = lambertian(light_dir, normal, color, light_color);
+            image(x, y) = color;
 
             // TODO: get material's (ambient) color
         }
     }
 
     // output image
-    std::cout << "P3" << std::endl;
-    std::cout << width << " " << height << std::endl;
-    std::cout << 255 << std::endl;
-    int i = 0;
-    for (auto color : image_data) {
-        if (i++ % width == 0) {
-            std::cout << std::endl;
-        }
-
-        std::cout << static_cast<int>(255 * color.r) << " "
-                  << static_cast<int>(255 * color.g) << " "
-                  << static_cast<int>(255 * color.b) << " ";
-    }
+    std::cout << image << std::endl;
 
     return 0;
 }
