@@ -1,8 +1,7 @@
-#include <assimp/types.h>
-
-#include <vector>
-
 #pragma once
+
+#include <assimp/types.h>
+#include <vector>
 
 class Image {
 
@@ -27,10 +26,10 @@ public:
         return _image_data[y * height + x];
     }
 
-    std::vector<aiColor4D>::const_iterator end() const {
+    auto end() const {
         return _image_data.end();
     }
-    std::vector<aiColor4D>::const_iterator begin() const {
+    auto begin() const {
         return _image_data.begin();
     }
 

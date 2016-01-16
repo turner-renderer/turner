@@ -179,7 +179,6 @@ int main(int argc, char const *argv[])
     // 4. Refactor code and move everything into functions.
 
     auto cam_pos = CT * aiVector3D(0, 0, 0);
-    std::vector<aiColor4D> image_data;
     Image image(width, height);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -231,7 +230,7 @@ int main(int argc, char const *argv[])
     std::cout << width << " " << height << std::endl;
     std::cout << (depth - min_nonzero) << std::endl;
     int i = 0;
-    for (auto color : image_data) {
+    for (auto color : image) {
         if (i++ % width == 0) {
             std::cout << std::endl;
         }
