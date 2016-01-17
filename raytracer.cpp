@@ -225,8 +225,7 @@ int main(int argc, char const *argv[])
             auto v_int = cam_pos + res.distance * cam_dir;
             auto light_dir = (light_pos - v_int).Normalize();
 
-            color = lambertian(light_dir, normal, color, light_color);
-            image(x, y) = color;
+            image(x, y) = lambertian(light_dir, normal, color, light_color);
 
             // TODO: get material's (ambient) color
         }
