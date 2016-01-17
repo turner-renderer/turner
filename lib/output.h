@@ -79,9 +79,9 @@ std::ostream& operator<<(std::ostream& os, const Image img) {
             os << std::endl;
         }
 
-        os << static_cast<int>(255 * color.r) << " "
-                  << static_cast<int>(255 * color.g) << " "
-                  << static_cast<int>(255 * color.b) << " ";
+        os << static_cast<int>(255 * color.r * color.a) << " "
+        << static_cast<int>(255 * color.g * color.a) << " "
+        << static_cast<int>(255 * color.b * color.a) << " ";
     }
 
     return os;

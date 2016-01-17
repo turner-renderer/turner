@@ -222,28 +222,15 @@ int main(int argc, char const *argv[])
         }
     }
     max *= max_channel;
-    int depth = max + (max - min_nonzero)/2;
+    float depth = max + (max - min_nonzero)/2;
+
+    //Adjust intensity so that the max is depth - min_nonzero = 255.
+    for(auto c = image.begin(); c != image.end(); c++) {
+       (*c).a = (depth - (*c).a) / (depth - min_nonzero);
+    }
 
     // output image
-    // TODO: recalc color and use std::cout << image;
-    std::cout << "P3" << std::endl;
-    std::cout << width << " " << height << std::endl;
-    std::cout << (depth - min_nonzero) << std::endl;
-    int i = 0;
-    for (auto color : image) {
-        if (i++ % width == 0) {
-            std::cout << std::endl;
-        }
-
-        if (color.a == 0) {
-            std::cout << "0 0 0 ";
-        } else {
-            int intensity = depth - static_cast<int>(color.a);
-            std::cout << static_cast<int>(intensity * color.r) << " "
-                      << static_cast<int>(intensity * color.g) << " "
-                      << static_cast<int>(intensity * color.b) << " ";
-        }
-    }
+    std::cout << image;
 
     return 0;
 }

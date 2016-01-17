@@ -33,6 +33,13 @@ public:
         return _image_data.begin();
     }
 
+    auto end() {
+        return _image_data.end();
+    }
+    auto begin() {
+        return _image_data.begin();
+    }
+
 private:
 
     std::vector<aiColor4D> _image_data;
