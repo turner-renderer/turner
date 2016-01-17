@@ -71,7 +71,9 @@ NodeIntersection ray_node_intersection(
 
         for (int i = 0; i < mesh.mNumFaces; ++i) {
             const auto& face = mesh.mFaces[i];
-            assert(face.mNumIndices == 3);
+            if(face.mNumIndices != 3) {
+                continue;
+            }
 
             auto V0 = T * mesh.mVertices[face.mIndices[0]];
             auto V1 = T * mesh.mVertices[face.mIndices[1]];
@@ -115,7 +117,6 @@ NodeIntersection ray_nodes_intersection(
 }
 
 
-
 int main(int argc, char const *argv[])
 {
     if (argc != 3) {
@@ -132,6 +133,7 @@ int main(int argc, char const *argv[])
         aiProcess_CalcTangentSpace       |
         aiProcess_Triangulate            |
         aiProcess_JoinIdenticalVertices  |
+        aiProcess_GenNormals             |
         aiProcess_SortByPType);
 
     if (!scene) {
@@ -155,12 +157,27 @@ int main(int argc, char const *argv[])
 
     int height = width / cam.mAspect;
 
-    // raycasting
+    // raytracing
 
     auto* camNode = scene->mRootNode->FindNode("Camera");
     assert(camNode != nullptr);
     const auto& CT = camNode->mTransformation;
     std::cerr << "Cam Trafo: " << CT << std::endl;
+    auto cam_pos = CT * aiVector3D(0, 0, 0);
+
+    // Get light node
+    auto* lightNode = scene->mRootNode->FindNode("Light");
+    assert(lightNode != nullptr);
+    const auto& LT = lightNode->mTransformation;
+    std::cerr << "Light Trafo: " << LT << std::endl;
+    auto light_pos = LT * aiVector3D();
+
+    // FIXME: Our scene does not have any lights yet.
+    // std::cerr << scene->mNumLights << std::endl;
+    // assert(scene->mNumLights == 1);
+    // auto* light = scene->mLights[0];
+    // TODO: ...
+    auto light_color = aiColor4D(0xFF / 255., 0xF8 / 255., 0xDD / 255., 1);
 
     std::vector<aiNode*> geometry_nodes;
     for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
@@ -173,12 +190,11 @@ int main(int argc, char const *argv[])
     }
 
     // TODO:
-    // 1. Use blender directly (Done)
-    // 2. Fix camera position (Done)
-    // 3. Find better constants and interpolation of colors. (Done)
-    // 4. Refactor code and move everything into functions.
+    // 1. Refactor code and move everything into functions.
+    // 2. Fix normal calculation.
+    // 3. Add ambient light.
+    // 4. Find a nice scene (cornell box).
 
-    auto cam_pos = CT * aiVector3D(0, 0, 0);
     Image image(width, height);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -188,49 +204,36 @@ int main(int argc, char const *argv[])
             auto res = ray_nodes_intersection(
                 aiRay(cam_pos, std::move(cam_dir)), *scene, geometry_nodes);
 
+            //image_data.emplace_back();  // black
             if (!res.intersects()) {
-                image(x, y) = aiColor4D(0, 0, 0, 1);  // black
-            } else {
-                aiColor4D color;
-                scene->mMaterials[res.mesh->mMaterialIndex]->Get(
-                    AI_MATKEY_COLOR_DIFFUSE, color);
-                color.a = res.distance;
-                image(x, y) = color;
+                continue;
             }
-        }
-    }
 
-    // compute max and min values that are non-zero
-    int min_nonzero = 0, max = 0;
-    float max_channel = -1;
-    for (auto color : image) {
-        int d = static_cast<int>(color.a);
-        if (min_nonzero == 0 || (0 < d && d < min_nonzero)) {
-            min_nonzero = d;
-        }
-        if (max == 0 || d > max) {
-            max = d;
-        }
-        if (max_channel < -1) {
-            max_channel = std::min(color.r, std::min(color.g, color.b));
-        } else if (max_channel < color.r) {
-            max_channel = color.r;
-        } else if (max_channel < color.g) {
-            max_channel = color.g;
-        } else if (max_channel < color.b) {
-            max_channel = color.b;
-        }
-    }
-    max *= max_channel;
-    float depth = max + (max - min_nonzero)/2;
+            // get material's (diffuse) color
+            aiColor4D color;
+            scene->mMaterials[res.mesh->mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_DIFFUSE, color);
 
-    //Adjust intensity so that the max is depth - min_nonzero = 255.
-    for(auto c = image.begin(); c != image.end(); c++) {
-       (*c).a = (depth - (*c).a) / (depth - min_nonzero);
+            // compute normal
+            auto v0 = res.mesh->mVertices[res.face->mIndices[0]];
+            auto v1 = res.mesh->mVertices[res.face->mIndices[1]];
+            auto v2 = res.mesh->mVertices[res.face->mIndices[2]];
+
+            auto normal = ((v1 - v0)^(v2 - v0)).Normalize();
+
+            // compute vector towards light
+            auto v_int = cam_pos + res.distance * cam_dir;
+            auto light_dir = (light_pos - v_int).Normalize();
+
+            color = lambertian(light_dir, normal, color, light_color);
+            image(x, y) = color;
+
+            // TODO: get material's (ambient) color
+        }
     }
 
     // output image
-    std::cout << image;
+    std::cout << image << std::endl;
 
     return 0;
 }

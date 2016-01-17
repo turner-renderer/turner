@@ -1,5 +1,6 @@
 #include "lib/intersection.h"
 #include "lib/output.h"
+#include "lib/range.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -49,6 +50,7 @@ int main(int argc, char const *argv[])
                 const auto& face = mesh.mFaces[k];
                 for (int idx = 0; idx < face.mNumIndices; ++idx) {
                     std::cout << mesh.mVertices[face.mIndices[idx]] << " ";
+                    std::cout << "n=" << mesh.mNormals[face.mIndices[idx]] << "\n";
                 }
                 if (mesh.mColors[0] != nullptr) {
                     for (int idx = 0; idx < face.mNumIndices; ++idx) {
@@ -104,14 +106,34 @@ int main(int argc, char const *argv[])
         std::cout << "mUp: " << camera->mUp << std::endl;
     }
 
-    for (int i = 0; i < scene->mNumMaterials; ++i) {
-        const auto& material = *scene->mMaterials[i];
-        std::cerr << "Material " << i << std::endl;
-        for (int j = 0; j < material.mNumProperties; ++j) {
-            const auto& prop = *material.mProperties[j];
-            std::cerr << prop.mKey << " ";
-        }
-        std::cerr << std::endl;
+    std::cout << &(*scene->mMaterials)[0] << std::endl;
+    std::cout << &(*scene->mMaterials)[scene->mNumMaterials] << std::endl;
+    std::cout << scene->mNumMaterials << std::endl;
+
+    for (const aiMaterial* material :
+            make_range(scene->mMaterials, scene->mNumMaterials))
+    {
+        // std::cout << &material << std::end;
+
+        aiString name;
+        material->Get(AI_MATKEY_NAME, name);
+        std::cerr << name << std::endl;
+
+        // for (int j = 0; j < material.mNumProperties; ++j) {
+        //     const auto& prop = *material.mProperties[j];
+        //     std::cerr << prop.mKey << " ";
+        // }
+        // std::cerr << std::endl;
+
+        // aiColor4D color;
+        // material.Get(AI_MATKEY_COLOR_DIFFUSE, color);
+        // std::cerr << color << std::endl;
+        // material.Get(AI_MATKEY_COLOR_EMISSIVE, color);
+        // std::cerr << color << std::endl;
+        // material.Get(AI_MATKEY_COLOR_SPECULAR, color);
+        // std::cerr << color << std::endl;
+
+        // std::cerr << std::endl;
     }
 
     return 0;

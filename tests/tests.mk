@@ -15,7 +15,8 @@ genfiles/$(1): genfiles/$(1).o genfiles/main_test.o
 	$(CXX) $(LDFLAGS) $$^ -o $$@
 
 test:: genfiles/$(1)
-	$$<
+	$$< ||:
+
 
 endef
 
