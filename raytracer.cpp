@@ -12,6 +12,7 @@
 #include <math.h>
 #include <vector>
 #include <iostream>
+#include <chrono>
 
 //
 // Convert 2d raster coodinates into 3d cameras coordinates.
@@ -160,6 +161,7 @@ int main(int argc, char const *argv[])
 
     auto triangles = triangles_from_scene(scene);
 
+
     // FIXME: Our scene does not have any lights yet.
     // std::cerr << scene->mNumLights << std::endl;
     // assert(scene->mNumLights == 1);
@@ -170,6 +172,8 @@ int main(int argc, char const *argv[])
     // TODO:
     // 1. Add ambient light.
     // 2. Find a nice scene (cornell box).
+
+    auto start = std::chrono::steady_clock::now();
 
     Image image(width, height);
     for (int y = 0; y < height; ++y) {
@@ -192,28 +196,30 @@ int main(int argc, char const *argv[])
             const auto& triangle = triangles[triangle_index];
 
             // compute normal
-
-            // barycentric coordinates
-            float u = s;
-            float v = t;
-            float w = 1.f - u - v;
-
-            auto aN = triangle.normals[0];
-            auto bN = triangle.normals[1];
-            auto cN = triangle.normals[2];
-            auto normal = (w*aN + u*bN + v*cN).Normalize();
+            auto n0 = triangle.normals[0];
+            auto n1 = triangle.normals[1];
+            auto n2 = triangle.normals[2];
+            auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
 
             // compute vector towards light
-            auto light_dir = (light_pos - p).Normalize();
+            auto light_dir = light_pos - p;
+            light_dir.Normalize();
 
-            image(x, y) = lambertian(light_dir, normal, triangle.diffuse, light_color);
+            image(x, y) = lambertian(
+                light_dir, normal, triangle.diffuse, light_color);
+            image(x, y) += 0.1f * triangle.diffuse;
 
             // TODO: get material's (ambient) color
         }
     }
 
+    auto end = std::chrono::steady_clock::now();
+    auto ms =  std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cerr << "Rendering time: " << ms << std::endl;
+
     // output image
     std::cout << image << std::endl;
+
 
     return 0;
 }
