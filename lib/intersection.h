@@ -42,20 +42,20 @@ float ray_plane_intersection(const Ray& ray, const Vec& V0, const Vec& n) {
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
 bool ray_triangle_intersection(
-    const Ray& ray, const Vec& V0, const Vec& V1, const Vec& V2,
+    const Ray& ray, const Triangle& triangle,
     float& r, float& s, float& t)
 {
-    auto u = V1 - V0;
-    auto v = V2 - V0;
+    auto u = triangle.vertices[1] - triangle.vertices[0];
+    auto v = triangle.vertices[2] - triangle.vertices[0];
     auto n = u^v;  // normal vector of the triangle
 
-    r = ray_plane_intersection(ray, V0, n);
+    r = ray_plane_intersection(ray, triangle.vertices[0], n);
     if (r == -1) {
         return false;
     }
 
     auto P_int = ray.pos + r * ray.dir;
-    auto w = P_int - V0;
+    auto w = P_int - triangle.vertices[0];
 
     // precompute scalar products
     auto uv = u*v;

@@ -2,6 +2,7 @@
 
 #include <assimp/types.h>
 #include <assert.h>
+#include <vector>
 
 
 using Vec = aiVector3D;
@@ -33,3 +34,10 @@ struct Ray : public aiRay {
     // pos, dir are in aiRay
     Vec invdir;
 };
+
+struct Triangle {
+    const Vec vertices[3];
+    const Vec normals[3];
+    const aiColor4D diffuse;
+};
+using Triangles = std::vector<Triangle>;

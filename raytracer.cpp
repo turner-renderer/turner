@@ -2,6 +2,7 @@
 #include "lib/image.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
+#include "lib/range.h"
 #include "lib/types.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
@@ -11,29 +12,6 @@
 #include <math.h>
 #include <vector>
 #include <iostream>
-
-struct NodeIntersection {
-
-    NodeIntersection() : distance(-1), mesh(nullptr), face(nullptr) {}
-    NodeIntersection(float d, const aiNode* n, const aiMesh* m, const aiFace* f)
-        : distance(d)
-        , node(n)
-        , mesh(m)
-        , face(f) {}
-
-    bool intersects() const {
-        return !(distance < 0);
-    }
-
-    bool operator<(const NodeIntersection& other) const {
-        return distance < other.distance;
-    }
-
-    float distance;
-    const aiNode* node;
-    const aiMesh* mesh;
-    const aiFace* face;
-};
 
 //
 // Convert 2d raster coodinates into 3d cameras coordinates.
@@ -60,67 +38,27 @@ aiVector3D raster2cam(
 }
 
 
-NodeIntersection ray_node_intersection(
-    const aiRay& ray,
-    const aiScene& scene, const aiNode& node)
-{
-    float min_r = -1;
-    const aiNode* min_node = &node;
-    const aiMesh* min_mesh = nullptr;
-    const aiFace* min_face = nullptr;
+ssize_t ray_intersection(const aiRay& ray, const Triangles& triangles,
+        float& min_r, float& min_s, float& min_t) {
 
-    for (int i = 0; i < node.mNumMeshes; ++i) {
-        const auto& mesh = *scene.mMeshes[node.mMeshes[i]];
-        const auto& T = node.mTransformation;
-
-        for (int i = 0; i < mesh.mNumFaces; ++i) {
-            const auto& face = mesh.mFaces[i];
-            if(face.mNumIndices != 3) {
-                continue;
-            }
-
-            auto V0 = T * mesh.mVertices[face.mIndices[0]];
-            auto V1 = T * mesh.mVertices[face.mIndices[1]];
-            auto V2 = T * mesh.mVertices[face.mIndices[2]];
-
-            float r, s, t;
-            auto intersect = ray_triangle_intersection(
-                ray, V0, V1, V2,
-                r, s, t);
-
-            if (!intersect) {
-                continue;
-            }
-
-            if (min_r < 0 || r < min_r) {
+    ssize_t triangle_index = -1;
+    min_r = -1;
+    float r, s, t;
+    for (size_t i = 0; i < triangles.size(); i++) {
+        auto intersect = ray_triangle_intersection(
+            ray, triangles[i], r, s, t);
+        if (intersect) {
+            if (triangle_index < 0 || r < min_r) {
                 min_r = r;
-                min_mesh = &mesh;
-                min_face = &face;
+                min_s = s;
+                min_t = t;
+                triangle_index = i;
             }
         }
     }
 
-    return NodeIntersection { min_r, min_node, min_mesh, min_face };
+    return triangle_index;
 }
-
-NodeIntersection ray_nodes_intersection(
-    const aiRay& ray,
-    const aiScene& scene, const std::vector<aiNode*>& nodes)
-{
-    NodeIntersection min_res;
-    for (auto node : nodes) {
-        auto res = ray_node_intersection(ray, scene, *node);
-        if (!res.intersects()) {
-            continue;
-        }
-
-        if (!min_res.intersects() || res < min_res) {
-            min_res = std::move(res);
-        }
-    }
-    return min_res;
-}
-
 
 int main(int argc, char const *argv[])
 {
@@ -184,21 +122,41 @@ int main(int argc, char const *argv[])
     // TODO: ...
     auto light_color = aiColor4D(0xFF / 255., 0xF8 / 255., 0xDD / 255., 1);
 
-    std::vector<aiNode*> geometry_nodes;
-    for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
-        auto node = scene->mRootNode->mChildren[i];
-        if (node->mNumMeshes > 0) {
-            std::cerr << "DEBUG: " << "Adding new geometry node: "
-                      << node->mName << std::endl;
-            geometry_nodes.push_back(node);
+    std::vector<Triangle> triangles;
+    for (auto node :
+            make_range(scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
+    {
+        const auto& T = node->mTransformation;
+        if (node->mNumMeshes == 0) {
+            continue;
+        }
+
+        for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
+            const auto& mesh = *scene->mMeshes[node->mMeshes[mesh_index]];
+
+            aiColor4D diffuse;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_DIFFUSE, diffuse);
+
+            for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
+                assert(face.mNumIndices == 3);
+                auto v0 = T * mesh.mVertices[face.mIndices[0]];
+                auto v1 = T * mesh.mVertices[face.mIndices[1]];
+                auto v2 = T * mesh.mVertices[face.mIndices[2]];
+
+                auto n0 = T * mesh.mNormals[face.mIndices[0]];
+                auto n1 = T * mesh.mNormals[face.mIndices[1]];
+                auto n2 = T * mesh.mNormals[face.mIndices[2]];
+
+                triangles.push_back( { {v0, v1, v2}, {n0, n1, n2}, diffuse } );
+            }
         }
     }
 
     // TODO:
-    // 1. Refactor code and move everything into functions.
-    // 2. Fix normal calculation.
-    // 3. Add ambient light.
-    // 4. Find a nice scene (cornell box).
+    // 1. Better triangle structure
+    // 2. Add ambient light.
+    // 3. Find a nice scene (cornell box).
 
     Image image(width, height);
     for (int y = 0; y < height; ++y) {
@@ -206,49 +164,36 @@ int main(int argc, char const *argv[])
             auto cam_dir = raster2cam(cam, aiVector2D(x, y), width, height);
             cam_dir = (CT * cam_dir - cam_pos).Normalize();
 
-            auto res = ray_nodes_intersection(
-                aiRay(cam_pos, std::move(cam_dir)), *scene, geometry_nodes);
+            float r, s, t;
+            auto triangle_index = ray_intersection(
+                aiRay(cam_pos, std::move(cam_dir)), triangles, r, s, t);
 
             //image_data.emplace_back();  // black
-            if (!res.intersects()) {
+            if (triangle_index < 0) {
                 continue;
             }
 
             // intersection point
-            auto p = cam_pos + (res.distance) * cam_dir;
+            auto p = cam_pos + r * cam_dir;
 
-            // get material's (diffuse) color
-            aiColor4D color;
-            scene->mMaterials[res.mesh->mMaterialIndex]->Get(
-                AI_MATKEY_COLOR_DIFFUSE, color);
+            const auto& triangle = triangles[triangle_index];
 
             // compute normal
-            auto T = res.node->mTransformation;
-            auto a = T * res.mesh->mVertices[res.face->mIndices[0]];
-            auto b = T * res.mesh->mVertices[res.face->mIndices[1]];
-            auto c = T * res.mesh->mVertices[res.face->mIndices[2]];
-
-            // calculate areas of (sub-)triangles
-            float abc_area = ((b-a)^(c-a)).Length() / 2.f;
-            float cap_area = ((a-c)^(p-c)).Length() / 2.f;
-            float abp_area = ((b-a)^(p-a)).Length() / 2.f;
-            assert(cap_area <= abc_area);
-            assert(abp_area <= abc_area);
 
             // barycentric coordinates
-            float u = cap_area / abc_area;
-            float v = abp_area / abc_area;
+            float u = s;
+            float v = t;
             float w = 1.f - u - v;
 
-            auto aN = T * res.mesh->mNormals[res.face->mIndices[0]];
-            auto bN = T * res.mesh->mNormals[res.face->mIndices[1]];
-            auto cN = T * res.mesh->mNormals[res.face->mIndices[2]];
+            auto aN = triangle.normals[0];
+            auto bN = triangle.normals[1];
+            auto cN = triangle.normals[2];
             auto normal = (w*aN + u*bN + v*cN).Normalize();
 
             // compute vector towards light
             auto light_dir = (light_pos - p).Normalize();
 
-            image(x, y) = lambertian(light_dir, normal, color, light_color);
+            image(x, y) = lambertian(light_dir, normal, triangle.diffuse, light_color);
 
             // TODO: get material's (ambient) color
         }
