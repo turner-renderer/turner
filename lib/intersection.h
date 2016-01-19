@@ -1,3 +1,5 @@
+#pragma once
+
 #include "types.h"
 #include <assimp/types.h>
 
@@ -14,16 +16,13 @@
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
-float ray_plane_intersection(
-    const aiVector3D& P0, const aiVector3D& P1,
-    const aiVector3D& V0, const aiVector3D& n)
-{
-    auto denom = n * (P1 - P0);
+float ray_plane_intersection(const Ray& ray, const Vec& V0, const Vec& n) {
+    auto denom = n * ray.dir;
     if (denom == 0) {
         return -1;
     }
 
-    auto nom = n * (V0 - P0);
+    auto nom = n * (V0 - ray.pos);
     auto r = nom / denom;
 
     return r < 0 ? -1 : r;
@@ -38,25 +37,24 @@ float ray_plane_intersection(
 // the triangle.
 //
 // Args:
-//   P0, P1: Points defining a ray from P0 to P1
 //   V0, V1, V2: Points defining a triangle
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
-float ray_triangle_intersection(
-    const aiVector3D& P0, const aiVector3D& P1,
-    const aiVector3D& V0, const aiVector3D& V1, const aiVector3D& V2)
+bool ray_triangle_intersection(
+    const Ray& ray, const Vec& V0, const Vec& V1, const Vec& V2,
+    float& r, float& s, float& t)
 {
     auto u = V1 - V0;
     auto v = V2 - V0;
     auto n = u^v;  // normal vector of the triangle
 
-    auto r = ray_plane_intersection(P0, P1, V0, n);
+    r = ray_plane_intersection(ray, V0, n);
     if (r == -1) {
-        return -1;
+        return false;
     }
 
-    auto P_int = P0 + r * (P1 - P0);
+    auto P_int = ray.pos + r * ray.dir;
     auto w = P_int - V0;
 
     // precompute scalar products
@@ -67,19 +65,19 @@ float ray_triangle_intersection(
     auto uu = u*u;
 
     auto denom = uv * uv - uu * vv;
-    auto s = (uv * wv - vv * wu) / denom;
+    s = (uv * wv - vv * wu) / denom;
 
     if (s < 0) {
-        return -1;
+        return false;
     }
 
-    auto t = (uv * wu - uu * wv) / denom;
+    t = (uv * wu - uu * wv) / denom;
 
     if (t < 0 || s + t > 1) {
-        return -1;
+        return false;
     }
 
-    return r;
+    return true;
 }
 
 //

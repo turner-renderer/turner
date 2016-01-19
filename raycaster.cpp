@@ -77,11 +77,12 @@ NodeIntersection ray_node_intersection(
             auto V1 = T * mesh.mVertices[face.mIndices[1]];
             auto V2 = T * mesh.mVertices[face.mIndices[2]];
 
-            auto r = ray_triangle_intersection(
-                ray.pos, ray.pos + ray.dir,
-                V0, V1, V2);
+            float r, s, t;
+            auto intersect = ray_triangle_intersection(
+                ray, V0, V1, V2,
+                r, s, t);
 
-            if (r < 0) {
+            if (!intersect) {
                 continue;
             }
 

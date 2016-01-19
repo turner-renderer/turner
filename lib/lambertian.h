@@ -2,7 +2,8 @@
 
 /**
  * Calculates Lambertian reflectance.
- * https://en.wikipedia.org/wiki/Lambertian_reflectance
+ *
+ * Cf. https://en.wikipedia.org/wiki/Lambertian_reflectance
  *
  * @param L Unit vector towards light.
  * @param N Normal vector of surface.

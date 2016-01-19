@@ -28,6 +28,8 @@ struct Ray : public aiRay {
         , invdir(1/dir)
     {}
 
+    Ray(const aiRay& ray) : Ray(ray.pos, ray.dir) {}
+
     // pos, dir are in aiRay
     Vec invdir;
 };

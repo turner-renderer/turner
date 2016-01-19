@@ -2,6 +2,7 @@
 #include "lib/image.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
+#include "lib/types.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -14,8 +15,9 @@
 struct NodeIntersection {
 
     NodeIntersection() : distance(-1), mesh(nullptr), face(nullptr) {}
-    NodeIntersection(float d, const aiMesh* m, const aiFace* f)
+    NodeIntersection(float d, const aiNode* n, const aiMesh* m, const aiFace* f)
         : distance(d)
+        , node(n)
         , mesh(m)
         , face(f) {}
 
@@ -28,6 +30,7 @@ struct NodeIntersection {
     }
 
     float distance;
+    const aiNode* node;
     const aiMesh* mesh;
     const aiFace* face;
 };
@@ -62,6 +65,7 @@ NodeIntersection ray_node_intersection(
     const aiScene& scene, const aiNode& node)
 {
     float min_r = -1;
+    const aiNode* min_node = &node;
     const aiMesh* min_mesh = nullptr;
     const aiFace* min_face = nullptr;
 
@@ -79,11 +83,12 @@ NodeIntersection ray_node_intersection(
             auto V1 = T * mesh.mVertices[face.mIndices[1]];
             auto V2 = T * mesh.mVertices[face.mIndices[2]];
 
-            auto r = ray_triangle_intersection(
-                ray.pos, ray.pos + ray.dir,
-                V0, V1, V2);
+            float r, s, t;
+            auto intersect = ray_triangle_intersection(
+                ray, V0, V1, V2,
+                r, s, t);
 
-            if (r < 0) {
+            if (!intersect) {
                 continue;
             }
 
@@ -95,7 +100,7 @@ NodeIntersection ray_node_intersection(
         }
     }
 
-    return NodeIntersection { min_r, min_mesh, min_face };
+    return NodeIntersection { min_r, min_node, min_mesh, min_face };
 }
 
 NodeIntersection ray_nodes_intersection(
@@ -209,21 +214,39 @@ int main(int argc, char const *argv[])
                 continue;
             }
 
+            // intersection point
+            auto p = cam_pos + (res.distance) * cam_dir;
+
             // get material's (diffuse) color
             aiColor4D color;
             scene->mMaterials[res.mesh->mMaterialIndex]->Get(
                 AI_MATKEY_COLOR_DIFFUSE, color);
 
             // compute normal
-            auto v0 = res.mesh->mVertices[res.face->mIndices[0]];
-            auto v1 = res.mesh->mVertices[res.face->mIndices[1]];
-            auto v2 = res.mesh->mVertices[res.face->mIndices[2]];
+            auto T = res.node->mTransformation;
+            auto a = T * res.mesh->mVertices[res.face->mIndices[0]];
+            auto b = T * res.mesh->mVertices[res.face->mIndices[1]];
+            auto c = T * res.mesh->mVertices[res.face->mIndices[2]];
 
-            auto normal = ((v1 - v0)^(v2 - v0)).Normalize();
+            // calculate areas of (sub-)triangles
+            float abc_area = ((b-a)^(c-a)).Length() / 2.f;
+            float cap_area = ((a-c)^(p-c)).Length() / 2.f;
+            float abp_area = ((b-a)^(p-a)).Length() / 2.f;
+            assert(cap_area <= abc_area);
+            assert(abp_area <= abc_area);
+
+            // barycentric coordinates
+            float u = cap_area / abc_area;
+            float v = abp_area / abc_area;
+            float w = 1.f - u - v;
+
+            auto aN = T * res.mesh->mNormals[res.face->mIndices[0]];
+            auto bN = T * res.mesh->mNormals[res.face->mIndices[1]];
+            auto cN = T * res.mesh->mNormals[res.face->mIndices[2]];
+            auto normal = (w*aN + u*bN + v*cN).Normalize();
 
             // compute vector towards light
-            auto v_int = cam_pos + res.distance * cam_dir;
-            auto light_dir = (light_pos - v_int).Normalize();
+            auto light_dir = (light_pos - p).Normalize();
 
             image(x, y) = lambertian(light_dir, normal, color, light_color);
 
