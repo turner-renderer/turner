@@ -60,6 +60,49 @@ ssize_t ray_intersection(const aiRay& ray, const Triangles& triangles,
     return triangle_index;
 }
 
+
+Triangles triangles_from_scene(const aiScene* scene) {
+    Triangles triangles;
+    for (auto node : make_range(
+            scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
+    {
+        const auto& T = node->mTransformation;
+        if (node->mNumMeshes == 0) {
+            continue;
+        }
+
+        for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
+            const auto& mesh = *scene->mMeshes[mesh_index];
+
+            aiColor4D diffuse;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(
+                AI_MATKEY_COLOR_DIFFUSE, diffuse);
+
+            for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
+                assert(face.mNumIndices == 3);
+                triangles.push_back({
+                    // vertices
+                    {
+                        T * mesh.mVertices[face.mIndices[0]],
+                        T * mesh.mVertices[face.mIndices[1]],
+                        T * mesh.mVertices[face.mIndices[2]]
+                    },
+                    // normals
+                    {
+                        T * mesh.mNormals[face.mIndices[0]],
+                        T * mesh.mNormals[face.mIndices[1]],
+                        T * mesh.mNormals[face.mIndices[2]]
+                    },
+                    diffuse
+                });
+            }
+        }
+    }
+    return triangles;
+}
+
+
+
 int main(int argc, char const *argv[])
 {
     if (argc != 3) {
@@ -115,6 +158,8 @@ int main(int argc, char const *argv[])
     std::cerr << "Light Trafo: " << LT << std::endl;
     auto light_pos = LT * aiVector3D();
 
+    auto triangles = triangles_from_scene(scene);
+
     // FIXME: Our scene does not have any lights yet.
     // std::cerr << scene->mNumLights << std::endl;
     // assert(scene->mNumLights == 1);
@@ -122,41 +167,9 @@ int main(int argc, char const *argv[])
     // TODO: ...
     auto light_color = aiColor4D(0xFF / 255., 0xF8 / 255., 0xDD / 255., 1);
 
-    std::vector<Triangle> triangles;
-    for (auto node :
-            make_range(scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
-    {
-        const auto& T = node->mTransformation;
-        if (node->mNumMeshes == 0) {
-            continue;
-        }
-
-        for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
-            const auto& mesh = *scene->mMeshes[node->mMeshes[mesh_index]];
-
-            aiColor4D diffuse;
-            scene->mMaterials[mesh.mMaterialIndex]->Get(
-                AI_MATKEY_COLOR_DIFFUSE, diffuse);
-
-            for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
-                assert(face.mNumIndices == 3);
-                auto v0 = T * mesh.mVertices[face.mIndices[0]];
-                auto v1 = T * mesh.mVertices[face.mIndices[1]];
-                auto v2 = T * mesh.mVertices[face.mIndices[2]];
-
-                auto n0 = T * mesh.mNormals[face.mIndices[0]];
-                auto n1 = T * mesh.mNormals[face.mIndices[1]];
-                auto n2 = T * mesh.mNormals[face.mIndices[2]];
-
-                triangles.push_back( { {v0, v1, v2}, {n0, n1, n2}, diffuse } );
-            }
-        }
-    }
-
     // TODO:
-    // 1. Better triangle structure
-    // 2. Add ambient light.
-    // 3. Find a nice scene (cornell box).
+    // 1. Add ambient light.
+    // 2. Find a nice scene (cornell box).
 
     Image image(width, height);
     for (int y = 0; y < height; ++y) {
