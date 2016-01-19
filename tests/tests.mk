@@ -6,14 +6,17 @@ genfiles:
 genfiles/main_test.o: tests/main.cpp
 	$(CXX) $(TESTS_CXXFLAGS) -c $< -o $@
 
+test:: genfiles
+
 define GENERIC_TEST
 
-genfiles/$(1).o: tests/$(1).cpp genfiles
+genfiles/$(1).o: tests/$(1).cpp
 	$(CXX) $(TESTS_CXXFLAGS) -c $$< -o $$@
 
 genfiles/$(1): genfiles/$(1).o genfiles/main_test.o
 	$(CXX) $(LDFLAGS) $$^ -o $$@
 
+.PHONY: test
 test:: genfiles/$(1)
 	$$< ||:
 

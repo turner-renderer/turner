@@ -1,3 +1,4 @@
+#include "types.h"
 #include <assimp/types.h>
 
 //
@@ -79,4 +80,31 @@ float ray_triangle_intersection(
     }
 
     return r;
+}
+
+//
+// Intersect a ray with an AABB (axis-aligned bounding box).
+//
+// Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
+//
+bool ray_box_intersection(const Ray& r, const Box& box) {
+    float tx1 = (box.min.x - r.pos.x) * r.invdir.x;
+    float tx2 = (box.max.x - r.pos.x) * r.invdir.x;
+
+    float tmin = std::fmin(tx1, tx2);
+    float tmax = std::fmax(tx1, tx2);
+
+    float ty1 = (box.min.y - r.pos.y) * r.invdir.y;
+    float ty2 = (box.max.y - r.pos.y) * r.invdir.y;
+
+    tmin = std::fmax(tmin, std::fmin(ty1, ty2));
+    tmax = std::fmin(tmax, std::fmax(ty1, ty2));
+
+    float tz1 = (box.min.z - r.pos.z) * r.invdir.z;
+    float tz2 = (box.max.z - r.pos.z) * r.invdir.z;
+
+    tmin = std::fmax(tmin, std::fmin(tz1, tz2));
+    tmax = std::fmin(tmax, std::fmax(tz1, tz2));
+
+    return !(tmax < tmin);
 }
