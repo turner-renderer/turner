@@ -16,18 +16,17 @@ struct Triangle {
     , normals(ns)
     , ambient(ambient)
     , diffuse(diffuse)
-    {
-        u = vertices[1] - vertices[0];
-        v = vertices[2] - vertices[0];
-        n = u^v;  // normal vector of the triangle
-        uv = u*v;
-        vv = v*v;
-        uu = u*u;
-        denom = uv * uv - uu * vv;
-    }
+    , u(vertices[1] - vertices[0])
+    , v(vertices[2] - vertices[0])
+    , normal(u^v)
+    , uv(u*v)
+    , vv(v*v)
+    , uu(u*u)
+    , denom(uv * uv - uu * vv)
+    {}
 
     bool intersect(const Ray& ray, float& r, float& s, float& t) const {
-        r = ray_plane_intersection(ray, vertices[0], n);
+        r = ray_plane_intersection(ray, vertices[0], normal);
         if (r < 0) {
             return false;
         }
@@ -59,7 +58,15 @@ struct Triangle {
     const aiColor4D diffuse;
 
     // precomputed
-    Vec u, v, n;
+    // Edges of the triangle from point 0 to points 1 resp. 2
+    const Vec u, v;
+    // Normal vector of the triangle
+    // Note: normals of the vertices may be different to this vector, if
+    // the triangle is not rendered with sharp edges, i.e. if the normals
+    // of the vertices are interpolated between all faces containing this
+    // vertex.
+    const Vec normal;
+private:
     float uv, vv, uu, denom;
 };
 

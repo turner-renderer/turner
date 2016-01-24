@@ -2,13 +2,10 @@
 
 #include <assimp/types.h>
 #include <assimp/camera.h>
-
 #include <assert.h>
-#include <vector>
 
 
 using Vec = aiVector3D;
-
 
 Vec operator/(int a, const Vec& v) {
     return {
@@ -25,6 +22,7 @@ struct Box {
 };
 
 
+// Ray with precomputed inverse direction
 struct Ray : public aiRay {
     Ray(const Vec& pos, const Vec& dir)
         : aiRay(pos, dir)

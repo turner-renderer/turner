@@ -10,17 +10,17 @@
 // the plane. Note: r may be negative.
 //
 // Args:
-//   V0, n: Plane through V0 with normal n
+//   v0, n: Plane through v0 with normal n
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
-float ray_plane_intersection(const Ray& ray, const Vec& V0, const Vec& n) {
+float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
     auto denom = n * ray.dir;
     if (denom == 0) {
         return std::numeric_limits<float>::min();
     }
 
-    auto nom = n * (V0 - ray.pos);
+    auto nom = n * (v0 - ray.pos);
     return nom / denom;
 }
 
