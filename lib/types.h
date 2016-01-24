@@ -1,6 +1,8 @@
 #pragma once
 
 #include <assimp/types.h>
+#include <assimp/camera.h>
+
 #include <assert.h>
 #include <vector>
 
@@ -36,7 +38,7 @@ struct Ray : public aiRay {
 };
 
 
-// Represents a camera with a transformation
+// Represents a camera including transformation
 class Camera : public aiCamera {
 public:
     template<typename... Args>

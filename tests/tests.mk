@@ -1,4 +1,4 @@
-TESTS_CXXFLAGS = $(CXXFLAGS) -Ilib/catch/include
+TESTS_CXXFLAGS = $(CXXFLAGS) -Ivendor/catch/include
 
 genfiles:
 	mkdir genfiles

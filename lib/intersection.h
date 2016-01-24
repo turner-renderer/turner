@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include <assimp/types.h>
 
 //
 // Return min infinity if there is no intersection, otherwise return r s.t. the

@@ -1,6 +1,6 @@
 [submodule "lib/assimp"]
-	path = lib/assimp
+	path = vendor/assimp
 	url = https://github.com/assimp/assimp
 [submodule "lib/catch"]
-	path = lib/catch
+	path = vendor/catch
 	url = https://github.com/philsquared/Catch
