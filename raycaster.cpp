@@ -2,6 +2,7 @@
 #include "lib/image.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
+#include "lib/triangle.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -78,10 +79,8 @@ NodeIntersection ray_node_intersection(
             auto V2 = T * mesh.mVertices[face.mIndices[2]];
 
             float r, s, t;
-            auto intersect = ray_triangle_intersection(
-                ray,
-                V0, V1, V2,
-                r, s, t);
+            Triangle triangle{{{V0, V1, V2}}, {}, {}, {}};
+            auto intersect = triangle.intersect(ray, r, s, t);
 
             if (!intersect) {
                 continue;
