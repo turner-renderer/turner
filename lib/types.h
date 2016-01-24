@@ -1,12 +1,11 @@
 #pragma once
 
 #include <assimp/types.h>
+#include <assimp/camera.h>
 #include <assert.h>
-#include <vector>
 
 
 using Vec = aiVector3D;
-
 
 Vec operator/(int a, const Vec& v) {
     return {
@@ -23,6 +22,7 @@ struct Box {
 };
 
 
+// Ray with precomputed inverse direction
 struct Ray : public aiRay {
     Ray(const Vec& pos, const Vec& dir)
         : aiRay(pos, dir)
@@ -35,9 +35,51 @@ struct Ray : public aiRay {
     Vec invdir;
 };
 
-struct Triangle {
-    const Vec vertices[3];
-    const Vec normals[3];
-    const aiColor4D diffuse;
+
+// Represents a camera including transformation
+class Camera : public aiCamera {
+public:
+    template<typename... Args>
+    Camera(const aiMatrix4x4& trafo, Args... args)
+        : aiCamera{args...}
+        , trafo_(trafo)  // discard tranlation in trafo
+    {
+        assert(mPosition == Vec());
+        assert(mUp == Vec(0, 1, 0));
+        assert(mLookAt == Vec(0, 0, -1));
+
+        // sometimes aspect ratio is not set
+        if (mAspect == 0) {
+            mAspect = 16.f/9.f;
+            // mAspect = 1.f;
+        }
+
+        mPosition = trafo * mPosition;
+        delta_x_ = tan(mHorizontalFOV / 2.f);
+        delta_y_ = delta_x_ / mAspect;
+    }
+
+    //
+    // Convert 2d raster coodinates into 3d cameras coordinates.
+    //
+    // We assume that the camera is trivial:
+    //   assert(cam.mPosition == (0, 0, 0))
+    //   assert(cam.mUp == (0, 1, 0))
+    //   assert(cam.mLookAt == (0, 0, -1))
+    //   assert(cam.mAspect != 0)
+    //
+    // The positioning of the camera is done in its parent's node
+    // transformation matrix.
+    //
+    aiVector3D raster2cam(const aiVector2D& p, const int w, const int h) const
+    {
+        return trafo_ * aiVector3D(
+            -delta_x_ * (1 - 2 * p.x / static_cast<float>(w)),
+            delta_y_ * (1 - 2 * p.y / static_cast<float>(h)),
+            -1);
+    }
+
+private:
+    aiMatrix3x3 trafo_;
+    float delta_x_, delta_y_;
 };
-using Triangles = std::vector<Triangle>;

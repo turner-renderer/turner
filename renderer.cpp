@@ -3,7 +3,7 @@
 #include <vector>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "lib/stb_image_write.h"
+#include "vendor/stb_image_write.h"
 
 struct Color {
     uint8_t r;
@@ -76,9 +76,21 @@ public:
         color(color) {}
 };
 
+
+const std::string USAGE =
+R"_(Usage: renderer d x y z
+
+Render a sphere.
+
+d       diameter of the sphere
+x y z   position of the sphere
+)_";
+
+
 int main(int argc, char* args[]) {
     if(argc != 5) {
-        std::cout << "Usage: renderer d x y z" << std::endl;
+        std::cout << USAGE;
+        return 0;
     }
 
     const Point eye = Point(0, 0, -20);

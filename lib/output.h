@@ -9,6 +9,10 @@ std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
 
+std::ostream& operator<<(std::ostream& os, const aiColor3D& c) {
+    return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ")";
+}
+
 std::ostream& operator<<(std::ostream& os, const aiColor4D& c) {
     return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ")";
 }

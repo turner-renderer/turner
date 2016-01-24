@@ -79,7 +79,8 @@ NodeIntersection ray_node_intersection(
 
             float r, s, t;
             auto intersect = ray_triangle_intersection(
-                ray, { {V0, V1, V2}, {}, aiColor4D(0,0,0,1)},
+                ray,
+                V0, V1, V2,
                 r, s, t);
 
             if (!intersect) {
