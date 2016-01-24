@@ -37,7 +37,7 @@ raytracer
 test_assimp
 .DS_Store
 
-*.png
-*.jpg
-*.tiff
+./*.png
+./*.jpg
+./*.tiff
 dna.txt
