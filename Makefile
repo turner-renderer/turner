@@ -12,6 +12,8 @@ bootstrap:
 		&& cmake . -DASSIMP_LIB_INSTALL_DIR=$$(pwd)/../../lib
 	make -C vendor/assimp/contrib/zlib
 	make -C vendor/assimp/contrib/zlib install
+	make -C vendor/assimp
+	make -C vendor/assimp install
 
 clean:
 	rm -rf *.o renderer test_assimp *.dSYM genfiles raycaster raytracer
