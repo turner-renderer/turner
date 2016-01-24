@@ -1,7 +1,7 @@
 # Renderer
 Prototype implementations of unbiased renderers.
 
-![Produced by our simple raycaster](scenes/cube.png)
+![Produced by our simple raytraces](scenes/colored_cube.png)
 
 ## Next
 

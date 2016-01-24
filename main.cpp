@@ -79,6 +79,7 @@ public:
 int main(int argc, char* args[]) {
     if(argc != 5) {
         std::cout << "Usage: renderer d x y z" << std::endl;
+        return 0;
     }
 
     const Point eye = Point(0, 0, -20);

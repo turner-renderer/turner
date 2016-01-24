@@ -4,14 +4,13 @@
 #include <assimp/types.h>
 
 //
-// Return -1 if there is no intersection, otherwise return r s.t. the
+// Return min infinity if there is no intersection, otherwise return r s.t. the
 // intersection point is P0 + r * (P1 - P0).
 //
-// If n is normalized, then r is exactly the euklidean distance from the ray to
-// the plane.
+// If n is normalized, then r is exactly the Euclidean distance from the ray to
+// the plane. Note: r may be negative.
 //
 // Args:
-//   P0, P1: Points defining a ray from P0 to P1
 //   V0, n: Plane through V0 with normal n
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
@@ -19,43 +18,45 @@
 float ray_plane_intersection(const Ray& ray, const Vec& V0, const Vec& n) {
     auto denom = n * ray.dir;
     if (denom == 0) {
-        return -1;
+        return std::numeric_limits<float>::min();
     }
 
     auto nom = n * (V0 - ray.pos);
-    auto r = nom / denom;
-
-    return r < 0 ? -1 : r;
+    return nom / denom;
 }
 
 
 //
-// Return -1 if there is no intersection, otherwise return r s.t. the
-// intersection point is P0 + r * (P1 - P0).
+// Return false if there is no intersection, otherwise true.
 //
 // If n is normalized, then r is exactly the euklidean distance from the ray to
 // the triangle.
 //
 // Args:
-//   V0, V1, V2: Points defining a triangle
+//   p0, p1, p2: points defining triangle
+//   r: `ray.pos + r * ray.dir` is the intersection point
+//   s, t: barycentric coordinates of the intersection point with respect to
+//     the edges `p1 - p0` and `p2 - p0`
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
+// depricated: Use Triangle class.
+//
 bool ray_triangle_intersection(
-    const Ray& ray, const Triangle& triangle,
+    const Ray& ray, const Vec& p0, const Vec& p1, const Vec& p2,
     float& r, float& s, float& t)
 {
-    auto u = triangle.vertices[1] - triangle.vertices[0];
-    auto v = triangle.vertices[2] - triangle.vertices[0];
+    auto u = p1 - p0;
+    auto v = p2 - p0;
     auto n = u^v;  // normal vector of the triangle
 
-    r = ray_plane_intersection(ray, triangle.vertices[0], n);
-    if (r == -1) {
+    r = ray_plane_intersection(ray, p0, n);
+    if (r < 0) {
         return false;
     }
 
     auto P_int = ray.pos + r * ray.dir;
-    auto w = P_int - triangle.vertices[0];
+    auto w = P_int - p0;
 
     // precompute scalar products
     auto uv = u*v;
