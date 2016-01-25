@@ -1,5 +1,5 @@
 CC=c++
-CXXFLAGS=-std=c++1y -Wall -O0 -g -Ivendor/assimp/include -Ivendor/docopt.cpp
+CXXFLAGS=-std=c++1y -Wall -O3 -g -Ivendor/assimp/include -Ivendor/docopt.cpp
 LDFLAGS=-Lvendor/assimp/lib -Lvendor/docopt.cpp -lassimp -lzlibstatic -ldocopt_s
 
 all: renderer test_assimp raycaster raytracer

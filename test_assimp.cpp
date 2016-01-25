@@ -70,6 +70,11 @@ int main(int argc, char const *argv[])
         std::cout << "\nList faces of " << node.mName << std::endl;
         for (int j = 0; j < node.mNumMeshes; ++j) {
             const auto& mesh = *scene->mMeshes[node.mMeshes[j]];
+
+            aiString name;
+            scene->mMaterials[mesh.mMaterialIndex]->Get(AI_MATKEY_NAME, name);
+            std::cout << "Material: " << name << std::endl;
+
             for (int k = 0; k < mesh.mNumFaces; ++k) {
                 std::cout << "Face" << std::endl;
                 const auto& face = mesh.mFaces[k];
@@ -77,6 +82,7 @@ int main(int argc, char const *argv[])
                     std::cout << mesh.mVertices[face.mIndices[idx]] << " ";
                     std::cout << "n=" << mesh.mNormals[face.mIndices[idx]] << "\n";
                 }
+
                 // if (mesh.mColors[0] != nullptr) {
                 //     for (int idx = 0; idx < face.mNumIndices; ++idx) {
                 //         std::cout << mesh.mColors[0][face.mIndices[idx]]
@@ -142,7 +148,21 @@ int main(int argc, char const *argv[])
 
         aiString name;
         material->Get(AI_MATKEY_NAME, name);
-        std::cerr << name << std::endl;
+        std::cout << name << std::endl;
+
+        aiColor4D color;
+        material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+        std::cout << color << std::endl;
+        material->Get(AI_MATKEY_COLOR_AMBIENT, color);
+        std::cout << color << std::endl;
+        material->Get(AI_MATKEY_COLOR_SPECULAR, color);
+        std::cout << color << std::endl;
+        material->Get(AI_MATKEY_COLOR_EMISSIVE, color);
+        std::cout << color << std::endl;
+        material->Get(AI_MATKEY_COLOR_TRANSPARENT, color);
+        std::cout << color << std::endl;
+        material->Get(AI_MATKEY_COLOR_REFLECTIVE, color);
+        std::cout << color << std::endl;
 
         // for (int j = 0; j < material.mNumProperties; ++j) {
         //     const auto& prop = *material.mProperties[j];
