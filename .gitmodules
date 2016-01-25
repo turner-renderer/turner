@@ -4,3 +4,6 @@
 [submodule "lib/catch"]
 	path = vendor/catch
 	url = https://github.com/philsquared/Catch
+[submodule "vendor/docopt.cpp"]
+	path = vendor/docopt.cpp
+	url = git@github.com:docopt/docopt.cpp.git

@@ -3,6 +3,8 @@
 #include <assimp/types.h>
 #include <assimp/camera.h>
 #include <assert.h>
+#include <sstream>
+#include <vector>
 
 
 using Vec = aiVector3D;
@@ -47,12 +49,7 @@ public:
         assert(mPosition == Vec());
         assert(mUp == Vec(0, 1, 0));
         assert(mLookAt == Vec(0, 0, -1));
-
-        // sometimes aspect ratio is not set
-        if (mAspect == 0) {
-            mAspect = 16.f/9.f;
-            // mAspect = 1.f;
-        }
+        assert(mAspect != 0);
 
         mPosition = trafo * mPosition;
         delta_x_ = tan(mHorizontalFOV / 2.f);
@@ -83,3 +80,27 @@ private:
     aiMatrix3x3 trafo_;
     float delta_x_, delta_y_;
 };
+
+
+std::vector<std::string> split(const std::string& s, char delim) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        if (!item.empty()) {
+            tokens.push_back(item);
+        }
+    }
+    return tokens;
+}
+
+aiColor4D parse_color4(const std::string& str) {
+    const auto tokens = split(str, ' ');
+    assert(tokens.size() == 4);
+    return
+        { std::stof(tokens[0])
+        , std::stof(tokens[1])
+        , std::stof(tokens[2])
+        , std::stof(tokens[3])
+        };
+}

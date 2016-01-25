@@ -8,9 +8,11 @@
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
+#include <docopt.h>
 
 #include <math.h>
 #include <vector>
+#include <map>
 #include <iostream>
 #include <chrono>
 
@@ -81,22 +83,27 @@ Triangles triangles_from_scene(const aiScene* scene) {
 }
 
 
+static const char USAGE[] =
+R"(Usage: raytracer <filename> [options]
+
+Options:
+  -w --width=<px>           Width of the image [default: 640].
+  -a --aspect=<num>         Aspect ratio of the image. If the model has
+                            specified the aspect ratio, it will be used.
+                            Otherwise default value is 1.
+  -b --background=<color>   Background color of the world. [default: 0 0 0 0].
+)";
 
 int main(int argc, char const *argv[])
 {
-    if (!(1 < argc && argc < 4)) {
-        std::cerr << "Usage: " << argv[0] << " <filename> [width]\n";
-        return 0;
-    }
-
     // parameters
-    std::string filename(argv[1]);
-    int width = argc == 3 ? std::atoi(argv[2]) : 640;
-    assert(width > 0);
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
     // import scene
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filename,
+    const aiScene* scene = importer.ReadFile(
+        args["<filename>"].asString().c_str(),
         aiProcess_CalcTangentSpace       |
         aiProcess_Triangulate            |
         aiProcess_JoinIdenticalVertices  |
@@ -111,14 +118,18 @@ int main(int argc, char const *argv[])
     // setup camera
     assert(scene->mNumCameras == 1);  // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
+    if (args["--aspect"]) {
+        sceneCam.mAspect = std::stof(args["--aspect"].asString());
+        assert(sceneCam.mAspect > 0);
+    } else if (sceneCam.mAspect == 0) {
+        sceneCam.mAspect = 1.f;
+    }
     auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
     assert(camNode != nullptr);
 
     const Camera cam(camNode->mTransformation, sceneCam);
     std::cerr << "Camera" << std::endl;
     std::cerr << cam << std::endl;
-
-    int height = width / cam.mAspect;
 
     // setup light
     assert(scene->mNumLights == 1);  // we can deal only with a single light
@@ -145,6 +156,11 @@ int main(int argc, char const *argv[])
     // Raytracer
     //
 
+    int width = args["--width"].asLong();
+    assert(width > 0);
+    int height = width / cam.mAspect;
+    auto background_color = parse_color4(args["--background"].asString());
+
     Image image(width, height);
     {
         auto rt = Runtime(std::cerr, "Rendering time: ");
@@ -156,7 +172,7 @@ int main(int argc, char const *argv[])
                 auto triangle_index = ray_intersection(
                     aiRay(cam.mPosition, cam_dir), triangles, r, s, t);
                 if (triangle_index < 0) {
-                    image(x, y) = aiColor4D() + 0.4f;
+                    image(x, y) = background_color;
                     continue;
                 }
 
