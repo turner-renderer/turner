@@ -178,7 +178,8 @@ int main(int argc, char const *argv[])
 
                 // light direction
                 auto p = cam.mPosition + r * cam_dir;
-                auto light_dir = (light_pos - p).Normalize();
+                auto light_dir = light_pos - p;
+                light_dir.Normalize();
 
                 // interpolate normal
                 const auto& triangle = triangles[triangle_index];
@@ -186,6 +187,21 @@ int main(int argc, char const *argv[])
                 const auto& n1 = triangle.normals[1];
                 const auto& n2 = triangle.normals[2];
                 auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
+
+                // calculate shadow
+                float distance_to_next_triangle, s2, t2;
+                auto p2 = p + normal * 0.0001f;
+                float distance_to_light = (light_pos - p2).Length();
+                auto shadow_triangle = ray_intersection(
+                    aiRay(p2, light_dir),
+                    triangles,
+                    distance_to_next_triangle, s2, t2);
+                if (shadow_triangle >= 0 &&
+                    distance_to_next_triangle < distance_to_light)
+                {
+                    image(x, y) = triangle.ambient;
+                    continue;
+                }
 
                 image(x, y) += lambertian(
                     light_dir, normal, triangle.diffuse, light_color);
