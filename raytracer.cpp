@@ -91,7 +91,8 @@ Options:
   -a --aspect=<num>         Aspect ratio of the image. If the model has
                             specified the aspect ratio, it will be used.
                             Otherwise default value is 1.
-  -b --background=<color>   Background color of the world. [default: 0 0 0 0].
+  -b --background=<color>   Background color of the world [default: 0 0 0 0].
+  --ambient-coeff=<float>   Ambient coefficient [default: 0.2f].
 )";
 
 int main(int argc, char const *argv[])
@@ -99,6 +100,10 @@ int main(int argc, char const *argv[])
     // parameters
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
+
+    float ambient_coeff = std::stof(args["--ambient-coeff"].asString());
+    assert(0 <= ambient_coeff && ambient_coeff <= 1);
+    float diffuse_coeff = 1.f - ambient_coeff;
 
     // import scene
     Assimp::Importer importer;
@@ -166,23 +171,22 @@ int main(int argc, char const *argv[])
         auto rt = Runtime(std::cerr, "Rendering time: ");
 
         std::cerr << "Rendering ";
-
-        float r, s, t;
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 // intersection
+                float dist_to_triangle, s, t;
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), width, height);
                 auto triangle_index = ray_intersection(
-                    aiRay(cam.mPosition, cam_dir), triangles, r, s, t);
+                    aiRay(cam.mPosition, cam_dir), triangles,
+                    dist_to_triangle, s, t);
                 if (triangle_index < 0) {
                     image(x, y) = background_color;
                     continue;
                 }
 
                 // light direction
-                auto p = cam.mPosition + r * cam_dir;
-                auto light_dir = light_pos - p;
-                light_dir.Normalize();
+                auto p = cam.mPosition + dist_to_triangle * cam_dir;
+                auto light_dir = (light_pos - p).Normalize();
 
                 // interpolate normal
                 const auto& triangle = triangles[triangle_index];
@@ -192,23 +196,27 @@ int main(int argc, char const *argv[])
                 auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
 
                 // calculate shadow
-                float distance_to_next_triangle, s2, t2;
+                float dist_to_next_triangle;
                 auto p2 = p + normal * 0.0001f;
-                float distance_to_light = (light_pos - p2).Length();
+                light_dir = (light_pos - p2).Normalize();
+                float dist_to_light = (light_pos - p2).Length();
                 auto shadow_triangle = ray_intersection(
                     aiRay(p2, light_dir),
                     triangles,
-                    distance_to_next_triangle, s2, t2);
+                    dist_to_next_triangle, s, t);
+
                 if (shadow_triangle >= 0 &&
-                    distance_to_next_triangle < distance_to_light)
+                    dist_to_next_triangle < dist_to_light)
                 {
-                    image(x, y) = triangle.ambient;
+                    image(x, y) = triangle.diffuse * ambient_coeff;
                     continue;
                 }
 
-                image(x, y) += lambertian(
-                    light_dir, normal, triangle.diffuse, light_color);
-                image(x, y) += triangle.ambient;
+                image(x, y) +=
+                    triangle.diffuse * ambient_coeff +
+                    lambertian(
+                        light_dir, normal, triangle.diffuse, light_color)
+                    * diffuse_coeff;
             }
 
             // update prograss bar
