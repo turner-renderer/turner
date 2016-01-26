@@ -3,6 +3,7 @@
 #include <assimp/scene.h>
 
 #include <ostream>
+#include <iomanip>
 
 
 std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
@@ -88,8 +89,11 @@ std::ostream& operator<<(std::ostream& os, const Image& img) {
             os << std::endl;
         }
 
-        os << static_cast<int>(255 * color.r * color.a) << " "
+        os << std::setfill(' ') << std::setw(3)
+           << static_cast<int>(255 * color.r * color.a) << " "
+           << std::setfill(' ') << std::setw(3)
            << static_cast<int>(255 * color.g * color.a) << " "
+           << std::setfill(' ') << std::setw(3)
            << static_cast<int>(255 * color.b * color.a) << " ";
     }
 
