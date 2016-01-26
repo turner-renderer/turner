@@ -164,6 +164,9 @@ int main(int argc, char const *argv[])
     Image image(width, height);
     {
         auto rt = Runtime(std::cerr, "Rendering time: ");
+
+        std::cerr << "Rendering ";
+
         float r, s, t;
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
@@ -207,7 +210,14 @@ int main(int argc, char const *argv[])
                     light_dir, normal, triangle.diffuse, light_color);
                 image(x, y) += triangle.ambient;
             }
+
+            // update prograss bar
+            auto height_fraction = height / 20;
+            if (y % height_fraction == 0) {
+                std::cerr << ".";
+            }
         }
+        std::cerr << std::endl;
     }
 
     // output image
