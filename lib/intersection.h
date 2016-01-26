@@ -17,7 +17,7 @@
 float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
     auto denom = n * ray.dir;
     if (denom == 0) {
-        return std::numeric_limits<float>::min();
+        return std::numeric_limits<float>::lowest();
     }
 
     auto nom = n * (v0 - ray.pos);
