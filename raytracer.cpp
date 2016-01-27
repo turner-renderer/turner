@@ -82,6 +82,62 @@ Triangles triangles_from_scene(const aiScene* scene) {
     return triangles;
 }
 
+aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
+        const Triangles triangles, const aiVector3D light_pos,
+        const aiColor4D light_color, int depth, const int max_depth)
+{
+    auto result = aiColor4D(0, 0, 0, 1);
+
+    if (depth > max_depth) {
+        return result;
+    }
+
+    // intersection
+    float dist_to_triangle, s, t;
+    auto triangle_index = ray_intersection(
+        aiRay(origin, dir), triangles,
+        dist_to_triangle, s, t);
+    if (triangle_index < 0) {
+        return result;
+    }
+
+    // light direction
+    auto p = origin + dist_to_triangle * dir;
+    auto light_dir = (light_pos - p).Normalize();
+
+    // interpolate normal
+    const auto& triangle = triangles[triangle_index];
+    const auto& n0 = triangle.normals[0];
+    const auto& n1 = triangle.normals[1];
+    const auto& n2 = triangle.normals[2];
+    auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
+
+    // calculate shadow
+    float dist_to_next_triangle;
+    auto p2 = p + normal * 0.0001f;
+    light_dir = (light_pos - p2).Normalize();
+    float dist_to_light = (light_pos - p2).Length();
+    auto shadow_triangle = ray_intersection(
+        aiRay(p2, light_dir),
+        triangles,
+        dist_to_next_triangle, s, t);
+
+    if (shadow_triangle >= 0 &&
+        dist_to_next_triangle < dist_to_light)
+    {
+        auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+        result = triangle.diffuse * 0.1f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
+        return result;
+    }
+
+    result += 0.9f * lambertian(light_dir, normal, triangle.diffuse, light_color);
+
+    // reflected light
+    auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+    result += triangle.diffuse * 0.01f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
+    return result;
+}
+
 
 static const char USAGE[] =
 R"(Usage: raytracer <filename> [options]
@@ -92,6 +148,7 @@ Options:
                             specified the aspect ratio, it will be used.
                             Otherwise default value is 1.
   -b --background=<color>   Background color of the world [default: 0 0 0 0].
+  --max-depth=<int>         Maximum recursion depth for raytracing [default: 3].
   --ambient-coeff=<float>   Ambient coefficient [default: 0.2f].
 )";
 
@@ -104,6 +161,8 @@ int main(int argc, char const *argv[])
     float ambient_coeff = std::stof(args["--ambient-coeff"].asString());
     assert(0 <= ambient_coeff && ambient_coeff <= 1);
     float diffuse_coeff = 1.f - ambient_coeff;
+
+    const int max_depth = args["--max-depth"].asLong();
 
     // import scene
     Assimp::Importer importer;
@@ -173,50 +232,10 @@ int main(int argc, char const *argv[])
         std::cerr << "Rendering ";
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                // intersection
-                float dist_to_triangle, s, t;
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), width, height);
-                auto triangle_index = ray_intersection(
-                    aiRay(cam.mPosition, cam_dir), triangles,
-                    dist_to_triangle, s, t);
-                if (triangle_index < 0) {
-                    image(x, y) = background_color;
-                    continue;
-                }
 
-                // light direction
-                auto p = cam.mPosition + dist_to_triangle * cam_dir;
-                auto light_dir = (light_pos - p).Normalize();
-
-                // interpolate normal
-                const auto& triangle = triangles[triangle_index];
-                const auto& n0 = triangle.normals[0];
-                const auto& n1 = triangle.normals[1];
-                const auto& n2 = triangle.normals[2];
-                auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
-
-                // calculate shadow
-                float dist_to_next_triangle;
-                auto p2 = p + normal * 0.0001f;
-                light_dir = (light_pos - p2).Normalize();
-                float dist_to_light = (light_pos - p2).Length();
-                auto shadow_triangle = ray_intersection(
-                    aiRay(p2, light_dir),
-                    triangles,
-                    dist_to_next_triangle, s, t);
-
-                if (shadow_triangle >= 0 &&
-                    dist_to_next_triangle < dist_to_light)
-                {
-                    image(x, y) = triangle.diffuse * ambient_coeff;
-                    continue;
-                }
-
-                image(x, y) +=
-                    triangle.diffuse * ambient_coeff +
-                    lambertian(
-                        light_dir, normal, triangle.diffuse, light_color)
-                    * diffuse_coeff;
+                image(x, y) = trace(cam.mPosition, cam_dir, triangles,
+                        light_pos, light_color, 0, max_depth);
             }
 
             // update prograss bar
