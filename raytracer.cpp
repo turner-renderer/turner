@@ -134,7 +134,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
 
     // reflected light
     auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-    result += triangle.diffuse * 0.01f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
+    result += triangle.diffuse * 0.1f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
     return result;
 }
 
