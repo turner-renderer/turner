@@ -17,7 +17,8 @@ Prototype implementations of unbiased renderers.
 
 Generated with:
 ```(bash)
-./raycaster scenes/cornell_box.blend 640 | convert - scenes/cornell.png
+./raycaster scenes/cornell_box.blend 3840 > cornell.pbm
+convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 ```
 
 We just use the distance to the eye of the camera as a light measure. So there
@@ -30,7 +31,7 @@ is no real lighting.
 Generated with:
 ```(bash)
 ./raytrace scenes/cornell_box.blend -w 3840 --max-depth 3 > cornell.pbm
-convert -resize 640x640 -interpolate bicubic cornerll.pbm cornell.png
+convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 ```
 
 We don't load material information yet. Every surface has the same reflectance.
