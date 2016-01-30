@@ -44,10 +44,12 @@ Triangles triangles_from_scene(const aiScene* scene) {
     for (auto node : make_range(
             scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
     {
-        const auto& T = node->mTransformation;
         if (node->mNumMeshes == 0) {
             continue;
         }
+
+        const auto& T = node->mTransformation;
+        const aiMatrix3x3 Tp(T);
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
@@ -69,9 +71,9 @@ Triangles triangles_from_scene(const aiScene* scene) {
                     }},
                     // normals
                     {{
-                        T * mesh.mNormals[face.mIndices[0]],
-                        T * mesh.mNormals[face.mIndices[1]],
-                        T * mesh.mNormals[face.mIndices[2]]
+                        Tp * mesh.mNormals[face.mIndices[0]],
+                        Tp * mesh.mNormals[face.mIndices[1]],
+                        Tp * mesh.mNormals[face.mIndices[2]]
                     }},
                     ambient,
                     diffuse
@@ -238,7 +240,7 @@ int main(int argc, char const *argv[])
                         light_pos, light_color, 0, max_depth);
             }
 
-            // update prograss bar
+            // update progress bar
             auto height_fraction = height / 20;
             if (y % height_fraction == 0) {
                 std::cerr << ".";
