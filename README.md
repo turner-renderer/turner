@@ -30,7 +30,7 @@ is no real lighting.
 
 Generated with:
 ```(bash)
-./raytrace scenes/cornell_box.blend -w 3840 --max-depth 3 > cornell.pbm
+./raytracer scenes/cornell_box.blend -w 3840 --max-depth 3 > cornell.pbm
 convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 ```
 
