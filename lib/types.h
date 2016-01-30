@@ -52,9 +52,7 @@ public:
         assert(mAspect != 0);
 
         mPosition = trafo * mPosition;
-        // FIXME: Issue #10
-        float fov = M_PI/4.f;  // 45 deg
-        delta_x_ = tan(fov/2.f);
+        delta_x_ = tan(mHorizontalFOV);
         delta_y_ = delta_x_ / mAspect;
     }
 
