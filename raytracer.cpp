@@ -49,7 +49,7 @@ Triangles triangles_from_scene(const aiScene* scene) {
         }
 
         const auto& T = node->mTransformation;
-        const aiMatrix3x3 Tp(T);
+        const aiMatrix3x3 Tp(T);  // trafo without translation
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
