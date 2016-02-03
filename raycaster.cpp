@@ -49,7 +49,7 @@ aiVector3D raster2cam(
     const aiCamera& cam, const aiVector2D& p,
     const int w, const int h)
 {
-    float delta_x = tan(cam.mHorizontalFOV / 2.);
+    float delta_x = tan(cam.mHorizontalFOV);
     float delta_y = delta_x / cam.mAspect;
     return aiVector3D(
         -delta_x * (1 - 2 * p.x / static_cast<float>(w)),
@@ -202,32 +202,22 @@ int main(int argc, char const *argv[])
     }
 
     // compute max and min values that are non-zero
-    int min_nonzero = 0, max = 0;
-    float max_channel = -1;
-    for (auto color : image) {
-        int d = static_cast<int>(color.a);
-        if (min_nonzero == 0 || (0 < d && d < min_nonzero)) {
-            min_nonzero = d;
+    float min_nonzero = 0, max = 0;
+    for (const auto& c : image) {
+        if (min_nonzero == 0 || (0 < c.a && c.a < min_nonzero)) {
+            min_nonzero = c.a;
         }
-        if (max == 0 || d > max) {
-            max = d;
-        }
-        if (max_channel < -1) {
-            max_channel = std::min(color.r, std::min(color.g, color.b));
-        } else if (max_channel < color.r) {
-            max_channel = color.r;
-        } else if (max_channel < color.g) {
-            max_channel = color.g;
-        } else if (max_channel < color.b) {
-            max_channel = color.b;
+        if (max == 0 || c.a > max) {
+            max = c.a;
         }
     }
-    max *= max_channel;
-    float depth = max + (max - min_nonzero)/2;
+    max += 0.1f;  // make the farthest slightly brighter
 
-    //Adjust intensity so that the max is depth - min_nonzero = 255.
-    for(auto c = image.begin(); c != image.end(); c++) {
-       (*c).a = (depth - (*c).a) / (depth - min_nonzero);
+    for (auto& c : image) {
+        if (c.a < min_nonzero) {
+            continue;
+        }
+        c.a = 1 - (c.a - min_nonzero) / (max - min_nonzero);
     }
 
     // output image
