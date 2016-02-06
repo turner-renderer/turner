@@ -62,21 +62,39 @@ struct Triangle {
         return normal;
     }
 
+
+    // bounding box of triangle
+    Box bbox() const {
+        Vec min =
+            { fmin(vertices[0].x, vertices[1].x, vertices[2].x)
+            , fmin(vertices[0].y, vertices[1].y, vertices[2].y)
+            , fmin(vertices[0].z, vertices[1].z, vertices[2].z)
+            };
+
+        Vec max =
+            { fmax(vertices[0].x, vertices[1].x, vertices[2].x)
+            , fmax(vertices[0].y, vertices[1].y, vertices[2].y)
+            , fmax(vertices[0].z, vertices[1].z, vertices[2].z)
+            };
+
+        return {min, max};
+    }
+
     // members
-    const std::array<Vec, 3> vertices;
-    const std::array<Vec, 3> normals;
-    const aiColor4D ambient;
-    const aiColor4D diffuse;
+    std::array<Vec, 3> vertices;
+    std::array<Vec, 3> normals;
+    aiColor4D ambient;
+    aiColor4D diffuse;
 
     // precomputed
     // Edges of the triangle from point 0 to points 1 resp. 2
-    const Vec u, v;
+    Vec u, v;
     // Normal vector of the triangle
     // Note: normals of the vertices may be different to this vector, if
     // the triangle is not rendered with sharp edges, i.e. if the normals
     // of the vertices are interpolated between all faces containing this
     // vertex.
-    const Vec normal;
+    Vec normal;
 private:
     float uv, vv, uu, denom;
 };

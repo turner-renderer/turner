@@ -1,4 +1,5 @@
 #include "image.h"
+#include "types.h"
 
 #include <assimp/scene.h>
 
@@ -99,3 +100,9 @@ std::ostream& operator<<(std::ostream& os, const Image& img) {
 
     return os;
 }
+
+
+std::ostream& operator<<(std::ostream& os, const Box& box) {
+    return os << "Box[" << box.min << ", " << box.max << "]";
+}
+

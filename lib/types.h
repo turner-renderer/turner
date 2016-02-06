@@ -18,9 +18,34 @@ Vec operator/(int a, const Vec& v) {
 }
 
 
+float fmin(float x, float y, float z) {
+    return std::fmin(x, std::min(y, z));
+}
+
+float fmax(float x, float y, float z) {
+    return std::fmax(x, std::max(y, z));
+}
+
+
 // AABB
 struct Box {
     Vec min, max;
+
+    Box expand(const Box& b) const {
+        Vec new_min =
+            { std::fmin(min.x, b.min.x)
+            , std::fmin(min.y, b.min.y)
+            , std::fmin(min.z, b.min.z)
+            };
+
+        Vec new_max =
+            { std::fmax(max.x, b.max.x)
+            , std::fmax(max.y, b.max.y)
+            , std::fmax(max.z, b.max.z)
+            };
+
+        return {new_min, new_max};
+    }
 };
 
 
