@@ -55,7 +55,7 @@ required for rendering.
 
 * Xorshift64*
 * Lambertian Reflectance
-* Ray-Triangle Interfsection after [Dan Sunday](http://geomalgorithms.com/a06-_intersect-2.html)
+* Ray-Triangle Intersection after [Dan Sunday](http://geomalgorithms.com/a06-_intersect-2.html)
 * Barycentric Interpolation
 
 Upcoming:
