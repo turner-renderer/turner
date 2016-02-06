@@ -47,5 +47,22 @@ it in your projects.
 
 [cornell_box.blend](scenes/cornell_box.blend)
 
+## Algorithm Implementations from Scratch
+
+The following algorithm have been implemented from scratch. While most are not
+that complicated it is good practice and gives a nice overview of all things
+required for rendering.
+
+* Xorshift64*
+* Lambertian Reflectance
+* Ray-Triangle Interfsection after [Dan Sunday](http://geomalgorithms.com/a06-_intersect-2.html)
+* Barycentric Interpolation
+
+Upcoming:
+
+* Monte Carlo Integration for Hemisphere Sampling
+* Polar Coordinates to Cartesian Coordinates
+* KD-Tree
+
 ## Thanks
 * Sean Barrett for [stb](https://github.com/nothings/stb)'s image writer
