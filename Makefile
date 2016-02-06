@@ -1,8 +1,12 @@
-CC=c++
-CXXFLAGS=-std=c++1y -Wall -O3 -g -Ivendor/assimp/include -Ivendor/docopt.cpp
-LDFLAGS=-Lvendor/assimp/lib -Lvendor/docopt.cpp -lassimp -lzlibstatic -ldocopt_s
+CC=$(CXX)
+CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
+LDFLAGS=-Lvendor/assimp/lib -lassimp -lzlibstatic
+BINS=renderer test_assimp raycaster raytracer pathtracer
 
-all: renderer test_assimp raycaster raytracer pathtracer
+all: $(BINS)
+
+raytracer pathtracer: CXXFLAGS += -Ivendor/docopt.cpp
+raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp -ldocopt_s
 
 bootstrap:
 	git submodule init
@@ -17,7 +21,7 @@ bootstrap:
 	cd vendor/docopt.cpp && cmake . && make
 
 clean:
-	rm -rf *.o renderer test_assimp *.dSYM genfiles raycaster raytracer
+	rm -rf *.o renderer test_assimp *.dSYM genfiles $(BINS)
 
 distclean: clean
 	cd vendor/assimp && git clean -df && git reset --hard

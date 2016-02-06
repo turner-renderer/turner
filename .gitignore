@@ -34,6 +34,7 @@ notes
 renderer
 raycaster
 raytracer
+pathtracer
 test_assimp
 .DS_Store
 
