@@ -149,9 +149,7 @@ Options:
   -a --aspect=<num>         Aspect ratio of the image. If the model has
                             specified the aspect ratio, it will be used.
                             Otherwise default value is 1.
-  -b --background=<color>   Background color of the world [default: 0 0 0 0].
   --max-depth=<int>         Maximum recursion depth for raytracing [default: 3].
-  --ambient-coeff=<float>   Ambient coefficient [default: 0.2f].
 )";
 
 int main(int argc, char const *argv[])
@@ -159,10 +157,6 @@ int main(int argc, char const *argv[])
     // parameters
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
-
-    float ambient_coeff = std::stof(args["--ambient-coeff"].asString());
-    assert(0 <= ambient_coeff && ambient_coeff <= 1);
-    float diffuse_coeff = 1.f - ambient_coeff;
 
     const int max_depth = args["--max-depth"].asLong();
 
@@ -225,7 +219,6 @@ int main(int argc, char const *argv[])
     int width = args["--width"].asLong();
     assert(width > 0);
     int height = width / cam.mAspect;
-    auto background_color = parse_color4(args["--background"].asString());
 
     Image image(width, height);
     {
