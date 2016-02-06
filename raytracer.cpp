@@ -120,15 +120,14 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
 
     // interpolate normal
     const auto& triangle = triangles[triangle_index];
-    const auto& n0 = triangle.normals[0];
-    const auto& n1 = triangle.normals[1];
-    const auto& n2 = triangle.normals[2];
-    auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
+    auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
+
+    // direct light
+    result += 0.9f * lambertian(
+        light_dir, normal, triangle.diffuse, light_color);
 
     // move slightly in direction of normal
     auto p2 = p + normal * 0.0001f;
-
-    result += 0.9f * lambertian(light_dir, normal, triangle.diffuse, light_color);
 
     // reflected light
     auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
@@ -137,7 +136,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
         triangles, light_pos, light_color, depth + 1, conf);
     result += reflected_color;
 
-    // calculate shadow
+    // shadow
     float dist_to_next_triangle;
     light_dir = (light_pos - p2).Normalize();
     float dist_to_light = (light_pos - p2).Length();
@@ -146,9 +145,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
         triangles,
         dist_to_next_triangle, s, t);
 
-    if (shadow_triangle >= 0 &&
-        dist_to_next_triangle < dist_to_light)
-    {
+    if (shadow_triangle >= 0 && dist_to_next_triangle < dist_to_light) {
         result -= result * conf.shadow_intensity;
     }
 

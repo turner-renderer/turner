@@ -51,6 +51,17 @@ struct Triangle {
         return true;
     }
 
+    //
+    // Interpolate normal using barycentric coordinates.
+    //
+    // Requirement: r + s + t == 1
+    //
+    Vec interpolate_normal(float r, float s, float t) const {
+        auto normal = r * normals[0] + s * normals[1] + t * normals[2];
+        normal.Normalize();
+        return normal;
+    }
+
     // members
     const std::array<Vec, 3> vertices;
     const std::array<Vec, 3> normals;

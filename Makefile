@@ -34,4 +34,7 @@ TESTS = \
 	test_intersection \
 	test_lambertian
 
+%: %.o lib/*.h
+	$(CXX) $(LDFLAGS) -o $@ $<
+
 include tests/tests.mk
