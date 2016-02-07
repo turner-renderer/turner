@@ -32,17 +32,16 @@ bool axis_comp(Axis ax, const Triangle& tria, const Triangle& trib) {
 //
 // KDTree for D = 3
 //
-template<unsigned int leaf_capacity=10>
+template<unsigned int LEAF_CAPACITY=10>
 class KDTree {
 
     struct Node {
-        Node(Box bbox, Axis ax, Triangles&& triangles,
-                const std::shared_ptr<const Node>& lft,
-                const std::shared_ptr<const Node>& rht)
+        // a leaf contains triangle
+        Node(Box bbox, Axis ax, Triangles&& triangles)
             : bbox(bbox), splitaxis(ax), triangles(triangles)
-            , lft_(lft), rht_(rht)
             {}
 
+        // an inner node contains only bbox and splitting axis
         Node(Box bbox, Axis ax,
                 const std::shared_ptr<const Node>& lft,
                 const std::shared_ptr<const Node>& rht)
@@ -88,9 +87,9 @@ public:
         }
 
         // do we have to partition at all?
-        if (triangles.size() <= leaf_capacity) {
+        if (triangles.size() <= LEAF_CAPACITY) {
             root_ = std::make_shared<const Node>(
-                box, axis, std::move(triangles), nullptr, nullptr);
+                box, axis, std::move(triangles));
             return;
         }
 
@@ -136,27 +135,18 @@ public:
         return 1 + std::max(left().height(), right().height());
     }
 
-    size_t bytes() const {
-        if (empty()) {
-            return 0;
-        }
-
-        const Node& node = *root_.get();
-        return sizeof(node.bbox)
-            + sizeof(node.splitaxis)
-            + sizeof(Triangle) * node.triangles.size()
-            + left().bytes() + right().bytes();
-    }
-
     // algorithms
 
     bool intersect(
-            const Ray& /*ray*/,
-            float& /*r*/, float& /*s*/, float& /*t*/) const
+        const Ray& /*ray*/,
+        float& /*r*/, float& /*s*/, float& /*t*/) const
     {
         assert(false);  // not implemented
         return true;
     }
+
+    template<unsigned int LEAF_CAPACITY_>
+    friend class KDTreeTester;
 
 private:
     std::shared_ptr<const Node> root_;

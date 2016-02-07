@@ -65,6 +65,31 @@ TEST_CASE("Test bbox of triangle", "[triangle]")
 }
 
 
+// Extend the interface of KDTree for testing.
+template<unsigned int LEAF_CAPACITY>
+class KDTreeTester {
+public:
+    using KDTreeT = KDTree<LEAF_CAPACITY>;
+    using KDTreeNode = typename KDTreeT::Node;
+
+    KDTreeTester(const KDTreeT& tree) : tree(tree) {}
+    size_t bytes() const {
+        if (tree.empty()) {
+            return 0;
+        }
+
+        const KDTreeNode& node = *tree.root_.get();
+        return sizeof(node.bbox)
+            + sizeof(node.splitaxis)
+            + sizeof(Triangle) * node.triangles.size()
+            + KDTreeTester<LEAF_CAPACITY>(tree.left()).bytes()
+            + KDTreeTester<LEAF_CAPACITY>(tree.right()).bytes();
+    }
+
+    const KDTreeT& tree;
+};
+
+
 TEST_CASE("KDTree smoke test", "[kdtree]")
 {
     auto a = test_triangle({-1, -1, 0}, {1, -1, 0}, {1, 1, 0});
@@ -107,16 +132,17 @@ TEST_CASE("KDTree stress test", "[kdtree]")
 
     std::cerr << "Building the kd-tree" << std::endl;
     KDTree<10> tree(triangles);
+    KDTreeTester<10> tree_tester(tree);
 
     auto triangles_bytes = triangles.size() * sizeof(Triangle);
-    auto tree_bytes = tree.bytes();
-    std::cerr << "# Triangles            : " << COUNT << std::endl;
-    std::cerr << "Size of triangles (MB) : "
-        << triangles_bytes / 1024 / 1024 << std::endl;
-    std::cerr << "Size of kd-tree (MB)   : "
-        << tree_bytes / 1024 / 1024 << std::endl;
-    std::cerr << "Overhead (%)           : "
-        << (100. * tree_bytes / triangles_bytes - 100.) << std::endl;
+    auto tree_bytes = tree_tester.bytes();
+    std::cerr << "# Triangles       : " << COUNT << std::endl;
+    std::cerr << "Size of triangles : "
+        << triangles_bytes / 1024 / 1024 << "MB" << std::endl;
+    std::cerr << "Size of kd-tree   : "
+        << tree_bytes / 1024 / 1024 << "MB" << std::endl;
+    std::cerr << "Overhead          : "
+        << (100. * tree_bytes / triangles_bytes - 100.) << "%" << std::endl;
 
     REQUIRE((tree.height() == 18 || tree.height() == 19));
 }
