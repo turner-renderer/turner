@@ -1,5 +1,6 @@
 #include "image.h"
 #include "types.h"
+#include "stats.h"
 
 #include <assimp/scene.h>
 
@@ -104,5 +105,15 @@ std::ostream& operator<<(std::ostream& os, const Image& img) {
 
 std::ostream& operator<<(std::ostream& os, const Box& box) {
     return os << "Box[" << box.min << ", " << box.max << "]";
+}
+
+std::ostream& operator<<(std::ostream& os, const Stats& stats) {
+    return os
+        << "Triangles      : " << stats.num_triangles << std::endl
+        << "Rays           : " << stats.num_rays << std::endl
+        << "Rays (primary) : " << stats.num_prim_rays << std::endl
+        << "Rays/sec       : "
+        << 1000 * stats.num_rays / stats.runtime_ms << std::endl
+        << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
 }
 

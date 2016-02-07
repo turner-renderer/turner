@@ -1,5 +1,8 @@
+#pragma once
+
 #include "triangle.h"
 #include <algorithm>
+
 
 enum class Axis { X, Y, Z };
 
@@ -14,18 +17,6 @@ float axis_proj(Axis ax, const Vec& v) {
         return v.z;
     }
     assert(false);
-}
-
-bool axis_comp(Axis ax, const Triangle& tria, const Triangle& trib) {
-    auto coord_a = fmin(
-        axis_proj(ax, tria.vertices[0]),
-        axis_proj(ax, tria.vertices[1]),
-        axis_proj(ax, tria.vertices[2]));
-    auto coord_b = fmin(
-        axis_proj(ax, trib.vertices[0]),
-        axis_proj(ax, trib.vertices[1]),
-        axis_proj(ax, trib.vertices[2]));
-    return coord_a < coord_b;
 }
 
 
@@ -68,9 +59,9 @@ public:
         }
 
         // compute bounding box of all triangles
-        Box box;
-        for (const auto& triangle : triangles) {
-            box = box.expand(triangle.bbox());
+        Box box = triangles[0].bbox();
+        for (auto it = triangles.begin() + 1; it != triangles.end(); ++it) {
+            box = box.expand(it->bbox());
         }
 
         // choose the longest axis in the box
@@ -86,14 +77,15 @@ public:
             axis = Axis::Z;
         }
 
-        // do we have to partition at all?
+        // Do we have to partition at all?
         if (triangles.size() <= LEAF_CAPACITY) {
             root_ = std::make_shared<const Node>(
                 box, axis, std::move(triangles));
             return;
         }
 
-        // find median along axis and partition triangles (linear complexity)
+        // Find median along axis and partition triangles (linear complexity).
+        // Triangles are sorted along chosen axis at midpoint.
         //
         // TODO: Does nth_element invalidate iterators? If not, store mid_it
         // before and use it.
@@ -102,7 +94,8 @@ public:
             triangles.begin() + triangles.size() / 2,
             triangles.end(),
             [axis](const Triangle& tria, const Triangle& trib) {
-                return axis_comp(axis, tria, trib);
+                return axis_proj(axis, tria.midpoint())
+                    < axis_proj(axis, trib.midpoint());
             });
         auto mid_it = triangles.begin() + triangles.size() / 2;
         auto lft_tree = KDTree(Triangles(triangles.begin(), mid_it));
@@ -137,17 +130,87 @@ public:
 
     // algorithms
 
-    bool intersect(
-        const Ray& /*ray*/,
-        float& /*r*/, float& /*s*/, float& /*t*/) const
+    //
+    // Args:
+    //   r - distance from ray to found triangle
+    //   s, t - barycentric coordinates of intersection point
+    //
+    // Not liking the return pointer used as optional here? Me neither, but I
+    // don't have a better idea.
+    //
+    const Triangle* intersect(
+        const Ray& ray, float& r, float& s, float& t) const
     {
-        assert(false);  // not implemented
-        return true;
+        if (empty()) {
+            return nullptr;
+        }
+
+        if (!ray_box_intersection(ray, bbox())) {
+            return nullptr;
+        }
+
+        // we are at the bottom in a leaf
+        if (is_leaf()) {
+            return intersect(ray, triangles(), r, s, t);
+        }
+
+        // try to find a triangle in both subtrees
+        float left_r = -1, left_s = -1, left_t = -1;
+        auto left_tri = left().intersect(ray, left_r, left_s, left_t);
+
+        float right_r = -1, right_s = -1, right_t = -1;
+        auto right_tri = right().intersect(ray, right_r, right_s, right_t);
+
+        // Found a triangle in both subtrees. Choose a smaller one and forget
+        // about the other.
+        if (left_tri && right_tri) {
+            if (left_r < right_r) {
+                right_tri = nullptr;
+            } else {
+                left_tri = nullptr;
+            }
+        }
+
+        if (left_tri && !right_tri) {
+            r = left_r;
+            s = left_s;
+            t = left_t;
+            return left_tri;
+        } else if (!left_tri && right_tri) {
+            r = right_r;
+            s = right_s;
+            t = right_t;
+            return right_tri;
+        }
+
+        return nullptr;
     }
 
     template<unsigned int LEAF_CAPACITY_>
     friend class KDTreeTester;
 
 private:
+    const Triangle* intersect(
+        const Ray& ray, const Triangles& triangles,
+        float& min_r, float& min_s, float& min_t) const
+    {
+        min_r = -1;
+        const Triangle* res = nullptr;
+        float r, s, t;
+        for (const auto& triangle : triangles) {
+            bool intersects = triangle.intersect(ray, r, s, t);
+            if (intersects) {
+                if (!res || r < min_r) {
+                    min_r = r;
+                    min_s = s;
+                    min_t = t;
+                    res = &triangle;
+                }
+            }
+        }
+
+        return res;
+    }
+
     std::shared_ptr<const Node> root_;
 };

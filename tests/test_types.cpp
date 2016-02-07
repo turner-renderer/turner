@@ -2,6 +2,7 @@
 #include "../lib/triangle.h"
 #include "../lib/kdtree.h"
 #include "../lib/output.h"
+#include "../lib/runtime.h"
 #include <catch.hpp>
 #include <random>
 #include <iostream>
@@ -18,13 +19,22 @@ Triangle test_triangle(Vec a, Vec b, Vec c) {
     return Triangle({{a, b, c}}, {{Vec{}, Vec{}, Vec{}}}, {}, {});
 }
 
-
 // We need this operator only for tests.
 bool operator==(const Triangle& tria, const Triangle& trib) {
     return
         tria.vertices[0] == trib.vertices[0] &&
         tria.vertices[1] == trib.vertices[1] &&
         tria.vertices[2] == trib.vertices[2];
+}
+
+Vec random_vec() {
+    static std::default_random_engine gen;
+    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
+    return {rnd(gen), rnd(gen), rnd(gen)};
+};
+
+Triangle random_triangle() {
+    return test_triangle(random_vec(), random_vec(), random_vec());
 }
 
 
@@ -117,32 +127,98 @@ TEST_CASE("KDTree smoke test", "[kdtree]")
 
 TEST_CASE("KDTree stress test", "[kdtree]")
 {
-    static constexpr size_t COUNT = 2000000;
+    static constexpr size_t TRIANGLES_COUNT = 1000000;
+    static constexpr unsigned int LEAF_CAPACITY = 100;
 
-    std::cerr << "Generating triangles" << std::endl;
+    std::cerr << "\n== Stress test ==" << std::endl;
+
+    std::cerr << "Generating " << TRIANGLES_COUNT << " triangles" << std::endl;
     Triangles triangles;
-    std::default_random_engine gen;
-    std::uniform_real_distribution<float> rand(-100.f, 100.f);
-    for (size_t i = 0; i < COUNT; ++i) {
-        triangles.push_back(test_triangle(
-            {rand(gen), rand(gen), rand(gen)},
-            {rand(gen), rand(gen), rand(gen)},
-            {rand(gen), rand(gen), rand(gen)}));
+    for (size_t i = 0; i < TRIANGLES_COUNT; ++i) {
+        triangles.push_back(random_triangle());
     }
 
-    std::cerr << "Building the kd-tree" << std::endl;
-    KDTree<10> tree(triangles);
-    KDTreeTester<10> tree_tester(tree);
-
+    std::cerr << "Building a kd-tree of " << TRIANGLES_COUNT << " triangles"
+        << std::endl;
+    KDTree<LEAF_CAPACITY> tree(triangles);
+    KDTreeTester<LEAF_CAPACITY> tree_tester(tree);
     auto triangles_bytes = triangles.size() * sizeof(Triangle);
     auto tree_bytes = tree_tester.bytes();
-    std::cerr << "# Triangles       : " << COUNT << std::endl;
+    std::cerr << "Leaf capacity     : " << LEAF_CAPACITY << std::endl;
     std::cerr << "Size of triangles : "
         << triangles_bytes / 1024 / 1024 << "MB" << std::endl;
     std::cerr << "Size of kd-tree   : "
         << tree_bytes / 1024 / 1024 << "MB" << std::endl;
     std::cerr << "Overhead          : "
         << (100. * tree_bytes / triangles_bytes - 100.) << "%" << std::endl;
+    std::cerr << "Height            : " << tree.height() << std::endl;
 
-    REQUIRE((tree.height() == 18 || tree.height() == 19));
+    REQUIRE(tree.height() == 15);
+}
+
+TEST_CASE("KDTree intersection test", "[kdtree]")
+{
+    auto a = test_triangle({-1, -1, 0}, {1, -1, 0}, {1, 1, 0});
+    auto b = test_triangle({0, 0, 0}, {0, 2, 0}, {2, 2, 0});
+    KDTree<1> tree1(Triangles{a, b});
+
+    float r, s, t;
+    const Triangle* triangle;
+
+    triangle = tree1.intersect({{0.5f, 0.25f, 10.f}, {0, 0, -1}}, r, s, t);
+    REQUIRE(triangle);
+    REQUIRE(*triangle == a);
+
+    triangle = tree1.intersect({{0.25f, 0.5f, 10.f}, {0, 0, -1}}, r, s, t);
+    REQUIRE(triangle);
+    REQUIRE(*triangle == b);
+}
+
+
+TEST_CASE("KDTree stress intersection test", "[kdtree]")
+{
+    static constexpr size_t TRIANGLES_COUNT = 500;
+    static constexpr unsigned int LEAF_CAPACITY = 10;
+    static constexpr size_t RAYS_COUNT = 640 * 640;
+
+    Triangles triangles;
+    for (size_t i = 0; i < TRIANGLES_COUNT; ++i) {
+        auto pos = random_vec() * 10.f;
+        triangles.push_back(test_triangle(
+            random_vec() + pos, random_vec() + pos, random_vec() + pos));
+    }
+
+    std::cerr << "\n== Stress test ==" << std::endl;
+    std::cerr << "Building a kd-tree of " << TRIANGLES_COUNT << " triangles" << std::endl;
+    KDTree<LEAF_CAPACITY> tree(triangles);
+    KDTreeTester<LEAF_CAPACITY> tree_tester(tree);
+    auto triangles_bytes = triangles.size() * sizeof(Triangle);
+    auto tree_bytes = tree_tester.bytes();
+    std::cerr << "Leaf capacity     : " << LEAF_CAPACITY << std::endl;
+    std::cerr << "Size of triangles : "
+        << triangles_bytes / 1024 / 1024 << "MB" << std::endl;
+    std::cerr << "Size of kd-tree   : "
+        << tree_bytes / 1024 / 1024 << "MB" << std::endl;
+    std::cerr << "Overhead          : "
+        << (100. * tree_bytes / triangles_bytes - 100.) << "%" << std::endl;
+    std::cerr << "Height            : " << tree.height() << std::endl;
+
+    std::cerr << "Computing " << RAYS_COUNT << " random ray intersections." << std::endl;
+    Vec origin{0, 0, 1000};
+    Ray ray(origin, {});
+    float r, s, t;
+    size_t runtime_ms;
+    size_t hits = 0;
+    {
+        Runtime runtime(runtime_ms);
+        for (size_t i = 0; i < RAYS_COUNT; ++i) {
+            ray.dir = random_vec() * 10.f - origin;
+            if (tree.intersect(ray, r, s, t)) {
+                hits += 1;
+            }
+        }
+    }
+    std::cerr << "Runtime           : " << runtime_ms << "ms" << std::endl;
+    std::cerr << "# Hits            : " << hits << std::endl;
+    std::cerr << "Rays/sec          : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
 }

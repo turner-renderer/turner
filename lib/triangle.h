@@ -80,6 +80,10 @@ struct Triangle {
         return {min, max};
     }
 
+    Vec midpoint() const {
+        return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
+    }
+
     // members
     std::array<Vec, 3> vertices;
     std::array<Vec, 3> normals;
