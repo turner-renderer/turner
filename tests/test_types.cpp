@@ -3,6 +3,8 @@
 #include "../lib/kdtree.h"
 #include "../lib/output.h"
 #include <catch.hpp>
+#include <random>
+#include <iostream>
 
 
 // We need this operator only for tests.
@@ -86,4 +88,35 @@ TEST_CASE("KDTree smoke test", "[kdtree]")
     REQUIRE(tree1.right().triangles().size() == 1);
     REQUIRE(tree1.right().triangles().at(0) == b);
     REQUIRE(tree1.right().bbox() == b.bbox());
+}
+
+TEST_CASE("KDTree stress test", "[kdtree]")
+{
+    static constexpr size_t COUNT = 2000000;
+
+    std::cerr << "Generating triangles" << std::endl;
+    Triangles triangles;
+    std::default_random_engine gen;
+    std::uniform_real_distribution<float> rand(-100.f, 100.f);
+    for (size_t i = 0; i < COUNT; ++i) {
+        triangles.push_back(test_triangle(
+            {rand(gen), rand(gen), rand(gen)},
+            {rand(gen), rand(gen), rand(gen)},
+            {rand(gen), rand(gen), rand(gen)}));
+    }
+
+    std::cerr << "Building the kd-tree" << std::endl;
+    KDTree<10> tree(triangles);
+
+    auto triangles_bytes = triangles.size() * sizeof(Triangle);
+    auto tree_bytes = tree.bytes();
+    std::cerr << "# Triangles            : " << COUNT << std::endl;
+    std::cerr << "Size of triangles (MB) : "
+        << triangles_bytes / 1024 / 1024 << std::endl;
+    std::cerr << "Size of kd-tree (MB)   : "
+        << tree_bytes / 1024 / 1024 << std::endl;
+    std::cerr << "Overhead (%)           : "
+        << (100. * tree_bytes / triangles_bytes - 100.) << std::endl;
+
+    REQUIRE((tree.height() == 18 || tree.height() == 19));
 }

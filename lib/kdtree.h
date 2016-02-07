@@ -43,6 +43,12 @@ class KDTree {
             , lft_(lft), rht_(rht)
             {}
 
+        Node(Box bbox, Axis ax,
+                const std::shared_ptr<const Node>& lft,
+                const std::shared_ptr<const Node>& rht)
+            : bbox(bbox), splitaxis(ax), lft_(lft), rht_(rht)
+            {}
+
         Box bbox;
         Axis splitaxis;
         Triangles triangles;
@@ -104,7 +110,7 @@ public:
         auto rht_tree = KDTree(Triangles(mid_it, triangles.end()));
 
         root_ = std::make_shared<const Node>(
-            box, axis, std::move(triangles), lft_tree.root_, rht_tree.root_);
+            box, axis, lft_tree.root_, rht_tree.root_);
     }
 
     // properties
@@ -119,6 +125,7 @@ public:
     Axis splitaxis() const { assert(!empty()); return root_->splitaxis; }
     const Triangles& triangles() const {
         assert(!empty());
+        assert(is_leaf());
         return root_->triangles;
     }
 
@@ -127,6 +134,18 @@ public:
             return 0;
         }
         return 1 + std::max(left().height(), right().height());
+    }
+
+    size_t bytes() const {
+        if (empty()) {
+            return 0;
+        }
+
+        const Node& node = *root_.get();
+        return sizeof(node.bbox)
+            + sizeof(node.splitaxis)
+            + sizeof(Triangle) * node.triangles.size()
+            + left().bytes() + right().bytes();
     }
 
     // algorithms
