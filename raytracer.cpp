@@ -122,7 +122,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
     const auto& triangle = triangles[triangle_index];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    // direct light
+    // diffuse light
     result += 0.9f * lambertian(
         light_dir, normal, triangle.diffuse, light_color);
 
@@ -146,7 +146,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
         dist_to_next_triangle, s, t);
 
     if (shadow_triangle >= 0 && dist_to_next_triangle < dist_to_light) {
-        result -= result * conf.shadow_intensity;
+        result *= 1.f - conf.shadow_intensity;
     }
 
     return result;
