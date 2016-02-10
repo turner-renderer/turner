@@ -152,8 +152,6 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     std::cerr << "Overhead          : "
         << (100. * tree_bytes / triangles_bytes - 100.) << "%" << std::endl;
     std::cerr << "Height            : " << tree.height() << std::endl;
-
-    REQUIRE(tree.height() == 15);
 }
 
 TEST_CASE("KDTree intersection test", "[kdtree]")

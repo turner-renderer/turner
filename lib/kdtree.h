@@ -63,6 +63,7 @@ public:
         for (auto it = triangles.begin() + 1; it != triangles.end(); ++it) {
             box = box.expand(it->bbox());
         }
+        assert(box.min < box.max);
 
         // choose the longest axis in the box
         Axis axis;
@@ -84,25 +85,9 @@ public:
             return;
         }
 
-        // Find median along axis and partition triangles (linear complexity).
-        // Triangles are sorted along chosen axis at midpoint.
-        //
-        // TODO: Does nth_element invalidate iterators? If not, store mid_it
-        // before and use it.
-        std::nth_element(
-            triangles.begin(),
-            triangles.begin() + triangles.size() / 2,
-            triangles.end(),
-            [axis](const Triangle& tria, const Triangle& trib) {
-                return axis_proj(axis, tria.midpoint())
-                    < axis_proj(axis, trib.midpoint());
-            });
-        auto mid_it = triangles.begin() + triangles.size() / 2;
-        auto lft_tree = KDTree(Triangles(triangles.begin(), mid_it));
-        auto rht_tree = KDTree(Triangles(mid_it, triangles.end()));
-
+        auto split = split_at_spatial_median(axis, box, triangles);
         root_ = std::make_shared<const Node>(
-            box, axis, lft_tree.root_, rht_tree.root_);
+            box, axis, split.first.root_, split.second.root_);
     }
 
     // properties
@@ -190,6 +175,63 @@ public:
     friend class KDTreeTester;
 
 private:
+    std::pair<KDTree, KDTree> split_at_triangles_median(
+        const Axis axis, Triangles& triangles)
+    {
+        // Find median along axis and partition triangles (linear complexity).
+        // Triangles are sorted along chosen axis at midpoint.
+        //
+        // TODO: Does nth_element invalidate iterators? If not, store mid_it
+        // before and use it.
+        std::nth_element(
+            triangles.begin(),
+            triangles.begin() + triangles.size() / 2,
+            triangles.end(),
+            [axis](const Triangle& tria, const Triangle& trib) {
+                return axis_proj(axis, tria.midpoint())
+                    < axis_proj(axis, trib.midpoint());
+            });
+        auto mid_it = triangles.begin() + triangles.size() / 2;
+        return std::make_pair(
+            KDTree(Triangles(triangles.begin(), mid_it)),
+            KDTree(Triangles(mid_it, triangles.end())));
+    }
+
+    std::pair<KDTree, KDTree> split_at_spatial_median(
+        const Axis axis, const Box& bbox, const Triangles& triangles)
+    {
+        float min = axis_proj(axis, bbox.min);
+        float max = axis_proj(axis, bbox.max);
+
+        Triangles lft_triangles;
+        Triangles rht_triangles;
+
+        float axis_midpt;
+
+        // continue splitting to get two real subsets
+        while (lft_triangles.empty() || rht_triangles.empty()) {
+            if (!lft_triangles.empty()) {
+                max = axis_midpt;
+                lft_triangles.clear();
+            } else if (!rht_triangles.empty()) {
+                min = axis_midpt;
+                rht_triangles.clear();
+            }
+
+            axis_midpt = (min + max) / 2.f;
+            for (auto& triangle : triangles) {
+                if (axis_proj(axis, triangle.midpoint()) < axis_midpt) {
+                    lft_triangles.push_back(triangle);
+                } else {
+                    rht_triangles.push_back(triangle);
+                }
+            }
+        }
+
+        return std::make_pair(
+            std::move(lft_triangles), std::move(rht_triangles));
+    }
+
     const Triangle* intersect(
         const Ray& ray, const Triangles& triangles,
         float& min_r, float& min_s, float& min_t) const
