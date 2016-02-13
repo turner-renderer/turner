@@ -122,14 +122,15 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
     const auto& triangle = triangles[triangle_index];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    // diffuse light
+    // direct light
     result += 0.9f * lambertian(
         light_dir, normal, triangle.diffuse, light_color);
 
     // move slightly in direction of normal
     auto p2 = p + normal * 0.0001f;
 
-    // reflected light
+    // reflection
+    // compute reflected ray from incident ray
     auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
     auto reflected_color = triangle.diffuse * 0.1f * trace(
         p2, reflected_ray_dir,
