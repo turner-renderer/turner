@@ -14,7 +14,7 @@
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
-float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
+inline float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
     auto denom = n * ray.dir;
     if (denom == 0) {
         return std::numeric_limits<float>::lowest();
@@ -29,7 +29,7 @@ float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
 //
 // Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
 //
-bool ray_box_intersection(const Ray& r, const Box& box) {
+inline bool ray_box_intersection(const Ray& r, const Box& box) {
     float tx1 = (box.min.x - r.pos.x) * r.invdir.x;
     float tx2 = (box.max.x - r.pos.x) * r.invdir.x;
 

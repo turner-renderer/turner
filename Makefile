@@ -8,6 +8,10 @@ all: $(BINS)
 raytracer pathtracer: CXXFLAGS += -Ivendor/docopt.cpp
 raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp -ldocopt_s
 
+raycaster: raycaster.o lib/types.o
+raytracer: main.o raytracer.o lib/types.o
+pathtracer: main.o pathtracer.o lib/types.o
+
 bootstrap:
 	git submodule init
 	git submodule update
@@ -21,7 +25,7 @@ bootstrap:
 	cd vendor/docopt.cpp && cmake . && make
 
 clean:
-	rm -rf *.o renderer test_assimp *.dSYM genfiles $(BINS)
+	rm -rf *.o lib/*.o test_assimp *.dSYM genfiles $(BINS)
 
 distclean: clean
 	cd vendor/assimp && git clean -df && git reset --hard
@@ -36,7 +40,7 @@ TESTS = \
 	test_types \
 	stress_test_kdtree
 
-%: %.o lib/*.h
-	$(CXX) $(LDFLAGS) -o $@ $<
+#%: %.o lib/*.h
+#	$(CXX) $(LDFLAGS) -o $@ $<
 
 include tests/tests.mk

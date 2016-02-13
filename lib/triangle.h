@@ -7,7 +7,7 @@
 
 
 enum class Axis : char { X = 0, Y = 1, Z = 2};
-Axis operator++(const Axis& ax) {
+inline Axis operator++(const Axis& ax) {
     if (ax == Axis::X) {
         return Axis::Y;
     } else if (ax == Axis::Y) {
@@ -17,7 +17,7 @@ Axis operator++(const Axis& ax) {
 }
 
 // Projection onto axis ax.
-float axis_proj(Axis ax, const Vec& v) {
+inline float axis_proj(Axis ax, const Vec& v) {
     if (ax == Axis::X) {
         return v.x;
     } else if (ax == Axis::Y) {
