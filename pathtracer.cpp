@@ -7,6 +7,8 @@ Color trace(const Vec origin, const Vec dir,
         const Tree& triangles, const Vec light_pos,
         const Color light_color, int depth, const Configuration& conf)
 {
+    Stats::instance().num_rays += 1;
+
     auto result = Color(0, 0, 0, 1);
     const float diffuse_portion = 0.1f;
     const float direct_portion = 1.f - diffuse_portion;
