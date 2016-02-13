@@ -71,7 +71,7 @@ public:
             return;
         }
 
-        auto split = split_at_triangles_median(axis, std::move(triangles));
+        auto split = split_at_spatial_median(axis, box, std::move(triangles));
         root_ = std::make_shared<const Node>(
             box, axis, split.first.root_, split.second.root_);
     }
@@ -132,22 +132,12 @@ public:
         float right_r = -1, right_s = -1, right_t = -1;
         auto right_tri = right().intersect(ray, right_r, right_s, right_t);
 
-        // Found a triangle in both subtrees. Choose a smaller one and forget
-        // about the other.
-        if (left_tri && right_tri) {
-            if (left_r < right_r) {
-                right_tri = nullptr;
-            } else {
-                left_tri = nullptr;
-            }
-        }
-
-        if (left_tri && !right_tri) {
+        if (left_tri && (!right_tri || left_r < right_r)) {
             r = left_r;
             s = left_s;
             t = left_t;
             return left_tri;
-        } else if (!left_tri && right_tri) {
+        } else if (right_tri) {
             r = right_r;
             s = right_s;
             t = right_t;
