@@ -17,6 +17,17 @@
 #include <chrono>
 
 
+struct Configuration {
+    int max_depth;
+    float shadow_intensity;
+
+    void check() {
+        assert(0 < max_depth);
+        assert(0 <= shadow_intensity && shadow_intensity <= 1);
+    }
+};
+
+
 ssize_t ray_intersection(const aiRay& ray, const Triangles& triangles,
         float& min_r, float& min_s, float& min_t) {
 
@@ -86,11 +97,11 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
 aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
         const Triangles triangles, const aiVector3D light_pos,
-        const aiColor4D light_color, int depth, const int max_depth)
+        const aiColor4D light_color, int depth, const Configuration& conf)
 {
     auto result = aiColor4D(0, 0, 0, 1);
 
-    if (depth > max_depth) {
+    if (depth > conf.max_depth) {
         return result;
     }
 
@@ -109,14 +120,25 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
 
     // interpolate normal
     const auto& triangle = triangles[triangle_index];
-    const auto& n0 = triangle.normals[0];
-    const auto& n1 = triangle.normals[1];
-    const auto& n2 = triangle.normals[2];
-    auto normal = ((1.f - s - t)*n0 + s*n1 + t*n2).Normalize();
+    auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    // calculate shadow
-    float dist_to_next_triangle;
+    // direct light
+    result += 0.9f * lambertian(
+        light_dir, normal, triangle.diffuse, light_color);
+
+    // move slightly in direction of normal
     auto p2 = p + normal * 0.0001f;
+
+    // reflection
+    // compute reflected ray from incident ray
+    auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+    auto reflected_color = triangle.diffuse * 0.1f * trace(
+        p2, reflected_ray_dir,
+        triangles, light_pos, light_color, depth + 1, conf);
+    result += reflected_color;
+
+    // shadow
+    float dist_to_next_triangle;
     light_dir = (light_pos - p2).Normalize();
     float dist_to_light = (light_pos - p2).Length();
     auto shadow_triangle = ray_intersection(
@@ -124,19 +146,10 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
         triangles,
         dist_to_next_triangle, s, t);
 
-    if (shadow_triangle >= 0 &&
-        dist_to_next_triangle < dist_to_light)
-    {
-        auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-        result = triangle.diffuse * 0.1f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
-        return result;
+    if (shadow_triangle >= 0 && dist_to_next_triangle < dist_to_light) {
+        result *= 1.f - conf.shadow_intensity;
     }
 
-    result += 0.9f * lambertian(light_dir, normal, triangle.diffuse, light_color);
-
-    // reflected light
-    auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-    result += triangle.diffuse * 0.1f * trace(p2, reflected_ray_dir, triangles, light_pos, light_color, depth + 1, max_depth);
     return result;
 }
 
@@ -149,9 +162,8 @@ Options:
   -a --aspect=<num>         Aspect ratio of the image. If the model has
                             specified the aspect ratio, it will be used.
                             Otherwise default value is 1.
-  -b --background=<color>   Background color of the world [default: 0 0 0 0].
   --max-depth=<int>         Maximum recursion depth for raytracing [default: 3].
-  --ambient-coeff=<float>   Ambient coefficient [default: 0.2f].
+  --shadow=<float>          Intensity of shadow [default: 0.5].
 )";
 
 int main(int argc, char const *argv[])
@@ -160,11 +172,10 @@ int main(int argc, char const *argv[])
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    float ambient_coeff = std::stof(args["--ambient-coeff"].asString());
-    assert(0 <= ambient_coeff && ambient_coeff <= 1);
-    float diffuse_coeff = 1.f - ambient_coeff;
-
-    const int max_depth = args["--max-depth"].asLong();
+    Configuration conf;
+    conf.max_depth = args["--max-depth"].asLong();
+    conf.shadow_intensity = std::stof(args["--shadow"].asString());
+    conf.check();
 
     // import scene
     Assimp::Importer importer;
@@ -225,7 +236,6 @@ int main(int argc, char const *argv[])
     int width = args["--width"].asLong();
     assert(width > 0);
     int height = width / cam.mAspect;
-    auto background_color = parse_color4(args["--background"].asString());
 
     Image image(width, height);
     {
@@ -237,7 +247,7 @@ int main(int argc, char const *argv[])
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), width, height);
 
                 image(x, y) = trace(cam.mPosition, cam_dir, triangles,
-                        light_pos, light_color, 0, max_depth);
+                        light_pos, light_color, 0, conf);
             }
 
             // update progress bar
