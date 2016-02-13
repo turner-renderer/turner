@@ -7,18 +7,18 @@
 #include <catch.hpp>
 
 
-TEST_CASE("Test Box expand", "[box]")
+TEST_CASE("Test Box union", "[box]")
 {
     Box box{{0, 0, 0}, {1, 1, 1}};
-    REQUIRE(box.expand({{0, 0, 0}, {0, 0, 0}}) == box);
-    REQUIRE(box.expand({{0, 0, 0}, {1, 1, 1}}) == box);
-    REQUIRE(box.expand({{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
-    REQUIRE(box.expand({{0, 0, 0}, {2, 1, 1}}) == (Box{{0, 0, 0}, {2, 1, 1}}));
-    REQUIRE(box.expand({{0, 0, 0}, {1, 2, 1}}) == (Box{{0, 0, 0}, {1, 2, 1}}));
-    REQUIRE(box.expand({{0, 0, 0}, {1, 1, 2}}) == (Box{{0, 0, 0}, {1, 1, 2}}));
-    REQUIRE(box.expand({{-1, 0, 0},{1, 1, 1}}) == (Box{{-1, 0, 0},{0, 0, 0}}));
-    REQUIRE(box.expand({{0, -1, 0},{1, 1, 1}}) == (Box{{0, -1, 0},{0, 0, 0}}));
-    REQUIRE(box.expand({{0, 0, -1},{1, 1, 1}}) == (Box{{0, 0, -1},{0, 0, 0}}));
+    REQUIRE((box + Box{{0, 0, 0}, {0, 0, 0}}) == box);
+    REQUIRE((box + Box{{0, 0, 0}, {1, 1, 1}}) == box);
+    REQUIRE((box + Box{{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
+    REQUIRE((box + Box{{0, 0, 0}, {2, 1, 1}}) == (Box{{0, 0, 0}, {2, 1, 1}}));
+    REQUIRE((box + Box{{0, 0, 0}, {1, 2, 1}}) == (Box{{0, 0, 0}, {1, 2, 1}}));
+    REQUIRE((box + Box{{0, 0, 0}, {1, 1, 2}}) == (Box{{0, 0, 0}, {1, 1, 2}}));
+    REQUIRE((box + Box{{-1, 0, 0},{1, 1, 1}}) == (Box{{-1, 0, 0},{0, 0, 0}}));
+    REQUIRE((box + Box{{0, -1, 0},{1, 1, 1}}) == (Box{{0, -1, 0},{0, 0, 0}}));
+    REQUIRE((box + Box{{0, 0, -1},{1, 1, 1}}) == (Box{{0, 0, -1},{0, 0, 0}}));
 }
 
 
@@ -33,11 +33,9 @@ TEST_CASE("Test bbox of triangle", "[triangle]")
     REQUIRE(
         test_triangle({0, 0, 0}, {0, -1, 1}, {0, 1, 1}).bbox()
         == (Box{{0, -1, 0}, {0, 1, 1}}));
-
     REQUIRE(
         test_triangle({0, 0, 0}, {0, 0, -1}, {0, 1, 1}).bbox()
         == (Box{{0, 0, -1}, {0, 1, 1}}));
-
     REQUIRE(
         test_triangle({0, 0, 0}, {0, 0, 1}, {2, 1, 1}).bbox()
         == (Box{{0, 0, 0}, {2, 1, 1}}));

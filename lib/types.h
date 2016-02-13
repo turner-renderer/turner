@@ -33,25 +33,24 @@ float fmax(float x, float y, float z) {
 
 
 // AABB
-struct Box {
-    Vec min, max;
+struct Box { Vec min, max; };
 
-    Box expand(const Box& b) const {
-        Vec new_min =
-            { std::fmin(min.x, b.min.x)
-            , std::fmin(min.y, b.min.y)
-            , std::fmin(min.z, b.min.z)
-            };
 
-        Vec new_max =
-            { std::fmax(max.x, b.max.x)
-            , std::fmax(max.y, b.max.y)
-            , std::fmax(max.z, b.max.z)
-            };
+Box operator+(const Box& a, const Box& b) {
+    Vec new_min =
+        { std::min(a.min.x, b.min.x)
+        , std::min(a.min.y, b.min.y)
+        , std::min(a.min.z, b.min.z)
+        };
 
-        return {new_min, new_max};
-    }
-};
+    Vec new_max =
+        { std::max(a.max.x, b.max.x)
+        , std::max(a.max.y, b.max.y)
+        , std::max(a.max.z, b.max.z)
+        };
+
+    return {new_min, new_max};
+}
 
 
 // Ray with precomputed inverse direction

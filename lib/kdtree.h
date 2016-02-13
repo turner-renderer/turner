@@ -47,7 +47,7 @@ public:
         // compute bounding box of all triangles
         Box box = triangles[0].bbox();
         for (auto it = triangles.begin() + 1; it != triangles.end(); ++it) {
-            box = box.expand(it->bbox());
+            box = box + it->bbox();
         }
         assert(box.min < box.max);
 
