@@ -7,6 +7,11 @@
 #include <vector>
 
 
+float eps_zero(float a) {
+    return std::abs(a) < std::numeric_limits<float>::epsilon();
+}
+
+
 using Vec = aiVector3D;
 
 Vec operator/(int a, const Vec& v) {

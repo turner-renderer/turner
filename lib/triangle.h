@@ -6,6 +6,33 @@
 #include <array>
 
 
+enum class Axis : char { X = 0, Y = 1, Z = 2};
+Axis operator++(const Axis& ax) {
+    if (ax == Axis::X) {
+        return Axis::Y;
+    } else if (ax == Axis::Y) {
+        return Axis::Z;
+    }
+    return Axis::X;
+}
+
+// Projection onto axis ax.
+float axis_proj(Axis ax, const Vec& v) {
+    if (ax == Axis::X) {
+        return v.x;
+    } else if (ax == Axis::Y) {
+        return v.y;
+    } else if (ax == Axis::Z) {
+        return v.z;
+    }
+    assert(false);
+}
+
+
+//
+// Be aware of modifying data in the triangle after its construction. The
+// precomputed values won't be updated.
+//
 struct Triangle {
     Triangle(
         std::array<Vec, 3> vs,
@@ -82,6 +109,14 @@ struct Triangle {
 
     Vec midpoint() const {
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
+    }
+
+    // Check if triangle lies in the plane defined by the normal ax through 0.
+    bool is_planar(Axis ax) const {
+        return
+            ax != Axis::X ? eps_zero(axis_proj(Axis::X, normal)) : true &&
+            ax != Axis::Y ? eps_zero(axis_proj(Axis::Y, normal)) : true &&
+            ax != Axis::Z ? eps_zero(axis_proj(Axis::Z, normal)) : true;
     }
 
     // members

@@ -33,7 +33,8 @@ distclean: clean
 TESTS = \
 	test_intersection \
 	test_lambertian \
-	test_types
+	test_types \
+	stress_test_kdtree
 
 %: %.o lib/*.h
 	$(CXX) $(LDFLAGS) -o $@ $<

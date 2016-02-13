@@ -4,28 +4,14 @@
 #include <algorithm>
 
 
-enum class Axis { X, Y, Z };
-
-
-// Projection onto axis ax.
-float axis_proj(Axis ax, const Vec& v) {
-    if (ax == Axis::X) {
-        return v.x;
-    } else if (ax == Axis::Y) {
-        return v.y;
-    } else if (ax == Axis::Z) {
-        return v.z;
-    }
-    assert(false);
-}
-
-
 //
 // KDTree for D = 3
 //
 template<unsigned int LEAF_CAPACITY=10>
 class KDTree {
 
+    // TODO: Change the structure of the node s.t. it fits into a cpu cache
+    // line of 64 bytes.
     struct Node {
         // a leaf contains triangle
         Node(Box bbox, Axis ax, Triangles&& triangles)

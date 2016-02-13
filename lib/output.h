@@ -1,3 +1,5 @@
+#pragma once
+
 #include "image.h"
 #include "types.h"
 #include "stats.h"
