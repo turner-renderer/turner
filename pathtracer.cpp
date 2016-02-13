@@ -227,8 +227,6 @@ int main(int argc, char const *argv[])
 
     Image image(width, height);
     {
-        auto rt = Runtime(std::cerr, "Rendering time: ");
-
         std::cerr << "Rendering ";
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {

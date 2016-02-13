@@ -4,6 +4,8 @@
 #include "lib/range.h"
 #include "lib/runtime.h"
 #include "lib/triangle.h"
+#include "lib/kdtree.h"
+#include "lib/stats.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -16,6 +18,8 @@
 #include <iostream>
 #include <chrono>
 
+using Tree = KDTree<10>;
+
 
 struct Configuration {
     int max_depth;
@@ -26,28 +30,6 @@ struct Configuration {
         assert(0 <= shadow_intensity && shadow_intensity <= 1);
     }
 };
-
-
-ssize_t ray_intersection(const aiRay& ray, const Triangles& triangles,
-        float& min_r, float& min_s, float& min_t) {
-
-    ssize_t triangle_index = -1;
-    min_r = -1;
-    float r, s, t;
-    for (size_t i = 0; i < triangles.size(); i++) {
-        auto intersect = triangles[i].intersect(ray, r, s, t);
-        if (intersect) {
-            if (triangle_index < 0 || r < min_r) {
-                min_r = r;
-                min_s = s;
-                min_t = t;
-                triangle_index = i;
-            }
-        }
-    }
-
-    return triangle_index;
-}
 
 
 Triangles triangles_from_scene(const aiScene* scene) {
@@ -96,9 +78,11 @@ Triangles triangles_from_scene(const aiScene* scene) {
 }
 
 aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
-        const Triangles triangles, const aiVector3D light_pos,
+        const Tree& triangles_tree, const aiVector3D light_pos,
         const aiColor4D light_color, int depth, const Configuration& conf)
 {
+    Stats::instance().num_rays += 1;
+
     auto result = aiColor4D(0, 0, 0, 1);
 
     if (depth > conf.max_depth) {
@@ -107,10 +91,9 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_index = ray_intersection(
-        aiRay(origin, dir), triangles,
-        dist_to_triangle, s, t);
-    if (triangle_index < 0) {
+    auto triangle_pt = triangles_tree.intersect(
+        aiRay(origin, dir), dist_to_triangle, s, t);
+    if (!triangle_pt) {
         return result;
     }
 
@@ -119,7 +102,7 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
     auto light_dir = (light_pos - p).Normalize();
 
     // interpolate normal
-    const auto& triangle = triangles[triangle_index];
+    const auto& triangle = *triangle_pt;
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light
@@ -134,20 +117,19 @@ aiColor4D trace(const aiVector3D origin, const aiVector3D dir,
     auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
     auto reflected_color = triangle.diffuse * 0.1f * trace(
         p2, reflected_ray_dir,
-        triangles, light_pos, light_color, depth + 1, conf);
+        triangles_tree, light_pos, light_color, depth + 1, conf);
     result += reflected_color;
 
     // shadow
     float dist_to_next_triangle;
     light_dir = (light_pos - p2).Normalize();
     float dist_to_light = (light_pos - p2).Length();
-    auto shadow_triangle = ray_intersection(
-        aiRay(p2, light_dir),
-        triangles,
-        dist_to_next_triangle, s, t);
 
-    if (shadow_triangle >= 0 && dist_to_next_triangle < dist_to_light) {
-        result *= 1.f - conf.shadow_intensity;
+    auto has_shadow = triangles_tree.intersect(
+        aiRay(p2, light_dir), dist_to_next_triangle, s, t);
+
+    if (has_shadow && dist_to_next_triangle < dist_to_light) {
+        result -= result * conf.shadow_intensity;
     }
 
     return result;
@@ -203,22 +185,15 @@ int main(int argc, char const *argv[])
     }
     auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
     assert(camNode != nullptr);
-
     const Camera cam(camNode->mTransformation, sceneCam);
-    std::cerr << "Camera" << std::endl;
-    std::cerr << cam << std::endl;
 
     // setup light
     assert(scene->mNumLights == 1);  // we can deal only with a single light
     auto& light = *scene->mLights[0];
 
-    std::cerr << "Light" << std::endl;
-    std::cerr << "Diffuse: " << light.mColorDiffuse << std::endl;
-
     auto* lightNode = scene->mRootNode->FindNode(light.mName);
     assert(lightNode != nullptr);
     const auto& LT = lightNode->mTransformation;
-    std::cerr << "Light Trafo: " << LT << std::endl;
     auto light_pos = LT * aiVector3D();
     auto light_color = aiColor4D{
         light.mColorDiffuse.r,
@@ -226,8 +201,10 @@ int main(int argc, char const *argv[])
         light.mColorDiffuse.b,
         1};
 
-    // load triangles from the scene
+    // load triangles from the scene into a kd-tree
     auto triangles = triangles_from_scene(scene);
+    Stats::instance().num_triangles = triangles.size();
+    Tree tree(std::move(triangles));
 
     //
     // Raytracer
@@ -239,14 +216,15 @@ int main(int argc, char const *argv[])
 
     Image image(width, height);
     {
-        auto rt = Runtime(std::cerr, "Rendering time: ");
+        Runtime rt(Stats::instance().runtime_ms);
 
         std::cerr << "Rendering ";
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), width, height);
 
-                image(x, y) = trace(cam.mPosition, cam_dir, triangles,
+                Stats::instance().num_prim_rays += 1;
+                image(x, y) = trace(cam.mPosition, cam_dir, tree,
                         light_pos, light_color, 0, conf);
             }
 
@@ -258,6 +236,9 @@ int main(int argc, char const *argv[])
         }
         std::cerr << std::endl;
     }
+
+    // output stats
+    std::cerr << Stats::instance() << std::endl;
 
     // output image
     std::cout << image << std::endl;

@@ -7,6 +7,11 @@
 #include <vector>
 
 
+float eps_zero(float a) {
+    return std::abs(a) < std::numeric_limits<float>::epsilon();
+}
+
+
 using Vec = aiVector3D;
 
 Vec operator/(int a, const Vec& v) {
@@ -18,10 +23,34 @@ Vec operator/(int a, const Vec& v) {
 }
 
 
+float fmin(float x, float y, float z) {
+    return std::fmin(x, std::min(y, z));
+}
+
+float fmax(float x, float y, float z) {
+    return std::fmax(x, std::max(y, z));
+}
+
+
 // AABB
-struct Box {
-    Vec min, max;
-};
+struct Box { Vec min, max; };
+
+
+Box operator+(const Box& a, const Box& b) {
+    Vec new_min =
+        { std::min(a.min.x, b.min.x)
+        , std::min(a.min.y, b.min.y)
+        , std::min(a.min.z, b.min.z)
+        };
+
+    Vec new_max =
+        { std::max(a.max.x, b.max.x)
+        , std::max(a.max.y, b.max.y)
+        , std::max(a.max.z, b.max.z)
+        };
+
+    return {new_min, new_max};
+}
 
 
 // Ray with precomputed inverse direction

@@ -6,6 +6,33 @@
 #include <array>
 
 
+enum class Axis : char { X = 0, Y = 1, Z = 2};
+Axis operator++(const Axis& ax) {
+    if (ax == Axis::X) {
+        return Axis::Y;
+    } else if (ax == Axis::Y) {
+        return Axis::Z;
+    }
+    return Axis::X;
+}
+
+// Projection onto axis ax.
+float axis_proj(Axis ax, const Vec& v) {
+    if (ax == Axis::X) {
+        return v.x;
+    } else if (ax == Axis::Y) {
+        return v.y;
+    } else if (ax == Axis::Z) {
+        return v.z;
+    }
+    assert(false);
+}
+
+
+//
+// Be aware of modifying data in the triangle after its construction. The
+// precomputed values won't be updated.
+//
 struct Triangle {
     Triangle(
         std::array<Vec, 3> vs,
@@ -62,21 +89,53 @@ struct Triangle {
         return normal;
     }
 
+
+    // bounding box of triangle
+    Box bbox() const {
+        Vec min =
+            { fmin(vertices[0].x, vertices[1].x, vertices[2].x)
+            , fmin(vertices[0].y, vertices[1].y, vertices[2].y)
+            , fmin(vertices[0].z, vertices[1].z, vertices[2].z)
+            };
+
+        Vec max =
+            { fmax(vertices[0].x, vertices[1].x, vertices[2].x)
+            , fmax(vertices[0].y, vertices[1].y, vertices[2].y)
+            , fmax(vertices[0].z, vertices[1].z, vertices[2].z)
+            };
+
+        return {min, max};
+    }
+
+    Vec midpoint() const {
+        return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
+    }
+
+    // Check if triangle lies in the plane defined by the normal ax through 0.
+    bool is_planar(Axis ax) const {
+        if (ax == Axis::X) {
+            return eps_zero(normal.y) && eps_zero(normal.z);
+        } else if (ax == Axis::Y) {
+            return eps_zero(normal.x) && eps_zero(normal.z);
+        }
+        return eps_zero(normal.x) && eps_zero(normal.y);
+    }
+
     // members
-    const std::array<Vec, 3> vertices;
-    const std::array<Vec, 3> normals;
-    const aiColor4D ambient;
-    const aiColor4D diffuse;
+    std::array<Vec, 3> vertices;
+    std::array<Vec, 3> normals;
+    aiColor4D ambient;
+    aiColor4D diffuse;
 
     // precomputed
     // Edges of the triangle from point 0 to points 1 resp. 2
-    const Vec u, v;
+    Vec u, v;
     // Normal vector of the triangle
     // Note: normals of the vertices may be different to this vector, if
     // the triangle is not rendered with sharp edges, i.e. if the normals
     // of the vertices are interpolated between all faces containing this
     // vertex.
-    const Vec normal;
+    Vec normal;
 private:
     float uv, vv, uu, denom;
 };
