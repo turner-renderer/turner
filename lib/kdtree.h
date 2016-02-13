@@ -71,7 +71,7 @@ public:
             return;
         }
 
-        auto split = split_at_spatial_median(axis, box, triangles);
+        auto split = split_at_triangles_median(axis, std::move(triangles));
         root_ = std::make_shared<const Node>(
             box, axis, split.first.root_, split.second.root_);
     }
@@ -162,7 +162,7 @@ public:
 
 private:
     std::pair<KDTree, KDTree> split_at_triangles_median(
-        const Axis axis, Triangles& triangles)
+        const Axis axis, Triangles triangles)
     {
         // Find median along axis and partition triangles (linear complexity).
         // Triangles are sorted along chosen axis at midpoint.
@@ -178,13 +178,18 @@ private:
                     < axis_proj(axis, trib.midpoint());
             });
         auto mid_it = triangles.begin() + triangles.size() / 2;
+
+        Triangles rht_triangles(mid_it, triangles.end());
+        Triangles& lft_triangles = triangles;
+        triangles.erase(mid_it, triangles.end());
+
         return std::make_pair(
-            KDTree(Triangles(triangles.begin(), mid_it)),
-            KDTree(Triangles(mid_it, triangles.end())));
+            KDTree(std::move(lft_triangles)),
+            KDTree(std::move(rht_triangles)));
     }
 
     std::pair<KDTree, KDTree> split_at_spatial_median(
-        const Axis axis, const Box& bbox, const Triangles& triangles)
+        const Axis axis, const Box& bbox, Triangles triangles)
     {
         float min = axis_proj(axis, bbox.min);
         float max = axis_proj(axis, bbox.max);
