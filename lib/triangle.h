@@ -113,10 +113,12 @@ struct Triangle {
 
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {
-        return
-            ax != Axis::X ? eps_zero(axis_proj(Axis::X, normal)) : true &&
-            ax != Axis::Y ? eps_zero(axis_proj(Axis::Y, normal)) : true &&
-            ax != Axis::Z ? eps_zero(axis_proj(Axis::Z, normal)) : true;
+        if (ax == Axis::X) {
+            return eps_zero(normal.y) && eps_zero(normal.z);
+        } else if (ax == Axis::Y) {
+            return eps_zero(normal.x) && eps_zero(normal.z);
+        }
+        return eps_zero(normal.x) && eps_zero(normal.y);
     }
 
     // members
