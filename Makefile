@@ -5,12 +5,13 @@ BINS=renderer test_assimp raycaster raytracer pathtracer
 
 all: $(BINS)
 
-raytracer pathtracer: CXXFLAGS += -Ivendor/docopt.cpp
 raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp -ldocopt_s
 
 raycaster: raycaster.o lib/types.o
 raytracer: main.o raytracer.o lib/types.o
 pathtracer: main.o pathtracer.o lib/types.o
+
+main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp
 
 bootstrap:
 	git submodule init
@@ -38,9 +39,8 @@ TESTS = \
 	test_intersection \
 	test_lambertian \
 	test_types \
-	stress_test_kdtree
+	stress_test_kdtree \
+	test_sampling
 
-#%: %.o lib/*.h
-#	$(CXX) $(LDFLAGS) -o $@ $<
 
 include tests/tests.mk

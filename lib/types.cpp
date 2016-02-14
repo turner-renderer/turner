@@ -57,11 +57,11 @@ Ray::Ray(const aiRay& ray) : Ray(ray.pos, ray.dir) {}
 // The positioning of the camera is done in its parent's node
 // transformation matrix.
 //
-aiVector3D Camera::raster2cam(const aiVector2D& p, const int w, const int h) const
+aiVector3D Camera::raster2cam(const aiVector2D& p, const float w, const float h) const
 {
     return trafo_ * aiVector3D(
-        -delta_x_ * (1 - 2 * p.x / static_cast<float>(w)),
-        delta_y_ * (1 - 2 * p.y / static_cast<float>(h)),
+        -delta_x_ * (1 - 2 * p.x / w),
+        delta_y_ * (1 - 2 * p.y / h),
         -1);
 }
 

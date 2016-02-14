@@ -7,3 +7,6 @@
 [submodule "vendor/docopt.cpp"]
 	path = vendor/docopt.cpp
 	url = git@github.com:docopt/docopt.cpp.git
+[submodule "vendor/ThreadPool"]
+	path = vendor/ThreadPool
+	url = https://github.com/progschj/ThreadPool.git

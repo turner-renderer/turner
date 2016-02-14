@@ -10,19 +10,19 @@
 #include <iomanip>
 
 
-std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
+inline std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const aiColor3D& c) {
+inline std::ostream& operator<<(std::ostream& os, const aiColor3D& c) {
     return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const aiColor4D& c) {
+inline std::ostream& operator<<(std::ostream& os, const aiColor4D& c) {
     return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
+inline std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
     os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << " " << mat.a4 << "]\n";
     os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << " " << mat.b4 << "]\n";
     os << "[" << mat.c1 << " " << mat.c2 << " " << mat.c3 << " " << mat.c4 << "]\n";
@@ -30,11 +30,18 @@ std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const aiString& str) {
+inline std::ostream& operator<<(std::ostream& os, const aiMatrix3x3& mat) {
+    os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << "]\n";
+    os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << "]\n";
+    os << "[" << mat.c1 << " " << mat.c2 << " " << mat.c3 << "]\n";
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const aiString& str) {
     return os << str.C_Str();
 }
 
-std::ostream& operator<<(std::ostream& os, const aiNode& node) {
+inline std::ostream& operator<<(std::ostream& os, const aiNode& node) {
     os << "Node(name=" << node.mName;
 
     if (node.mNumChildren > 0) {
@@ -50,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, const aiNode& node) {
     return os << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
+inline std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
     for (size_t i = 0; i < mesh.mNumFaces; ++i) {
         const auto& face = mesh.mFaces[i];
         os << "---" << std::endl;
@@ -62,12 +69,12 @@ std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
 }
 
 
-std::ostream& operator<<(std::ostream& os, const aiRay& ray) {
+inline std::ostream& operator<<(std::ostream& os, const aiRay& ray) {
     return os << ray.pos << " + t * " << ray.dir;
 }
 
 
-std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
+inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
     return os << "Camera("
         << "mAspect=" << cam.mAspect << " "
         << "mClipPlaneFar=" << cam.mClipPlaneFar << " "
@@ -83,7 +90,7 @@ std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
 //
 // Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
 //
-std::ostream& operator<<(std::ostream& os, const Image& img) {
+inline std::ostream& operator<<(std::ostream& os, const Image& img) {
     os << "P3" << std::endl;
     os << img.width << " " << img.height << std::endl;
     os << 255 << std::endl;
@@ -105,11 +112,11 @@ std::ostream& operator<<(std::ostream& os, const Image& img) {
 }
 
 
-std::ostream& operator<<(std::ostream& os, const Box& box) {
+inline std::ostream& operator<<(std::ostream& os, const Box& box) {
     return os << "Box[" << box.min << ", " << box.max << "]";
 }
 
-std::ostream& operator<<(std::ostream& os, const Stats& stats) {
+inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
     return os
         << "Triangles      : " << stats.num_triangles << std::endl
         << "Rays           : " << stats.num_rays << std::endl

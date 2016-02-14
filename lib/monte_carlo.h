@@ -5,37 +5,30 @@
 
 #include <cmath>
 
+
+namespace {
+    static constexpr float M_2PI = 2.f * M_PI;
+}
+
+
 class Hemisphere {
 public:
-    Hemisphere() : uniform(4) {}
+    // TODO: Docs
+    std::pair<Vec, float> sample() {
+        // draw coordinates
+        float u1 = uniform();
+        float u2 = uniform();
 
-    const Vec sample() {
-        // Draw polar coordinates
-        const float theta = invertedCDFtheta(uniform());
-        const float phi = invertedCDFphi(uniform());
-
-        // Polar to cartesian coordinates
-        return Vec(cos(phi)*cos(theta), sin(theta), sin(phi)*cos(phi));
+        // u1 is cos(theta)
+        auto z = u1;
+        auto r = sqrtf(fmax(0.f, 1.f - z*z));
+        auto phi = M_2PI * u2;
+        auto x = r * cosf(phi);
+        auto y = r * sinf(phi);
+        return std::make_pair(Vec{x, y, z}, u1);
     }
 
 private:
-    xorshift64star<float> uniform;
-
-    /**
-     * Sample theta from its inverted CDF.
-     *
-     * @param y Uniform random variable ∈ [0.0, 1.0]
-     */
-    const float invertedCDFtheta(const float y) {
-        return acos(1.f - y);
-    }
-
-    /**
-     * Sample phi from its inverted CDF.
-     *
-     * @param y Uniform random variable ∈ [0.0, 1.0]
-     */
-    const float invertedCDFphi(const float y) {
-        return y * 2.f * M_PI;
-    }
+    // TODO: Use seed and make sure it is thread safe
+    xorshift64star<float> uniform{4};
 };

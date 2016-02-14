@@ -2,9 +2,9 @@
 #include "lib/lambertian.h"
 #include "lib/stats.h"
 
-Color trace(const Vec origin, const Vec dir,
-        const Tree& triangles_tree, const Vec light_pos,
-        const Color light_color, int depth, const Configuration& conf)
+Color trace(const Vec& origin, const Vec& dir,
+        const Tree& triangles_tree, const Vec& light_pos,
+        const Color& light_color, int depth, const Configuration& conf)
 {
     Stats::instance().num_rays += 1;
 

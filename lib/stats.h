@@ -8,8 +8,8 @@ public:
     }
 
     size_t num_triangles;
-    size_t num_rays;       // all rays
-    size_t num_prim_rays;  // primary rays
+    std::atomic<size_t> num_rays;       // all rays
+    std::atomic<size_t> num_prim_rays;  // primary rays
     size_t runtime_ms;
 
 private:

@@ -5,17 +5,20 @@
 #include "lib/runtime.h"
 #include "lib/triangle.h"
 #include "lib/stats.h"
+#include "lib/xorshift.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 #include <docopt.h>
+#include <ThreadPool.h>
 
 #include <math.h>
 #include <vector>
 #include <map>
 #include <iostream>
 #include <chrono>
+
 
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
@@ -66,12 +69,17 @@ static const char USAGE[] =
 R"(Usage: raytracer <filename> [options]
 
 Options:
-  -w --width=<px>           Width of the image [default: 640].
-  -a --aspect=<num>         Aspect ratio of the image. If the model has
-                            specified the aspect ratio, it will be used.
-                            Otherwise default value is 1.
-  --max-depth=<int>         Maximum recursion depth for raytracing [default: 3].
-  --shadow=<float>          Intensity of shadow [default: 0.5].
+  -w --width=<px>                   Width of the image [default: 640].
+  -a --aspect=<num>                 Aspect ratio of the image. If the model has
+                                    specified the aspect ratio, it will be
+                                    used. Otherwise default value is 1.
+  -d --max-depth=<int>              Maximum recursion depth for raytracing
+                                    [default: 3].
+  --shadow=<float>                  Intensity of shadow [default: 0.5].
+  -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
+  -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
+                                    Used only in pathtracer.
+  -t --threads=<int>                Number of threads [default: 1].
 )";
 
 int main(int argc, char const *argv[])
@@ -83,6 +91,9 @@ int main(int argc, char const *argv[])
     Configuration conf;
     conf.max_depth = args["--max-depth"].asLong();
     conf.shadow_intensity = std::stof(args["--shadow"].asString());
+    conf.num_pixel_samples = args["--pixel-samples"].asLong();
+    conf.num_monte_carlo_samples = args["--monte-carlo-samples"].asLong();
+    conf.num_threads = args["--threads"].asLong();
     conf.check();
 
     // import scene
@@ -145,20 +156,51 @@ int main(int argc, char const *argv[])
         Runtime rt(Stats::instance().runtime_ms);
 
         std::cerr << "Rendering ";
+        constexpr float inv_gamma = 1.f/2.2f;
+
+        ThreadPool pool(4);
+        std::vector<std::future<void>> tasks;
+
         for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                auto cam_dir = cam.raster2cam(aiVector2D(x, y), width, height);
+            tasks.emplace_back(pool.enqueue([
+                    &image, &cam, &tree, &light_pos, &light_color,
+                    width, height, y, &conf]()
+            {
+                for (int x = 0; x < width; ++x) {
+                    float dx, dy;
+                    xorshift64star<float> gen(42);
 
-                Stats::instance().num_prim_rays += 1;
-                image(x, y) = trace(cam.mPosition, cam_dir, tree,
-                        light_pos, light_color, 0, conf);
-            }
+                    for (int i = 0; i < conf.num_pixel_samples; ++i) {
+                        dx = gen();
+                        dy = gen();
 
-            // update progress bar
-            auto height_fraction = height / 20;
-            if (y % height_fraction == 0) {
-                std::cerr << ".";
+                        auto cam_dir = cam.raster2cam(
+                            aiVector2D(x + dx, y + dy), width, height);
+
+                        Stats::instance().num_prim_rays += 1;
+                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
+                            light_pos, light_color, 0, conf);
+                    }
+                    image(x, y) /=
+                        static_cast<float>(conf.num_pixel_samples);
+
+                    // gamma correction
+                    image(x, y).r = powf(image(x, y).r, inv_gamma);
+                    image(x, y).g = powf(image(x, y).g, inv_gamma);
+                    image(x, y).b = powf(image(x, y).b, inv_gamma);
+                }
+            }));
+        }
+
+        long completed = 0;
+        long fraction = tasks.size() / 100;
+
+        for (auto& task: tasks) {
+            task.get();
+            if (completed % fraction == 0) {
+                std::cerr << '.';
             }
+            completed += 1;
         }
         std::cerr << std::endl;
     }

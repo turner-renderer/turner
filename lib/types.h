@@ -63,7 +63,7 @@ public:
     // The positioning of the camera is done in its parent's node
     // transformation matrix.
     //
-    aiVector3D raster2cam(const aiVector2D& p, const int w, const int h) const;
+    aiVector3D raster2cam(const aiVector2D& p, const float w, const float h) const;
 
 private:
     aiMatrix3x3 trafo_;
