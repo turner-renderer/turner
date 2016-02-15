@@ -13,17 +13,26 @@ pathtracer: main.o pathtracer.o lib/types.o
 
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp
 
+bootstrap: ASSIMP_BUILD_OPTS = \
+	-DBUILD_SHARED_LIBS=OFF \
+	-DASSIMP_BUILD_ASSIMP_TOOLS=OFF \
+	-DASSIMP_BUILD_SAMPLES=OFF \
+	-DASSIMP_BUILD_TESTS=OFF
+bootstrap: ZLIB_BUILD_OPTIONS = \
+	-DASSIMP_LIB_INSTALL_DIR=$$(pwd)/../../lib
 bootstrap:
 	git submodule init
 	git submodule update
-	cd vendor/assimp && cmake CMakeLists.txt -DBUILD_SHARED_LIBS=OFF
 	cd vendor/assimp/contrib/zlib \
-		&& cmake . -DASSIMP_LIB_INSTALL_DIR=$$(pwd)/../../lib
-	make -C vendor/assimp/contrib/zlib
-	make -C vendor/assimp/contrib/zlib install
-	make -C vendor/assimp
-	make -C vendor/assimp install
-	cd vendor/docopt.cpp && cmake . && make
+		&& cmake . $(ZLIB_BUILD_OPTIONS) \
+		&& make \
+		&& make install
+	cd vendor/assimp \
+		&& cmake . $(ASSIMP_BUILD_OPTS) \
+		&& make
+	cd vendor/docopt.cpp \
+		&& cmake . \
+		&& make
 
 clean:
 	rm -rf *.o lib/*.o test_assimp *.dSYM genfiles $(BINS)
