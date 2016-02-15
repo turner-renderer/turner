@@ -48,8 +48,11 @@ TESTS = \
 	test_intersection \
 	test_lambertian \
 	test_types \
-	stress_test_kdtree \
 	test_sampling
+
+test-all: genfiles/stress_test_kdtree test
+	$<
+
 
 
 include tests/tests.mk
