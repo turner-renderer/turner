@@ -3,7 +3,6 @@
 #include "lib/monte_carlo.h"
 #include "lib/stats.h"
 #include "lib/output.h"
-#include <libiomp/omp.h>
 
 // Color trace(const Vec& origin, const Vec& dir,
 //         const Tree& triangles, const Vec& light_pos,
@@ -60,7 +59,7 @@ Color trace(const Vec& origin, const Vec& dir,
 
     Color indirect_lightning;
 
-    thread_local static Hemisphere hemisphere;
+    static Hemisphere hemisphere;
     // Turn hemisphere according normal, i.e. Up(0, 0, 1) is turned so that
     // it lies on normal of the hit point.
     aiMatrix3x3 mTrafo;
