@@ -156,8 +156,11 @@ int main(int argc, char const *argv[])
         Runtime rt(Stats::instance().runtime_ms);
 
         std::cerr << "Rendering ";
+
+        // TODO: Use conf.
         constexpr float inv_gamma = 1.f/2.2f;
 
+        // TODO: Use conf.
         ThreadPool pool(4);
         std::vector<std::future<void>> tasks;
 
@@ -166,10 +169,10 @@ int main(int argc, char const *argv[])
                     &image, &cam, &tree, &light_pos, &light_color,
                     width, height, y, &conf]()
             {
-                for (int x = 0; x < width; ++x) {
-                    float dx, dy;
-                    xorshift64star<float> gen(42);
+                float dx, dy;
+                xorshift64star<float> gen(42);
 
+                for (int x = 0; x < width; ++x) {
                     for (int i = 0; i < conf.num_pixel_samples; ++i) {
                         dx = gen();
                         dy = gen();
