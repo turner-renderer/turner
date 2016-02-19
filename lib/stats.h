@@ -1,5 +1,8 @@
 #pragma once
 
+#include <atomic>
+
+
 class Stats {
 public:
     static Stats& instance() {
