@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer)
 # Renderer
 Prototype implementations of unbiased renderers.
 
