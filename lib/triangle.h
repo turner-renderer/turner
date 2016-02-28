@@ -5,30 +5,6 @@
 #include <vector>
 #include <array>
 
-
-enum class Axis : char { X = 0, Y = 1, Z = 2};
-inline Axis operator++(const Axis& ax) {
-    if (ax == Axis::X) {
-        return Axis::Y;
-    } else if (ax == Axis::Y) {
-        return Axis::Z;
-    }
-    return Axis::X;
-}
-
-// Projection onto axis ax.
-inline float axis_proj(Axis ax, const Vec& v) {
-    if (ax == Axis::X) {
-        return v.x;
-    } else if (ax == Axis::Y) {
-        return v.y;
-    } else if (ax == Axis::Z) {
-        return v.z;
-    }
-    assert(false);
-}
-
-
 //
 // Be aware of modifying data in the triangle after its construction. The
 // precomputed values won't be updated.

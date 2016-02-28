@@ -50,7 +50,7 @@ TEST_CASE("Test is_planar of triangle", "[triangle]")
 
         Vec vs[3] = {random_vec(), random_vec(), random_vec()};
         for (int i = 0; i < 3; ++i) {
-            vs[i][static_cast<int>(ax)] = 0.f;
+            vs[i][ax] = 0.f;
         }
 
         Triangle triangle = test_triangle(vs[0], vs[1], vs[2]);
