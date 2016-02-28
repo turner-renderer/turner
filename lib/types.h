@@ -9,8 +9,38 @@
 
 float eps_zero(float a);
 
-using Vec = aiVector3D;
+
+enum class Axis : char { X = 0, Y = 1, Z = 2};
+
+inline Axis operator++(const Axis& ax) {
+    if (ax == Axis::X) {
+        return Axis::Y;
+    } else if (ax == Axis::Y) {
+        return Axis::Z;
+    }
+    return Axis::X;
+}
+
+
+//
+// Extend vector by [] operator to access axis coordinate.
+//
+class Vec : public aiVector3D {
+public:
+    template <typename... Args>
+    Vec(Args... args) : aiVector3D(args...) {}
+
+    float operator[](const Axis ax) const {
+        return *(this->v + static_cast<int>(ax));
+    }
+
+    float& operator[](const Axis ax) {
+        return *(this->v + static_cast<int>(ax));
+    }
+};
+
 Vec operator/(int a, const Vec& v);
+
 
 using Color = aiColor4D;
 

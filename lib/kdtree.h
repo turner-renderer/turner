@@ -165,8 +165,7 @@ private:
             triangles.begin() + triangles.size() / 2,
             triangles.end(),
             [axis](const Triangle& tria, const Triangle& trib) {
-                return axis_proj(axis, tria.midpoint())
-                    < axis_proj(axis, trib.midpoint());
+                return tria.midpoint()[axis] < trib.midpoint()[axis];
             });
         auto mid_it = triangles.begin() + triangles.size() / 2;
 
@@ -182,8 +181,8 @@ private:
     std::pair<KDTree, KDTree> split_at_spatial_median(
         const Axis axis, const Box& bbox, Triangles triangles)
     {
-        float min = axis_proj(axis, bbox.min);
-        float max = axis_proj(axis, bbox.max);
+        float min = bbox.min[axis];
+        float max = bbox.max[axis];
 
         Triangles lft_triangles;
         Triangles rht_triangles;
@@ -202,7 +201,7 @@ private:
 
             axis_midpt = (min + max) / 2.f;
             for (auto& triangle : triangles) {
-                if (axis_proj(axis, triangle.midpoint()) < axis_midpt) {
+                if (triangle.midpoint()[axis] < axis_midpt) {
                     lft_triangles.push_back(triangle);
                 } else {
                     rht_triangles.push_back(triangle);
