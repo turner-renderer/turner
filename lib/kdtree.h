@@ -266,36 +266,65 @@ inline std::pair<Box, Box> split(const Box& box, const Plane plane) {
     return {{box.min, lmax}, {rmin, box.max}};
 }
 
-// cost function bias
-inline float lambda() {
-    // TODO: Implement
+// Cost function Bias
+inline float lambda(size_t num_ltris, size_t num_rtris) {
+    if (num_ltris == 0 || num_rtris == 0) {
+        return 0.8f;
+    }
     return 1;
 }
 
-// Cost of splitting box b at a given plane p.
+//
+// Cost function of splitting box b at a given plane p
+//
+// Args:
+//   {l,r}area_ratio - ratio of the surface area of the left resp. right
+//     box over the box
+//   num_{l,r}tris - number of triangles in the left resp. right box
+//
+// Return:
+//   cost to split the box
+//
 inline float cost(
-    float lft_area, float rht_area, float lft_num_tris, float rht_num_tris)
+    float larea_ratio, float rarea_ratio, size_t num_ltris, size_t num_rtris)
 {
-    return lambda()*(COST_TRAVERSAL + COST_INTERSECTION *
-        (lft_area * lft_num_tris + rht_area * rht_num_tris));
+    return lambda(num_ltris, num_rtris) *
+        (COST_TRAVERSAL + COST_INTERSECTION *
+            (larea_ratio * num_ltris + rarea_ratio * num_rtris));
 }
 
 enum class Dir { LEFT, RIGHT };
 
+//
+// SAH function
+//
+// Args:
+//   p - splitting plane
+//   box - AABB to split
+//   num_{l,r}tris - number of triangles in the left resp. right box produces
+//     by splitting `box` at `p`
+//   num_planar_tris - number of triangles lying in the plane `p`
+//
+// Return:
+//   cost to split the box + if the planar triangles should be appended to the
+//   lhs or rhs of the box
+//
 inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Plane p, Box& box,
-    size_t lft_num_tris, size_t rht_num_tris, size_t planar_num_tris)
+    size_t num_ltris, size_t num_rtris, size_t num_planar_tris)
 {
     Box lbox, rbox;
     std::tie(lbox, rbox) = split(box, p);
     float area = box.surface_area();
-    float larea = lbox.surface_area()/area;
-    float rarea = rbox.surface_area()/area;
+    float larea_ratio = lbox.surface_area()/area;
+    float rarea_ratio = rbox.surface_area()/area;
 
     auto lpcost = cost(
-        larea, rarea, lft_num_tris + planar_num_tris, rht_num_tris);
+        larea_ratio, rarea_ratio,
+        num_ltris + num_planar_tris, num_rtris);
     auto rpcost = cost(
-        larea, rarea, lft_num_tris, planar_num_tris + rht_num_tris);
+        larea_ratio, rarea_ratio,
+        num_ltris, num_planar_tris + num_rtris);
 
     if (lpcost < rpcost) {
         return {lpcost, Dir::LEFT};
