@@ -76,6 +76,7 @@ Options:
   -d --max-depth=<int>              Maximum recursion depth for raytracing
                                     [default: 3].
   --shadow=<float>                  Intensity of shadow [default: 0.5].
+  --background=<3x float>           Background color [defauflt: 0 0 0].
   -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
   -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
                                     Used only in pathtracer.
@@ -94,6 +95,7 @@ int main(int argc, char const *argv[])
     conf.num_pixel_samples = args["--pixel-samples"].asLong();
     conf.num_monte_carlo_samples = args["--monte-carlo-samples"].asLong();
     conf.num_threads = args["--threads"].asLong();
+    conf.parse_bg_color(args["--background"].asString());
     conf.check();
 
     // import scene
