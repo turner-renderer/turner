@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
+CXXFLAGS=-std=c++1y -Wall -Wextra -O0 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
 BINS=renderer test_assimp raycaster raytracer pathtracer
@@ -58,11 +58,8 @@ TESTS = \
 	test_lambertian \
 	test_types \
 	test_sampling \
-	test_config
-
-test-all: genfiles/stress_test_kdtree test
-	$<
-
+	test_config \
+	test_kdtree
 
 
 include tests/tests.mk

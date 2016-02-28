@@ -243,13 +243,69 @@ private:
 // by Ingo Wald and Vlastimil Havran
 //
 
-class FastKDTree {
+// Cf. 5.2, Table 1
+static constexpr int COST_TRAVERSAL = 15;
+static constexpr int COST_INTERSECTION = 20;
 
-    struct Plane {
-        Axis ax;        // 1 byte
-        float coord;    // 4 bytes
-                        // = 8 bytes
-    };
+
+struct Plane {
+    Axis ax;        // 1 byte
+    float coord;    // 4 bytes
+                    // = 8 bytes
+};
+
+inline std::pair<Box, Box> split(const Box& box, const Plane plane) {
+    assert(box.min[plane.ax] <= plane.coord);
+    assert(plane.coord <= box.max[plane.ax]);
+
+    Vec lmax = box.max;
+    lmax[plane.ax] = plane.coord;
+    Vec rmin = box.min;
+    rmin[plane.ax] = plane.coord;
+
+    return {{box.min, lmax}, {rmin, box.max}};
+}
+
+// cost function bias
+inline float lambda() {
+    // TODO: Implement
+    return 1;
+}
+
+// Cost of splitting box b at a given plane p.
+inline float cost(
+    float lft_area, float rht_area, float lft_num_tris, float rht_num_tris)
+{
+    return lambda()*(COST_TRAVERSAL + COST_INTERSECTION *
+        (lft_area * lft_num_tris + rht_area * rht_num_tris));
+}
+
+enum class Dir { LEFT, RIGHT };
+
+inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
+    Plane p, Box& box,
+    size_t lft_num_tris, size_t rht_num_tris, size_t planar_num_tris)
+{
+    Box lbox, rbox;
+    std::tie(lbox, rbox) = split(box, p);
+    float area = box.surface_area();
+    float larea = lbox.surface_area()/area;
+    float rarea = rbox.surface_area()/area;
+
+    auto lpcost = cost(
+        larea, rarea, lft_num_tris + planar_num_tris, rht_num_tris);
+    auto rpcost = cost(
+        larea, rarea, lft_num_tris, planar_num_tris + rht_num_tris);
+
+    if (lpcost < rpcost) {
+        return {lpcost, Dir::LEFT};
+    } else {
+        return {rpcost, Dir::RIGHT};
+    }
+}
+
+
+class FastKDTree {
 
     enum class NodeType : char { INNER = 0, LEAF = 1 };
 
@@ -326,11 +382,6 @@ private:
     Plane find_plane(const Triangles& /*tris*/, const Box& /*box*/) const {
         // TODO: Imlement
         return {Axis::X, 0};
-    }
-
-    std::pair<Box, Box> split(const Box& /*box*/, const Plane /*plane*/) {
-        // TODO: Imlement
-        return {{}, {}};
     }
 
 private:
