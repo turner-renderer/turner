@@ -3,12 +3,19 @@ LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
 BINS=renderer test_assimp raycaster raytracer pathtracer
 
+ifdef COVERAGE
+CXXFLAGS+=-fprofile-arcs -ftest-coverage
+LDFLAGS+=--coverage
+endif
+
 all: $(BINS)
 
 $(BINS): CC=$(CXX)
 raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp
 raytracer pathtracer: LDLIBS += -ldocopt_s -lpthread
 
+renderer: renderer.o
+test_assimp: test_assimp.o
 raycaster: raycaster.o lib/types.o
 raytracer: main.o raytracer.o lib/types.o
 pathtracer: main.o pathtracer.o lib/types.o
@@ -37,7 +44,7 @@ bootstrap:
 		&& make
 
 clean:
-	rm -rf *.o lib/*.o test_assimp *.dSYM genfiles $(BINS)
+	rm -rf *.o lib/*.o test_assimp *.dSYM *.gcov *.gcno *.gcda genfiles $(BINS)
 
 distclean: clean
 	cd vendor/assimp && git clean -df && git reset --hard

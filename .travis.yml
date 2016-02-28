@@ -15,9 +15,16 @@ addons:
       - clang-3.6
       - cmake
       - cmake-data
-env: COMPILER=clang++-3.6
+env:
+  - COMPILER=clang++-3.6
+
+before_install:
+  - pip install --user cpp-coveralls
 
 script:
   - CXX=$COMPILER make bootstrap
-  - CXX=$COMPILER make
-  - CXX=$COMPILER make test -k
+  - CXX=$COMPILER COVERAGE=yes make
+  - CXX=$COMPILER COVERAGE=yes make test -k
+
+after_success:
+  - coveralls --exclude vendor --exclude tests --gcov-options '\-lp'

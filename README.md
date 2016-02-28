@@ -1,7 +1,6 @@
-[![Build Status](https://travis-ci.org/blacklab/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer)
 [![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer)
 
-# Renderer
+# Renderer [![Build Status](https://travis-ci.org/blacklab/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer) [![Coverage Status](https://coveralls.io/repos/blacklab/renderer/badge.svg?branch=master)](https://coveralls.io/r/blacklab/renderer?branch=master)
 Prototype implementations of unbiased renderers.
 
 ![Produced by our simple raytracer](scenes/colored_cube.png)
