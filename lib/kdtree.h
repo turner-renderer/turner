@@ -237,3 +237,102 @@ private:
 
     std::shared_ptr<const Node> root_;
 };
+
+//
+// "On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N)"
+// by Ingo Wald and Vlastimil Havran
+//
+
+class FastKDTree {
+
+    struct Plane {
+        Axis ax;        // 1 byte
+        float coord;    // 4 bytes
+                        // = 8 bytes
+    };
+
+    enum class NodeType : char { INNER = 0, LEAF = 1 };
+
+    struct Node {
+        NodeType type;
+    };
+
+    struct InnerNode : public Node {
+        InnerNode(
+            Plane p, std::unique_ptr<Node> lft, std::unique_ptr<Node> rht)
+        : Node{NodeType::INNER}
+        , p(p)
+        , lft(std::move(lft))
+        , rht(std::move(rht))
+        {}
+
+        Plane p;
+        std::unique_ptr<Node> lft;
+        std::unique_ptr<Node> rht;
+    };
+
+    struct Leaf : public Node {
+        Leaf(Triangles tris)
+        : Node{NodeType::LEAF}
+        , tris(std::move(tris))
+        {}
+
+        Triangles tris;
+    };
+
+public:
+    FastKDTree(Triangles tris) {
+        assert(tris.size() > 0);
+
+        Box box = tris.front().bbox();
+        for (auto it = tris.begin() + 1; it != tris.end(); ++it) {
+            box = box + it->bbox();
+        }
+        root_ = build(std::move(tris), box);
+    }
+
+    std::unique_ptr<Node> build(Triangles tris, const Box& box) {
+        if (terminate(tris, box)) {
+            return std::make_unique<Leaf>(tris);
+        }
+
+        auto p = find_plane(tris, box);
+
+        Box lft_box, rht_box;
+        std::tie(lft_box, rht_box) = split(box, p);
+        Triangles lft_tris, rht_tris;
+        for (const auto& tri : tris) {
+            if (tri.intersect(lft_box)) {
+                lft_tris.push_back(tri);
+            }
+            if (tri.intersect(rht_box)) {
+                rht_tris.push_back(tri);
+            }
+        }
+
+        return std::make_unique<InnerNode>(p,
+            build(std::move(lft_tris), lft_box),
+            build(std::move(rht_tris), rht_box));
+    }
+
+    friend class FastKDTreeTester;
+
+private:
+    bool terminate(const Triangles& /*tris*/, const Box& /*box*/) const {
+        // TODO: Implement
+        return true;
+    }
+
+    Plane find_plane(const Triangles& /*tris*/, const Box& /*box*/) const {
+        // TODO: Imlement
+        return {Axis::X, 0};
+    }
+
+    std::pair<Box, Box> split(const Box& /*box*/, const Plane /*plane*/) {
+        // TODO: Imlement
+        return {{}, {}};
+    }
+
+private:
+    std::unique_ptr<Node> root_;
+};
