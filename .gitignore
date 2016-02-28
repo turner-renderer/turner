@@ -27,6 +27,11 @@
 *.out
 *.app
 
+# Code coverage
+*.gcov
+*.gcno
+*.gcda
+
 # Others
 notes
 
