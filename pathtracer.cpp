@@ -22,7 +22,7 @@ Color trace(const Vec& origin, const Vec& dir,
     auto triangle_pt = triangles.intersect(
         Ray(origin, dir), dist_to_triangle, s, t);
     if (!triangle_pt) {
-        return {};
+        return conf.bg_color;
     }
 
     //
