@@ -9,7 +9,8 @@
 // Be aware of modifying data in the triangle after its construction. The
 // precomputed values won't be updated.
 //
-struct Triangle {
+class Triangle {
+public:
     Triangle(
         std::array<Vec, 3> vs,
         std::array<Vec, 3> ns,
@@ -53,6 +54,9 @@ struct Triangle {
 
         return true;
     }
+
+    // Triangle AABB intersection test
+    bool intersect(const Box& box) const;
 
     //
     // Interpolate normal using barycentric coordinates.
@@ -114,6 +118,11 @@ struct Triangle {
     Vec normal;
 private:
     float uv, vv, uu, denom;
+
+private:
+
+    // Helper functions for triangle aabb intersection
+    bool axis_intersection(const Axis ax, const Vec& box_halfsize) const;
 };
 
 using Triangles = std::vector<Triangle>;
