@@ -48,7 +48,16 @@ float fmin(float x, float y, float z);
 float fmax(float x, float y, float z);
 
 // AABB
-struct Box { Vec min, max; };
+struct Box {
+    float surface_area() const {
+        auto e0 = max[Axis::X] - min[Axis::X];
+        auto e1 = max[Axis::Y] - min[Axis::Y];
+        auto e2 = max[Axis::Z] - min[Axis::Z];
+        return 2.f * (e0 * e1 + e0 * e2 + e1 * e0);
+    }
+
+    Vec min, max;
+};
 Box operator+(const Box& a, const Box& b);
 
 // Light Source

@@ -7,6 +7,17 @@
 #include <catch.hpp>
 
 
+TEST_CASE("Test surface area of box") {
+    Box box{{0, 0, 0}, {1, 1, 1}};
+    REQUIRE(box.surface_area() == 6);
+
+    box = Box{{-10, -10, -10}, {10, 10, 10}};
+    REQUIRE(box.surface_area() == 2400);
+
+    box = Box{{0, 0, 0}, {1, 1, 0}};
+    REQUIRE(box.surface_area() == 4);
+}
+
 TEST_CASE("Test Box union", "[box]")
 {
     Box box{{0, 0, 0}, {1, 1, 1}};
