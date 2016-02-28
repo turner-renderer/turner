@@ -18,7 +18,7 @@ genfiles/$(1): genfiles/$(1).o genfiles/main_test.o lib/types.o
 
 .PHONY: test
 test:: genfiles/$(1)
-	$$< || true
+	$$<
 
 
 endef

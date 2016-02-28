@@ -1,17 +1,19 @@
-CC=$(CXX)
 CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
-LDFLAGS=-Lvendor/assimp/lib -lassimp -lzlibstatic
+LDFLAGS=-Lvendor/assimp/lib
+LDLIBS=-lassimp -lzlibstatic
 BINS=renderer test_assimp raycaster raytracer pathtracer
 
 all: $(BINS)
 
-raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp -ldocopt_s
+$(BINS): CC=$(CXX)
+raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp
+raytracer pathtracer: LDLIBS += -ldocopt_s -lpthread
 
 raycaster: raycaster.o lib/types.o
 raytracer: main.o raytracer.o lib/types.o
 pathtracer: main.o pathtracer.o lib/types.o
 
-main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp
+main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
 
 bootstrap: ASSIMP_BUILD_OPTS = \
 	-DBUILD_SHARED_LIBS=OFF \
@@ -29,7 +31,7 @@ bootstrap:
 		&& make install
 	cd vendor/assimp \
 		&& cmake . $(ASSIMP_BUILD_OPTS) \
-		&& make
+		&& make -j8
 	cd vendor/docopt.cpp \
 		&& cmake . \
 		&& make

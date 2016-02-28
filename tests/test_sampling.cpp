@@ -21,7 +21,7 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
             auto sampled_vec = trafo * res.first;
             auto cos_vec = sampled_vec * vec;
 
-            REQUIRE(sampled_vec.Length() - 1.f < 0.00001f);
+            REQUIRE(sampled_vec.Length() - 1.f < 0.0001f);
             REQUIRE(0.f <= cos_vec);
             REQUIRE(cos_vec <= 1.f);
         }

@@ -1,0 +1,23 @@
+language: cpp
+
+cache:
+  directories:
+    - vendor
+
+compiler: clang
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-precise-3.6
+      - george-edison55-precise-backports
+    packages:
+      - clang-3.6
+      - cmake
+      - cmake-data
+env: COMPILER=clang++-3.6
+
+script:
+  - CXX=$COMPILER make bootstrap
+  - CXX=$COMPILER make
+  - CXX=$COMPILER make test -k

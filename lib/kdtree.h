@@ -1,6 +1,7 @@
 #pragma once
 
 #include "triangle.h"
+#include <memory>
 #include <algorithm>
 
 
