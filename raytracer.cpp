@@ -8,10 +8,8 @@ Color trace(const Vec& origin, const Vec& dir,
 {
     Stats::instance().num_rays += 1;
 
-    auto result = aiColor4D(0, 0, 0, 1);
-
     if (depth > conf.max_depth) {
-        return result;
+        return {};
     }
 
     // intersection
@@ -19,7 +17,7 @@ Color trace(const Vec& origin, const Vec& dir,
     auto triangle_pt = triangles_tree.intersect(
         aiRay(origin, dir), dist_to_triangle, s, t);
     if (!triangle_pt) {
-        return result;
+        return conf.bg_color;
     }
 
     // light direction
@@ -31,7 +29,7 @@ Color trace(const Vec& origin, const Vec& dir,
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light
-    result += 0.9f * lambertian(
+    auto direct_lightning = 0.9f * lambertian(
         light_dir, normal, triangle.diffuse, light_color);
 
     // move slightly in direction of normal
@@ -43,7 +41,8 @@ Color trace(const Vec& origin, const Vec& dir,
     auto reflected_color = triangle.diffuse * 0.1f * trace(
         p2, reflected_ray_dir,
         triangles_tree, light_pos, light_color, depth + 1, conf);
-    result += reflected_color;
+
+    auto result = direct_lightning + reflected_color;
 
     // shadow
     float dist_to_next_triangle;
