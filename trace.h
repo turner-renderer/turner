@@ -2,6 +2,8 @@
 
 #include "lib/kdtree.h"
 #include "lib/types.h"
+#include <vector>
+#include <sstream>
 
 using Tree = KDTree<10>;
 
@@ -11,6 +13,24 @@ struct Configuration {
     int num_pixel_samples;
     int num_monte_carlo_samples;
     int num_threads;
+    Color bg_color;
+
+    void parse_bg_color(const std::string& str) {
+        std::vector<float> result;
+        std::stringstream ss(str);
+        std::string item;
+        while (std::getline(ss, item, ' ')) {
+            result.push_back(std::stof(item));
+        }
+
+        if (result.size() == 1) {
+            bg_color = Color{result[0], result[0], result[0], 1};
+        } else if (result.size() == 3) {
+            bg_color = Color{result[0], result[1], result[2], 1};
+        } else {
+            assert(false);
+        }
+    }
 
     void check() {
         assert(0 < max_depth);
