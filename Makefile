@@ -55,6 +55,7 @@ distclean: clean
 
 TESTS = \
 	test_intersection \
+	test_clipping \
 	test_lambertian \
 	test_types \
 	test_sampling \
