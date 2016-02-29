@@ -1,6 +1,6 @@
-[![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer)
 
-# Renderer [![Build Status](https://travis-ci.org/blacklab/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer) [![Coverage Status](https://coveralls.io/repos/github/blacklab/renderer/badge.svg?branch=master)](https://coveralls.io/github/blacklab/renderer?branch=master)
+# Renderer [![Build Status](https://travis-ci.org/blacklab/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer) [![Coverage Status](https://coveralls.io/repos/github/blacklab/renderer/badge.svg?branch=master)](https://coveralls.io/github/blacklab/renderer?branch=master) [![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer)
+
 Prototype implementations of unbiased renderers.
 
 ![Produced by our simple raytracer](scenes/colored_cube.png)
@@ -54,6 +54,14 @@ Generated with:
 ```(bash)
 ./pathtracer scenes/cornell_box.blend -w 3480 --max-depth 3 -m 4 --pixel-samples 128 > cornell_box_3480_3_4_128.pbm
 convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
+```
+
+[![Stanford dragon rendered by our pathtracer](scenes/stanford_dragon_small.png)](scenes/stanford_dragon.png)
+
+Generated with:
+```(bash)
+./pathtracer scenes/stanford_dragon.blend -w 1920 --max-depth 3 -m 4 --pixel-samples 128 > stanford_dragon.pbm
+convert stanford_dragon.pbm stanford_dragon.png
 ```
 
 Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
