@@ -56,6 +56,8 @@ Generated with:
 convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
 ```
 
+Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
+
 [![Stanford dragon rendered by our pathtracer](scenes/stanford_dragon_small.png)](scenes/stanford_dragon.png)
 
 Generated with:
@@ -64,7 +66,7 @@ Generated with:
 convert stanford_dragon.pbm stanford_dragon.png
 ```
 
-Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
+It took roughly 26 hours to render.
 
 ## Model
 
