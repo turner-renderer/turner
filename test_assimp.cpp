@@ -137,6 +137,7 @@ int main(int argc, char const *argv[])
         std::cout << "mUp: " << camera->mUp << std::endl;
     }
 
+    std::cout << "Materials" << std::endl;
     std::cout << &(*scene->mMaterials)[0] << std::endl;
     std::cout << &(*scene->mMaterials)[scene->mNumMaterials] << std::endl;
     std::cout << scene->mNumMaterials << std::endl;
