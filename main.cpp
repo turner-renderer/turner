@@ -202,13 +202,14 @@ int main(int argc, char const *argv[])
         for (auto& task: tasks) {
             task.get();
             completed += 1;
-            float progress = (float)completed / (float)tasks.size();
+            float progress = static_cast<float>(completed) / tasks.size();
             int bar_width = progress * 20;
-            std::cerr << "\rRendering ";
-            std::cerr << "[" << std::string(bar_width, '-');
-            std::cerr << std::string(20 - bar_width, ' ') << "] ";
-            std::cerr << std::setfill(' ') << std::setw(6);
-            std::cerr << std::fixed << std::setprecision(2) << (progress * 100.0) << "%";
+            std::cerr
+                << "\rRendering "
+                << "[" << std::string(bar_width, '-')
+                << std::string(20 - bar_width, ' ') << "] "
+                << std::setfill(' ') << std::setw(6)
+                << std::fixed << std::setprecision(2) << (progress * 100.0) << '%';
             std::cerr.flush();
         }
         std::cerr << std::endl;
