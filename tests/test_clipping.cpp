@@ -37,6 +37,13 @@ TEST_CASE("Simple clipping test", "[clipping]") {
 }
 
 
+TEST_CASE("Big triangle clipping at aabb", "[clipping]") {
+    Box box{{-1, -1, -1}, {1, 1, 1}};
+    auto tri = test_triangle({0, 0, -10}, {10, 0, 10}, {-10, 0, 10});
+    REQUIRE(triangle_clip_aabb(tri, box) == (Box{{-1, 0, -1}, {1, 0, 1}}));
+}
+
+
 TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
 
