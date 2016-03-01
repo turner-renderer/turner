@@ -81,6 +81,7 @@ Options:
   -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
                                     Used only in pathtracer.
   -t --threads=<int>                Number of threads [default: 1].
+  --no-gamma-correction             Disables gamma correction.
 )";
 
 int main(int argc, char const *argv[])
@@ -95,6 +96,7 @@ int main(int argc, char const *argv[])
                        , args["--monte-carlo-samples"].asLong()
                        , args["--threads"].asLong()
                        , args["--background"].asString()
+                       , args["--no-gamma-correction"].asBool()
                        };
 
     // import scene
@@ -168,8 +170,7 @@ int main(int argc, char const *argv[])
         // TODO: Use conf.
         constexpr float inv_gamma = 1.f/2.2f;
 
-        // TODO: Use conf.
-        ThreadPool pool(4);
+        ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
 
         for (int y = 0; y < height; ++y) {
@@ -195,9 +196,11 @@ int main(int argc, char const *argv[])
                         static_cast<float>(conf.num_pixel_samples);
 
                     // gamma correction
-                    image(x, y).r = powf(image(x, y).r, inv_gamma);
-                    image(x, y).g = powf(image(x, y).g, inv_gamma);
-                    image(x, y).b = powf(image(x, y).b, inv_gamma);
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y).r = powf(image(x, y).r, inv_gamma);
+                        image(x, y).g = powf(image(x, y).g, inv_gamma);
+                        image(x, y).b = powf(image(x, y).b, inv_gamma);
+                    }
                 }
             }));
         }
