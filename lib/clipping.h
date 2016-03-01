@@ -5,6 +5,8 @@
 // Cohen-Sutherland line clipping on AABB in 3d
 //
 
+// TODO: Remove
+
 using OutCode = int;
 
 static constexpr int INSIDE = 0;   // 000000
@@ -116,50 +118,16 @@ bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
 //   the box, zero box is return.
 //
 Box triangle_clip_aabb(const Triangle& tri, const Box& box) {
-    // check if the bounding box of triangle contains `box`
-    auto bbox = tri.bbox();
-    if (bbox.min < box.min && box.max < bbox.max) {
-        return box;
-    }
+    Vec min, max;
+    auto tri_box = tri.bbox();
 
-    // clip on 3 triangle sides --> max. 6 points
-    Vec points[6];
-    int size = 0;
+    min.x = std::max(tri_box.min.x, box.min.x);
+    min.y = std::max(tri_box.min.y, box.min.y);
+    min.z = std::max(tri_box.min.z, box.min.z);
 
-    for (int i = 0; i < 3; ++i) {
-        points[size] = tri.vertices[i];
-        points[size + 1] = tri.vertices[(i + 1) % 3];
+    max.x = std::min(tri_box.max.x, box.max.x);
+    max.y = std::min(tri_box.max.y, box.max.y);
+    max.z = std::min(tri_box.max.z, box.max.z);
 
-        if (clip_line_aabb(points[size], points[size + 1], box)) {
-            size += 2;
-        }
-    }
-
-    // all sides are outside of the box --> triangle is outside of the box
-    if (size == 0) {
-        return {};
-    }
-
-    // Compute min, max from the clipped points
-    Vec min = points[0];
-    Vec max = points[0];
-    for (int i = 1; i < size; ++i) {
-        if (points[i].x < min.x) {
-            min.x = points[i].x;
-        } else if (max.x < points[i].x) {
-            max.x = points[i].x;
-        }
-        if (points[i].y < min.y) {
-            min.y = points[i].y;
-        } else if (max.y < points[i].y) {
-            max.y = points[i].y;
-        }
-        if (points[i].z < min.z) {
-            min.z = points[i].z;
-        } else if (max.z < points[i].z) {
-            max.z = points[i].z;
-        }
-    }
-
-    return {min, max};
+    return min <= max ? Box{min, max} : Box{};
 }

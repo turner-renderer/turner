@@ -37,6 +37,14 @@ public:
     float& operator[](const Axis ax) {
         return *(this->v + static_cast<int>(ax));
     }
+
+    bool operator<(const Vec& v) const {
+        return x < v.x && y < v.y && z < v.z;
+    }
+
+    bool operator<=(const Vec& v) const {
+        return x <= v.x && y <= v.y && z <= v.z;
+    }
 };
 
 Vec operator/(int a, const Vec& v);
