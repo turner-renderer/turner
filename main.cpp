@@ -76,7 +76,7 @@ Options:
   -d --max-depth=<int>              Maximum recursion depth for raytracing
                                     [default: 3].
   --shadow=<float>                  Intensity of shadow [default: 0.5].
-  --background=<3x float>           Background color [defauflt: 0 0 0].
+  --background=<3x float>           Background color [default: 0 0 0].
   -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
   -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
                                     Used only in pathtracer.
@@ -198,14 +198,19 @@ int main(int argc, char const *argv[])
         }
 
         long completed = 0;
-        long fraction = tasks.size() / 100;
 
         for (auto& task: tasks) {
             task.get();
-            if (completed % fraction == 0) {
-                std::cerr << '.';
-            }
             completed += 1;
+            float progress = static_cast<float>(completed) / tasks.size();
+            int bar_width = progress * 20;
+            std::cerr
+                << "\rRendering "
+                << "[" << std::string(bar_width, '-')
+                << std::string(20 - bar_width, ' ') << "] "
+                << std::setfill(' ') << std::setw(6)
+                << std::fixed << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
         }
         std::cerr << std::endl;
     }
