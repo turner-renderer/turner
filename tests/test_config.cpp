@@ -18,8 +18,11 @@ SCENARIO("Create config from options", "[config]") {
     GIVEN("A number of threads") {
         long num_threads = 4;
 
-    GIVEN("A a background color") {
+    GIVEN("A background color") {
         std::string bg_color = "0 0.3 1.0";
+
+    GIVEN("A gamma correction flag") {
+        bool no_gamma = false;
 
     WHEN("the configuration is created") {
         Configuration config { max_depth
@@ -28,6 +31,7 @@ SCENARIO("Create config from options", "[config]") {
                              , num_monte_carlo_samples
                              , num_threads
                              , bg_color
+                             , no_gamma
                              };
 
     THEN("the configuration holds all variables") {
@@ -36,6 +40,7 @@ SCENARIO("Create config from options", "[config]") {
         REQUIRE(config.num_pixel_samples == 128);
         REQUIRE(config.num_monte_carlo_samples == 2);
         REQUIRE(config.num_threads == 4);
+        REQUIRE(config.gamma_correction_enabled == true);
         REQUIRE(config.bg_color == Color(0.0f, 0.3f, 1.0f, 1.0f));
-    }}}}}}}}
+    }}}}}}}}}
 }
