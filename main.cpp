@@ -89,14 +89,13 @@ int main(int argc, char const *argv[])
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    Configuration conf;
-    conf.max_depth = args["--max-depth"].asLong();
-    conf.shadow_intensity = std::stof(args["--shadow"].asString());
-    conf.num_pixel_samples = args["--pixel-samples"].asLong();
-    conf.num_monte_carlo_samples = args["--monte-carlo-samples"].asLong();
-    conf.num_threads = args["--threads"].asLong();
-    conf.parse_bg_color(args["--background"].asString());
-    conf.check();
+    Configuration conf { args["--max-depth"].asLong()
+                       , std::stof(args["--shadow"].asString())
+                       , args["--pixel-samples"].asLong()
+                       , args["--monte-carlo-samples"].asLong()
+                       , args["--threads"].asLong()
+                       , args["--background"].asString()
+                       };
 
     // import scene
     Assimp::Importer importer;
@@ -127,18 +126,25 @@ int main(int argc, char const *argv[])
     const Camera cam(camNode->mTransformation, sceneCam);
 
     // setup light
-    assert(scene->mNumLights == 1);  // we can deal only with a single light
-    auto& light = *scene->mLights[0];
+    // we can deal only with one single or no light at all
+    assert(scene->mNumLights == 0 || scene->mNumLights == 1);
+    std::vector<Light> lights;
+    if(scene->mNumLights == 1) {
+        auto& rawLight = *scene->mLights[0];
 
-    auto* lightNode = scene->mRootNode->FindNode(light.mName);
-    assert(lightNode != nullptr);
-    const auto& LT = lightNode->mTransformation;
-    auto light_pos = LT * aiVector3D();
-    auto light_color = aiColor4D{
-        light.mColorDiffuse.r,
-        light.mColorDiffuse.g,
-        light.mColorDiffuse.b,
-        1};
+        auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
+        assert(lightNode != nullptr);
+        const auto& LT = lightNode->mTransformation;
+        lights.push_back(
+            { LT * aiVector3D()
+            , aiColor4D
+                { rawLight.mColorDiffuse.r
+                , rawLight.mColorDiffuse.g
+                , rawLight.mColorDiffuse.b
+                , 1
+                }
+            });
+    }
 
     // load triangles from the scene into a kd-tree
     auto triangles = triangles_from_scene(scene);
@@ -168,8 +174,7 @@ int main(int argc, char const *argv[])
 
         for (int y = 0; y < height; ++y) {
             tasks.emplace_back(pool.enqueue([
-                    &image, &cam, &tree, &light_pos, &light_color,
-                    width, height, y, &conf]()
+                    &image, &cam, &tree, &lights, width, height, y, &conf]()
             {
                 float dx, dy;
                 xorshift64star<float> gen(42);
@@ -184,7 +189,7 @@ int main(int argc, char const *argv[])
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                            light_pos, light_color, 0, conf);
+                            lights, 0, conf);
                     }
                     image(x, y) /=
                         static_cast<float>(conf.num_pixel_samples);

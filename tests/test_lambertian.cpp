@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <catch.hpp>
 #include "../lib/lambertian.h"
 
 #include <assimp/mesh.h>
