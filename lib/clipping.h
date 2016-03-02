@@ -17,7 +17,7 @@ static constexpr int    TOP = 8;   // 001000
 static constexpr int  FRONT = 16;  // 010000
 static constexpr int   BACK = 32;  // 100000
 
-OutCode compute_outcode(const Vec& v, const Box& box) {
+inline OutCode compute_outcode(const Vec& v, const Box& box) {
     OutCode code = INSIDE;
 
     if (v.x < box.min.x) {
@@ -49,7 +49,7 @@ OutCode compute_outcode(const Vec& v, const Box& box) {
 //   false, if the line is outside of the box, otherwise return true. In
 //   that case p0 and p1 are updated, and describe the clipped line.
 //
-bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
+inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
     auto outcode0 = compute_outcode(p0, box);
     auto outcode1 = compute_outcode(p1, box);
 
@@ -117,7 +117,7 @@ bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
 //   the bounding box of the clipped polynomial. If the triangle is outside of
 //   the box, zero box is return.
 //
-Box triangle_clip_aabb(const Triangle& tri, const Box& box) {
+inline Box triangle_clip_aabb(const Triangle& tri, const Box& box) {
     Vec min, max;
     auto tri_box = tri.bbox();
 

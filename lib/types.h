@@ -65,6 +65,11 @@ struct Box {
     }
 
     Vec min, max;
+
+    // Check if the box is planar in the plane with normal `ax`.
+    bool is_planar(Axis ax) {
+        return eps_zero((max - min)[static_cast<int>(ax)]);
+    }
 };
 Box operator+(const Box& a, const Box& b);
 
