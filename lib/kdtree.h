@@ -1,6 +1,7 @@
 #pragma once
 
 #include "triangle.h"
+#include "clipping.h"
 #include <memory>
 #include <algorithm>
 
@@ -310,7 +311,7 @@ enum class Dir { LEFT, RIGHT };
 //   lhs or rhs of the box
 //
 inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
-    Plane p, Box& box,
+    Plane p, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_planar_tris)
 {
     Box lbox, rbox;
@@ -381,7 +382,8 @@ public:
             return std::make_unique<Leaf>(tris);
         }
 
-        auto p = find_plane(tris, box);
+        Plane p;
+        std::tie(std::ignore, p, std::ignore) = find_plane(tris, box);
 
         Box lft_box, rht_box;
         std::tie(lft_box, rht_box) = split(box, p);
@@ -408,9 +410,98 @@ private:
         return true;
     }
 
-    Plane find_plane(const Triangles& /*tris*/, const Box& /*box*/) const {
-        // TODO: Imlement
-        return {Axis::X, 0};
+    static constexpr int STARTING = 2;
+    static constexpr int ENDING = 0;
+    static constexpr int PLANAR = 1;
+
+    struct Event {
+        const Triangle* tri;
+        float point;
+        int type;
+    };
+
+    std::tuple<float /*cost*/, Plane, Dir /*side*/>
+    find_plane(const Triangles& tris, const Box& box) const {
+        float min_cost = std::numeric_limits<float>::max();
+        Plane min_plane;
+        Dir min_side;
+
+        Axis ax = Axis::X;
+        for (int k = 0; k < 3; ++k, ++ax) {
+            // generate events
+            std::vector<Event> events;
+            for (const auto& tri : tris) {
+                auto clipped_box = triangle_clip_aabb(tri, box);
+                if (clipped_box.is_planar(ax)) {
+                    events.push_back(
+                        Event{&tri, clipped_box.min[ax], PLANAR});
+                } else {
+                    events.push_back(
+                        Event{&tri, clipped_box.min[ax], STARTING});
+                    events.push_back(
+                        Event{&tri, clipped_box.max[ax], ENDING});
+                }
+            }
+
+            std::sort(events.begin(), events.end(),
+                [](const Event& e1, const Event& e2) {
+                    return e1.point < e2.point ||
+                        (eps_zero(e1.point - e2.point) && e1.type < e2.type);
+                });
+
+            // sweep
+            int num_ltris = 0, num_planar_tris = 0, num_rtris = tris.size();
+            for (size_t i = 0; i < events.size(); ) {
+                auto& event = events[i];
+
+                auto p = event.point;
+                int point_starting = 0;
+                int point_ending = 0;
+                int point_planar = 0;
+
+                while (i < events.size() && events[i].point == p &&
+                    events[i].type == ENDING)
+                {
+                    point_ending += 1;
+                    i += 1;
+                }
+                while (i < events.size() && events[i].point == p &&
+                    events[i].type == PLANAR)
+                {
+                    point_planar += 1;
+                    i += 1;
+                }
+                while (i < events.size() && events[i].point == p &&
+                    events[i].type == STARTING)
+                {
+                    point_ending += 1;
+                    i += 1;
+                }
+
+                num_planar_tris = point_planar;
+                num_rtris -= point_planar + point_ending;
+
+                Plane plane{static_cast<Axis>(k), p};
+
+                float cost;
+                Dir side;
+                std::tie(cost, side) = surface_area_heuristics(
+                    plane, box, num_ltris, num_rtris, num_planar_tris);
+
+                if (cost < min_cost) {
+                    min_cost = cost;
+                    min_plane = plane;
+                    min_side = side;
+                }
+
+                num_ltris += point_starting + point_planar;
+                num_planar_tris = 0;
+            }
+        }
+
+        // classify
+
+        return {min_cost, min_plane, min_side};
     }
 
 private:
