@@ -18,12 +18,14 @@ public:
             long num_monte_carlo_samples,
             long num_threads,
             const std::string& bg_color_str,
+            float inverse_gamma,
             const bool no_gamma_correction):
         max_depth(max_depth),
         shadow_intensity(shadow_intensity),
         num_pixel_samples(num_pixel_samples),
         num_monte_carlo_samples(num_monte_carlo_samples),
         num_threads(num_threads),
+        inverse_gamma(inverse_gamma),
         gamma_correction_enabled(!no_gamma_correction)
     {
         check();
@@ -62,6 +64,7 @@ public:
     int num_pixel_samples;
     int num_monte_carlo_samples;
     int num_threads;
+    float inverse_gamma;
     bool gamma_correction_enabled;
     Color bg_color;
 };
