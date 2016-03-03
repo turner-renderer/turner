@@ -4,12 +4,9 @@
 #include "lib/stats.h"
 #include "lib/output.h"
 
-// Color trace(const Vec& origin, const Vec& dir,
-//         const Tree& triangles, const Vec& light_pos,
-//         const Color& light_color, int depth, const Configuration& conf)
 Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles, const Vec& light_pos,
-        const Color& light_color, int depth, const Configuration& conf)
+        const Tree& triangles, const std::vector<Light>& lights,
+        int depth, const Configuration& conf)
 {
     if (depth > conf.max_depth) {
         return {};
@@ -25,15 +22,7 @@ Color trace(const Vec& origin, const Vec& dir,
         return conf.bg_color;
     }
 
-    //
-    // Direct lightning
-    //
-
-    Color direct_lightning;
-
-    // light direction
     auto p = origin + dist_to_triangle * dir;
-    auto light_dir = (light_pos - p).Normalize();
 
     // interpolate normal
     const auto& triangle = *triangle_pt;
@@ -41,16 +30,27 @@ Color trace(const Vec& origin, const Vec& dir,
 
     auto p2 = p + normal * 0.0001f;
 
-    light_dir = (light_pos - p2).Normalize();
-    float dist_to_light = (light_pos - p2).Length();
-    float dist_to_next_triangle;
-    auto has_shadow = triangles.intersect(
-        aiRay(p2, light_dir), dist_to_next_triangle, s, t);
+    //
+    // Direct lightning
+    //
 
-    // Do we get direct light?
-    if (!has_shadow || dist_to_next_triangle > dist_to_light) {
-        // lambertian
-        direct_lightning = std::max(0.f, light_dir * normal) * light_color;
+    Color direct_lightning;
+
+    for (auto& light : lights) {
+        // light direction
+        auto light_dir = (light.position - p).Normalize();
+
+        light_dir = (light.position - p2).Normalize();
+        float dist_to_light = (light.position - p2).Length();
+        float dist_to_next_triangle;
+        auto has_shadow = triangles.intersect(
+            aiRay(p2, light_dir), dist_to_next_triangle, s, t);
+
+        // Do we get direct light?
+        if (!has_shadow || dist_to_next_triangle > dist_to_light) {
+            // lambertian
+            direct_lightning = std::max(0.f, light_dir * normal) * light.color;
+        }
     }
 
     //
@@ -71,7 +71,7 @@ Color trace(const Vec& origin, const Vec& dir,
         auto cos_theta = dir_theta.second;
 
         const auto indirect_light = trace(
-            p2, dir, triangles, light_pos, light_color, depth + 1, conf);
+            p2, dir, triangles, lights, depth + 1, conf);
 
         // lambertian
         indirect_lightning += cos_theta * indirect_light;

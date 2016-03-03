@@ -153,13 +153,13 @@ int main(int argc, char const *argv[])
 
         aiColor4D color;
         material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-        std::cout << color << std::endl;
+        std::cout << "Diffuse " << color << std::endl;
         material->Get(AI_MATKEY_COLOR_AMBIENT, color);
-        std::cout << color << std::endl;
+        std::cout << "Ambient " << color << std::endl;
         material->Get(AI_MATKEY_COLOR_SPECULAR, color);
-        std::cout << color << std::endl;
+        std::cout << "Specular " << color << std::endl;
         material->Get(AI_MATKEY_COLOR_EMISSIVE, color);
-        std::cout << color << std::endl;
+        std::cout << "Emissive " << color << std::endl;
         material->Get(AI_MATKEY_COLOR_TRANSPARENT, color);
         std::cout << color << std::endl;
         material->Get(AI_MATKEY_COLOR_REFLECTIVE, color);

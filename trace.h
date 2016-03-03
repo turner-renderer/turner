@@ -7,17 +7,32 @@
 
 using Tree = KDTree<10>;
 
-struct Configuration {
-    int max_depth;
-    float shadow_intensity;
-    int num_pixel_samples;
-    int num_monte_carlo_samples;
-    int num_threads;
-    Color bg_color;
+class Configuration {
 
-    void parse_bg_color(const std::string& str) {
+public:
+
+    Configuration(
+            long max_depth,
+            float shadow_intensity,
+            long num_pixel_samples,
+            long num_monte_carlo_samples,
+            long num_threads,
+            const std::string& bg_color_str,
+            float inverse_gamma,
+            const bool no_gamma_correction):
+        max_depth(max_depth),
+        shadow_intensity(shadow_intensity),
+        num_pixel_samples(num_pixel_samples),
+        num_monte_carlo_samples(num_monte_carlo_samples),
+        num_threads(num_threads),
+        inverse_gamma(inverse_gamma),
+        gamma_correction_enabled(!no_gamma_correction)
+    {
+        check();
+
+        // Parse background color.
         std::vector<float> result;
-        std::stringstream ss(str);
+        std::stringstream ss(bg_color_str);
         std::string item;
         while (std::getline(ss, item, ' ')) {
             result.push_back(std::stof(item));
@@ -32,6 +47,8 @@ struct Configuration {
         }
     }
 
+private:
+
     void check() {
         assert(0 < max_depth);
         assert(0 <= shadow_intensity && shadow_intensity <= 1);
@@ -39,9 +56,20 @@ struct Configuration {
         assert(0 <= num_monte_carlo_samples);
         assert(1 <= num_threads);
     }
+
+public:
+
+    int max_depth;
+    float shadow_intensity;
+    int num_pixel_samples;
+    int num_monte_carlo_samples;
+    int num_threads;
+    float inverse_gamma;
+    bool gamma_correction_enabled;
+    Color bg_color;
 };
 
 Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles_tree, const Vec& light_pos,
-        const Color& light_color, int depth, const Configuration& conf);
+        const Tree& triangles_tree, const std::vector<Light>& lights,
+        int depth, const Configuration& conf);
 
