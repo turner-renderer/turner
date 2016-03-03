@@ -21,6 +21,11 @@ float fmax(float x, float y, float z);
 struct Box { Vec min, max; };
 Box operator+(const Box& a, const Box& b);
 
+// Light Source
+struct Light {
+    Vec position;
+    Color color;
+};
 
 // Ray with precomputed inverse direction
 struct Ray : public aiRay {

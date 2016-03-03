@@ -57,7 +57,8 @@ TESTS = \
 	test_intersection \
 	test_lambertian \
 	test_types \
-	test_sampling
+	test_sampling \
+	test_config
 
 test-all: genfiles/stress_test_kdtree test
 	$<
