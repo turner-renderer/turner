@@ -21,6 +21,9 @@ SCENARIO("Create config from options", "[config]") {
     GIVEN("A background color") {
         std::string bg_color = "0 0.3 1.0";
 
+    GIVEN("An inverse of gamma") {
+        float inv_gamma = 1.f/2.2f;
+
     GIVEN("A gamma correction flag") {
         bool no_gamma = false;
 
@@ -31,6 +34,7 @@ SCENARIO("Create config from options", "[config]") {
                              , num_monte_carlo_samples
                              , num_threads
                              , bg_color
+                             , inv_gamma
                              , no_gamma
                              };
 
@@ -42,5 +46,5 @@ SCENARIO("Create config from options", "[config]") {
         REQUIRE(config.num_threads == 4);
         REQUIRE(config.gamma_correction_enabled == true);
         REQUIRE(config.bg_color == Color(0.0f, 0.3f, 1.0f, 1.0f));
-    }}}}}}}}}
+    }}}}}}}}}}
 }

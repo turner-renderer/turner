@@ -81,6 +81,8 @@ Options:
   -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
                                     Used only in pathtracer.
   -t --threads=<int>                Number of threads [default: 1].
+  --inverse-gamma=<float>           Inverse of gamma for gamma correction
+                                    [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
 )";
 
@@ -90,14 +92,15 @@ int main(int argc, char const *argv[])
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    Configuration conf { args["--max-depth"].asLong()
-                       , std::stof(args["--shadow"].asString())
-                       , args["--pixel-samples"].asLong()
-                       , args["--monte-carlo-samples"].asLong()
-                       , args["--threads"].asLong()
-                       , args["--background"].asString()
-                       , args["--no-gamma-correction"].asBool()
-                       };
+    const Configuration conf { args["--max-depth"].asLong()
+                             , std::stof(args["--shadow"].asString())
+                             , args["--pixel-samples"].asLong()
+                             , args["--monte-carlo-samples"].asLong()
+                             , args["--threads"].asLong()
+                             , args["--background"].asString()
+                             , std::stof(args["--inverse-gamma"].asString())
+                             , args["--no-gamma-correction"].asBool()
+                             };
 
     // import scene
     Assimp::Importer importer;
@@ -167,9 +170,6 @@ int main(int argc, char const *argv[])
 
         std::cerr << "Rendering ";
 
-        // TODO: Use conf.
-        constexpr float inv_gamma = 1.f/2.2f;
-
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
 
@@ -197,9 +197,9 @@ int main(int argc, char const *argv[])
 
                     // gamma correction
                     if (conf.gamma_correction_enabled) {
-                        image(x, y).r = powf(image(x, y).r, inv_gamma);
-                        image(x, y).g = powf(image(x, y).g, inv_gamma);
-                        image(x, y).b = powf(image(x, y).b, inv_gamma);
+                        image(x, y).r = powf(image(x, y).r, conf.inverse_gamma);
+                        image(x, y).g = powf(image(x, y).g, conf.inverse_gamma);
+                        image(x, y).b = powf(image(x, y).b, conf.inverse_gamma);
                     }
                 }
             }));
