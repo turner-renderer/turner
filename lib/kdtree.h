@@ -431,7 +431,7 @@ private:
             // generate events
             std::vector<Event> events;
             for (const auto& tri : tris) {
-                auto clipped_box = triangle_clip_aabb(tri, box);
+                auto clipped_box = clip_triangle_at_aabb(tri, box);
                 if (clipped_box.is_planar(ax)) {
                     events.push_back(
                         Event{&tri, clipped_box.min[ax], PLANAR});
@@ -501,7 +501,7 @@ private:
 
         // classify
 
-        return {min_cost, min_plane, min_side};
+        return std::make_tuple(min_cost, min_plane, min_side);
     }
 
 private:

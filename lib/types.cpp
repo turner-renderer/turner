@@ -1,7 +1,8 @@
 #include "types.h"
 
+
 float eps_zero(float a) {
-    return std::abs(a) < std::numeric_limits<float>::epsilon();
+    return std::abs(a) < EPS;
 }
 
 Vec operator/(int a, const Vec& v) {

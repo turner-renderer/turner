@@ -90,7 +90,7 @@ bool plane_box_intersect(const Vec& normal, const Vec& v, const Vec& max_box)
 //
 // Triangle AABB intersection test
 //
-// Implementation following
+// Implementation
 // "Fast 3D Triangle-Box Overlap Testing"
 // by Tomas Akenine-Möller
 //

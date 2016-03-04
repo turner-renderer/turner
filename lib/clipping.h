@@ -1,5 +1,9 @@
 #include "types.h"
 #include "triangle.h"
+#include "intersection.h"
+
+#include "output.h"
+#include <iostream>
 
 //
 // Cohen-Sutherland line clipping on AABB in 3d
@@ -110,24 +114,124 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
 }
 
 
+enum class PointPlanePos {
+    ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE
+};
+
+//
+// Classify point to the plane given by equation `x * n = d`.
+//
+inline PointPlanePos classify_point_to_plane(
+    const Vec& pt, const Vec& n, float d)
+{
+    float dist = n * pt - d;
+    if (dist > EPS) {
+        return PointPlanePos::IN_FRONT_OF_PLANE;
+    } else if (dist < -EPS) {
+        return PointPlanePos::BEHIND_PLANE;
+    }
+    return PointPlanePos::ON_PLANE;
+}
+
+//
+// Sutherland-Hodgman polygon clipping at a (thick) plane.
+//
+inline std::vector<Vec>
+clip_polygon_at_plane(const std::vector<Vec> poly, const Vec& n, float d) {
+    assert(poly.size() > 1);
+
+    std::vector<Vec> points;
+
+    Vec a = poly.back();
+    auto a_side = classify_point_to_plane(a, n, d);
+
+    for (auto b : poly) {
+
+        auto b_side = classify_point_to_plane(b, n, d);
+
+        if (b_side == PointPlanePos::IN_FRONT_OF_PLANE) {
+            if (a_side == PointPlanePos::BEHIND_PLANE) {
+                // intersect (a, b) at plane
+                float t;
+                assert(intersect_segment_plane(a, b, n, d, t));
+                Vec pt(a + t * (b - a));
+                assert(
+                    classify_point_to_plane(pt, n, d)
+                    == PointPlanePos::ON_PLANE);
+                points.emplace_back(pt);
+            }
+            points.emplace_back(b);
+        } else if (b_side == PointPlanePos::BEHIND_PLANE) {
+            if (a_side == PointPlanePos::IN_FRONT_OF_PLANE) {
+                // intesect (a, b) at plane
+                float t;
+                assert(intersect_segment_plane(a, b, n, d, t));
+                Vec pt(a + t * (b - a));
+                assert(
+                    classify_point_to_plane(pt, n, d)
+                    == PointPlanePos::ON_PLANE);
+                points.emplace_back(pt);
+            }
+            // a is behind plane or on plane
+        } else {
+            // b is on plane
+            points.emplace_back(b);
+        }
+
+        a = b;
+        a_side = b_side;
+    }
+
+    return points;
+}
+
+
 //
 // Clip triangle `tri` at AABB `box`.
 //
-// Return:
-//   the bounding box of the clipped polynomial. If the triangle is outside of
-//   the box, zero box is return.
+// Requirement: triangle and box intersect.
 //
-inline Box triangle_clip_aabb(const Triangle& tri, const Box& box) {
-    Vec min, max;
-    auto tri_box = tri.bbox();
+// Return:
+//   the bounding box of the clipped polygon.
+//
+inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
+    std::vector<Vec> points(tri.vertices.begin(), tri.vertices.end());
 
-    min.x = std::max(tri_box.min.x, box.min.x);
-    min.y = std::max(tri_box.min.y, box.min.y);
-    min.z = std::max(tri_box.min.z, box.min.z);
+    // clip at 6 planes defined by box
+    Axis ax = Axis::X;
+    for (int i = 0; i < 3; ++i, ++ax) {
+        for (int j = 0; j < 2; ++j) {
+            Vec normal;
+            normal[ax] = j == 0 ? 1 : -1;
+            float dist = j == 0 ? box.min[ax] : -box.max[ax];
 
-    max.x = std::min(tri_box.max.x, box.max.x);
-    max.y = std::min(tri_box.max.y, box.max.y);
-    max.z = std::min(tri_box.max.z, box.max.z);
+            points = clip_polygon_at_plane(points, normal, dist);
+            if (points.size() == 0) {
+                return {};
+            }
 
-    return min <= max ? Box{min, max} : Box{};
+            // std::cerr << normal << " = " << dist << std::endl;
+            // for (auto p : points) {
+                // std::cerr << p << ", ";
+            // }
+            // std::cerr << std::endl;
+        }
+    }
+
+    // compute min and max coordinates
+    Box res
+        { std::numeric_limits<float>::max()
+        , std::numeric_limits<float>::lowest()
+        };
+    for (int i = 0; i < 3; ++i, ++ax) {
+        for (const auto& pt : points) {
+            if (pt[ax] < res.min[ax]) {
+                res.min[ax] = pt[ax];
+            } else if (res.max[ax] < pt[ax]) {
+                res.max[ax] = pt[ax];
+            }
+        }
+    }
+
+    return res;
 }
