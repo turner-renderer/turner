@@ -2,6 +2,17 @@
 
 #include "types.h"
 
+inline bool intersect_segment_plane(
+    const Vec& a, const Vec& b, const Vec& n, float d, float& t)
+{
+    auto ab = b - a;
+    t = (d - n * a) / (n * ab);
+    if (0.f <= t && t <= 1.f) {
+        return true;
+    }
+    return false;
+}
+
 //
 // Return min infinity if there is no intersection, otherwise return r s.t. the
 // intersection point is P0 + r * (P1 - P0).
@@ -16,7 +27,7 @@
 //
 inline float ray_plane_intersection(const Ray& ray, const Vec& v0, const Vec& n) {
     auto denom = n * ray.dir;
-    if (denom == 0) {
+    if (denom == 0.f) {
         return std::numeric_limits<float>::lowest();
     }
 

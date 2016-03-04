@@ -7,17 +7,24 @@
 #include <vector>
 
 
+static constexpr float EPS = 0.000001f;
+    // std::numeric_limits<float>::epsilon()
+    // std::numeric_limits<float>::epsilon();
+
 float eps_zero(float a);
 
 
 enum class Axis : char { X = 0, Y = 1, Z = 2};
 
-inline Axis operator++(const Axis& ax) {
+inline Axis operator++(Axis& ax) {
     if (ax == Axis::X) {
+        ax = Axis::Y;
         return Axis::Y;
     } else if (ax == Axis::Y) {
+        ax = Axis::Z;
         return Axis::Z;
     }
+    ax = Axis::X;
     return Axis::X;
 }
 
