@@ -119,7 +119,7 @@ enum class PointPlanePos {
 };
 
 //
-// Classify point to the plane given by equation `x * n = d`.
+// Classify point to the plane given by equation `n * x = d`.
 //
 inline PointPlanePos classify_point_to_plane(
     const Vec& pt, const Vec& n, float d)
@@ -206,7 +206,7 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
             float dist = j == 0 ? box.min[ax] : -box.max[ax];
 
             points = clip_polygon_at_plane(points, normal, dist);
-            if (points.size() == 0) {
+            if (points.size() < 2) {
                 return {};
             }
 
@@ -227,7 +227,8 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
         for (const auto& pt : points) {
             if (pt[ax] < res.min[ax]) {
                 res.min[ax] = pt[ax];
-            } else if (res.max[ax] < pt[ax]) {
+            }
+            if (res.max[ax] < pt[ax]) {
                 res.max[ax] = pt[ax];
             }
         }

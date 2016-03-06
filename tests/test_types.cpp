@@ -7,7 +7,21 @@
 #include <catch.hpp>
 
 
-TEST_CASE("Test surface area of box") {
+TEST_CASE("Test min and max", "[helper]") {
+    REQUIRE(min(1, 2, 3) == 1);
+    REQUIRE(min(2, 1, 3) == 1);
+    REQUIRE(min(3, 2, 1) == 1);
+
+    REQUIRE(max(1, 2, 3) == 3);
+    REQUIRE(max(2, 1, 3) == 3);
+    REQUIRE(max(3, 2, 1) == 3);
+
+    REQUIRE(min(1, 1, 1) == 1);
+    REQUIRE(max(1, 1, 1) == 1);
+}
+
+
+TEST_CASE("Test surface area of box", "[box]") {
     Box box{{0, 0, 0}, {1, 1, 1}};
     REQUIRE(box.surface_area() == 6);
 
@@ -66,26 +80,5 @@ TEST_CASE("Test is_planar of triangle", "[triangle]")
 
         Triangle triangle = test_triangle(vs[0], vs[1], vs[2]);
         REQUIRE(triangle.is_planar(ax));
-    }
-}
-
-
-TEST_CASE("Triangle simple aabb intersection", "[intersection]") {
-    Box box{{-10, -10, -10}, {10, 10, 10}};
-
-    auto tri = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 1, 0});
-    REQUIRE(tri.intersect(box));
-
-    tri = test_triangle({-20, -20, 0}, {-15, -20, 0}, {-15, -15, 0});
-    REQUIRE(!tri.intersect(box));
-
-    tri = test_triangle({-10, -10, 10}, {10, -10, 10}, {10, 10, 10});
-    REQUIRE(tri.intersect(box));
-}
-
-TEST_CASE("Triangle random aabb intersection", "[intersection]") {
-    Box box{{-10, -10, -10}, {10, 10, 10}};
-    for (int i = 0; i < 1000; ++i) {
-        REQUIRE(random_triangle().intersect(box));
     }
 }

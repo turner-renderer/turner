@@ -1,9 +1,9 @@
 #pragma once
 
 #include "types.h"
-#include "intersection.h"
 #include <vector>
 #include <array>
+
 
 //
 // Be aware of modifying data in the triangle after its construction. The
@@ -29,31 +29,11 @@ public:
     , denom(uv * uv - uu * vv)
     {}
 
-    bool intersect(const Ray& ray, float& r, float& s, float& t) const {
-        r = ray_plane_intersection(ray, vertices[0], normal);
-        if (r < 0) {
-            return false;
-        }
-
-        auto P_int = ray.pos + r * ray.dir;
-        auto w = P_int - vertices[0];
-
-        // precompute scalar products
-        auto wv = w*v;
-        auto wu = w*u;
-
-        s = (uv * wv - vv * wu) / denom;
-        if (s < 0) {
-            return false;
-        }
-
-        t = (uv * wu - uu * wv) / denom;
-        if (t < 0 || s + t > 1) {
-            return false;
-        }
-
-        return true;
-    }
+    // Intersect Triangle Ray
+    bool intersect(const Ray& ray, float& r, float& s, float& t) const;
+    friend bool intersect_ray_triangle(
+        const Ray& ray, const Triangle& tri,
+        float& r, float& s, float& t);
 
     // Triangle AABB intersection test
     bool intersect(const Box& box) const;

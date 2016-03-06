@@ -7,11 +7,20 @@
 #include <vector>
 
 
-static constexpr float EPS = 0.000001f;
+static constexpr float EPS = 0.00001f;
     // std::numeric_limits<float>::epsilon()
     // std::numeric_limits<float>::epsilon();
 
 float eps_zero(float a);
+
+
+inline constexpr float min(float a, float b, float c) {
+    return a < b ? (a < c ? a : c) : (b < c ? b : c);
+}
+
+inline constexpr float max(float a, float b, float c) {
+    return a > b ? (a > c ? a : c) : (b > c ? b : c);
+}
 
 
 enum class Axis : char { X = 0, Y = 1, Z = 2};
