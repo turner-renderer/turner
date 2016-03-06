@@ -88,33 +88,20 @@ TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {
 
 TEST_CASE("Random triangle clipping at aabb", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
-
-    int failures = 0;
-    for (int i = 0; i < 1000; ++i) {
-        // triangle in box [(-10, -10, -10), (10, 10, 10)]
+    for (int i = 0; i < 10000; ++i) {
         auto tri = random_triangle();
         if (!tri.intersect(box)) {
             continue;
         }
 
-        // std::cerr << "################" << std::endl;
-        // std::cerr << tri.vertices[0] << ", " << tri.vertices[1] << ", " << tri.vertices[2] << std::endl;
         auto res = clip_triangle_at_aabb(tri, box);
 
-        if (res == (Box{})) {
-            failures += 1;
-        }
+        REQUIRE(-EPS < res.min.x - box.min.x);
+        REQUIRE(-EPS < res.min.y - box.min.y);
+        REQUIRE(-EPS < res.min.z - box.min.z);
 
-        // std::cerr << res << std::endl;
-
-        REQUIRE(box.min.x - res.min.x < EPS);
-        REQUIRE(res.max.x - box.max.x < EPS);
-        REQUIRE(box.min.y - res.min.y < EPS);
-        REQUIRE(res.max.y - box.max.y < EPS);
-        REQUIRE(box.min.z - res.min.z < EPS);
-        REQUIRE(res.max.z - box.max.z < EPS);
+        REQUIRE(-EPS < box.max.x - res.max.x);
+        REQUIRE(-EPS < box.max.y - res.max.y);
+        REQUIRE(-EPS < box.max.z - res.max.z);
     }
-
-    // TODO: We still have to fix it.
-    // REQUIRE(failures == 0);
 }

@@ -1,5 +1,5 @@
-#include "../lib/types.h"
 #include "../lib/intersection.h"
+#include "helper.h"
 #include "catch.hpp"
 #include <iostream>
 
@@ -40,4 +40,36 @@ TEST_CASE("Ray AABB intersection", "[intersection]") {
     REQUIRE(!ray_box_intersection(
         Ray({-1, 0, 0}, {-1, 0, 0}),
         Box{{0, 0, 0}, {1, 1, 1}}));
+}
+
+
+TEST_CASE("Test intersect plane with AABB", "[intersection]") {
+    REQUIRE(intersect_plane_box(
+        {1, 0, 0}, 1, {{-10, -10, -10}, {10, 10, 10}}));
+    REQUIRE(!intersect_plane_box(
+        {1, 0, 0}, 20, {{-10, -10, -10}, {10, 10, 10}}));
+    REQUIRE(intersect_plane_box(
+        {1, 0, -1}, 0, {{9, 9, 9}, {10, 10, 10}}));
+}
+
+
+TEST_CASE("Triangle simple aabb intersection", "[intersection]") {
+    Box box{{-10, -10, -10}, {10, 10, 10}};
+
+    auto tri = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 1, 0});
+    REQUIRE(tri.intersect(box));
+
+    tri = test_triangle({-20, -20, 0}, {-15, -20, 0}, {-15, -15, 0});
+    REQUIRE(!tri.intersect(box));
+
+    tri = test_triangle({-10, -10, 10}, {10, -10, 10}, {10, 10, 10});
+    REQUIRE(tri.intersect(box));
+}
+
+
+TEST_CASE("Random triangle aabb intersection", "[intersection]") {
+    Box box{{-10, -10, -10}, {10, 10, 10}};
+    for (int i = 0; i < 1000; ++i) {
+        REQUIRE(random_triangle().intersect(box));
+    }
 }
