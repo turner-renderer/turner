@@ -3,13 +3,10 @@
 #include "intersection.h"
 
 #include "output.h"
-#include <iostream>
 
 //
 // Cohen-Sutherland line clipping on AABB in 3d
 //
-
-// TODO: Remove
 
 using OutCode = int;
 
