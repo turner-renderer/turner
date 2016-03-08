@@ -4,8 +4,8 @@
 #include "clipping.h"
 #include <memory>
 #include <algorithm>
-#include "output.h"
 #include <unordered_set>
+#include <cstdint>
 
 
 //
@@ -242,6 +242,8 @@ private:
 };
 
 //
+// Implementation of a fast kd-tree following the article:
+//
 // "On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N)"
 // by Ingo Wald and Vlastimil Havran
 //
@@ -344,71 +346,173 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
 
 class FastKDTree {
 
-    enum class NodeType : char { INNER = 0, LEAF = 1 };
-
-    struct Node {
-        NodeType type;
-    };
-
-    struct InnerNode : public Node {
-        InnerNode(
-            Plane p, std::unique_ptr<Node> lft, std::unique_ptr<Node> rht)
-        : Node{NodeType::INNER}
-        , p(p)
-        , lft(std::move(lft))
-        , rht(std::move(rht))
+    class Node {
+    public:
+        Node(Axis split_axis, float split_pos, Node* left, Node* right)
+        : flags_(static_cast<size_t>(split_axis) + FLAG_AXIS_X)
+        , split_pos_(split_pos)
+        , left_or_triangle_ids_(static_cast<void*>(left))
+        , right_(right)
         {}
 
-        Plane p;
-        std::unique_ptr<Node> lft;
-        std::unique_ptr<Node> rht;
-    };
+        explicit Node(const std::vector<uint32_t>& ids)
+        : flags_(ids.size())
+        {
+            uint32_t* triangle_ids = new uint32_t[ids.size()];
+            ::memcpy(triangle_ids, ids.data(), ids.size() * sizeof(uint32_t));
+            left_or_triangle_ids_ = static_cast<void*>(triangle_ids);
+        }
 
-    struct Leaf : public Node {
-        Leaf(Triangles tris)
-        : Node{NodeType::LEAF}
-        , tris(std::move(tris))
-        {}
+        ~Node() {
+            if (is_inner()) {
+                delete left();
+                delete right();
+            } else {
+                delete[] triangle_ids();
+            }
+        }
 
-        Triangles tris;
+        // attributes
+
+        bool is_leaf() const {
+            return flags_ <= MAX_ID;
+        }
+
+        bool is_inner() const {
+            return !is_leaf();
+        }
+
+        Axis split_axis() const {
+            assert(is_inner());
+
+            if (flags_ == FLAG_AXIS_X) {
+                return Axis::X;
+            } else if (flags_ == FLAG_AXIS_Y) {
+                return Axis::Y;
+            } else if (flags_ == FLAG_AXIS_Z) {
+                return Axis::Z;
+            }
+
+            assert(false);
+        }
+
+        float split_pos() const {
+            assert(is_inner());
+            return split_pos_;
+        }
+
+        Node* left() const {
+            assert(is_inner());
+            return reinterpret_cast<Node*>(left_or_triangle_ids_);
+        }
+
+        Node* right() const {
+            assert(is_inner());
+            return right_;
+        }
+
+        size_t num_tris() const {
+            assert(is_leaf());
+            return flags_;
+        }
+
+        size_t* triangle_ids() {
+            assert(is_leaf());
+            return reinterpret_cast<size_t*>(left_or_triangle_ids_);
+        }
+
+        static constexpr uint32_t MAX_ID = \
+            std::numeric_limits<uint32_t>::max() - 3;
+
+        // public interface
+
+        size_t height() const {
+            if (is_leaf()) {
+                return 0;
+            }
+            return 1 + std::max(left()->height(), right()->height());
+        }
+
+        size_t size() const {
+            if (is_leaf()) {
+                return num_tris();
+            }
+            return left()->size() + right()->size();
+        }
+
+    private:
+        static constexpr uint32_t FLAG_AXIS_X = MAX_ID + 1;
+        static constexpr uint32_t FLAG_AXIS_Y = MAX_ID + 2;
+        static constexpr uint32_t FLAG_AXIS_Z = MAX_ID + 3;
+
+        // flags_ == isLeaf, numTris or splitAxis
+        uint32_t flags_;              // 4 bytes
+        float split_pos_;             // 4 bytes
+        void* left_or_triangle_ids_;  // 8 bytes
+        Node* right_;                 // 8 bytes
+                                      // == 24 bytes
     };
 
 public:
-    FastKDTree(Triangles tris) {
-        assert(tris.size() > 0);
 
-        Box box = tris.front().bbox();
-        for (auto it = tris.begin() + 1; it != tris.end(); ++it) {
-            box = box + it->bbox();
-        }
-        root_ = build(std::move(tris), box);
+    using TriangleId = uint32_t;
+    using TriangleIds = std::vector<TriangleId>;
+
+    static constexpr size_t node_size() {
+        return sizeof(Node);
     }
 
-    friend class FastKDTreeTester;
+
+    FastKDTree(Triangles tris)
+        : tris_(std::move(tris))
+    {
+        assert(tris_.size() > 0);
+        assert(tris_.size() <= Node::MAX_ID);
+
+        std::vector<uint32_t> ids(tris_.size(), 0);
+
+        box_ = tris_.front().bbox();
+        for (size_t i = 1; i < tris_.size(); ++i) {
+            box_ = box_ + tris_[i].bbox();
+            ids[i] = i;
+        }
+
+        root_ = std::unique_ptr<Node>(build(std::move(ids), box_));
+    }
+
+    // public interface
+
+    size_t height() const {
+        return root_->height();
+    }
+
+    size_t size() const {
+        return root_->size();
+    }
 
 private:
 
-    std::unique_ptr<Node> build(Triangles tris, const Box& box) {
+    Node* build(TriangleIds tris, const Box& box) {
         // to few triangles -> terminate
         if (tris.size() < 2) {
-            return std::make_unique<Leaf>(std::move(tris));
+            return new Node(tris);
         }
 
         float min_cost;
         Plane plane;
-        Triangles ltris, rtris;
+        TriangleIds ltris, rtris;
         std::tie(min_cost, plane, ltris, rtris) = find_plane_and_classify(
             tris, box);
 
         // automatic termination
         if (min_cost > COST_INTERSECTION * tris.size()) {
-            return std::make_unique<Leaf>(std::move(tris));
+            return new Node(tris);
         }
 
         Box lbox, rbox;
         std::tie(lbox, rbox) = split(box, plane);
 
-        return std::make_unique<InnerNode>(plane,
+        return new Node(plane.ax, plane.coord,
             build(std::move(ltris), lbox),
             build(std::move(rtris), rbox));
     }
@@ -418,13 +522,15 @@ private:
     static constexpr int PLANAR = 1;
 
     struct Event {
-        const Triangle* tri;
+        TriangleId id;
         float point;
         int type;
     };
 
-    std::tuple<float /*cost*/, Plane, Triangles /*left*/, Triangles /*right*/>
-    find_plane_and_classify(const Triangles& tris, const Box& box) const {
+    std::tuple<
+        float /*cost*/, Plane,
+        TriangleIds /*left*/, TriangleIds /*right*/>
+    find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
         float min_cost = std::numeric_limits<float>::max();
         Plane min_plane;
         Dir min_side;
@@ -435,18 +541,18 @@ private:
         for (int k = 0; k < 3; ++k, ++ax) {
             // generate events
             auto& events = event_lists[k];
-            for (const auto& tri : tris) {
-                auto clipped_box = clip_triangle_at_aabb(tri, box);
+            for (const auto& id : tris) {
+                auto clipped_box = clip_triangle_at_aabb(tris_[id], box);
                 assert(!clipped_box.is_trivial());
 
                 if (clipped_box.is_planar(ax)) {
                     events.push_back(
-                        Event{&tri, clipped_box.min[ax], PLANAR});
+                        Event{id, clipped_box.min[ax], PLANAR});
                 } else {
                     events.push_back(
-                        Event{&tri, clipped_box.min[ax], STARTING});
+                        Event{id, clipped_box.min[ax], STARTING});
                     events.push_back(
-                        Event{&tri, clipped_box.max[ax], ENDING});
+                        Event{id, clipped_box.max[ax], ENDING});
                 }
             }
 
@@ -512,7 +618,7 @@ private:
 
         // classify
 
-        std::unordered_set<const Triangle*> ltris, rtris;
+        std::unordered_set<TriangleId> ltris, rtris;
 
         const auto& events = event_lists[static_cast<int>(min_plane.ax)];
 
@@ -520,7 +626,7 @@ private:
         while (eit != events.end() && (eit->point < min_plane.coord ||
             (eit->point == min_plane.coord && eit->type == ENDING)))
         {
-            ltris.insert(eit->tri);
+            ltris.insert(eit->id);
             ++eit;
         }
 
@@ -528,30 +634,32 @@ private:
             eit->point == min_plane.coord && eit->type == PLANAR)
         {
             if (min_side == Dir::LEFT) {
-                ltris.insert(eit->tri);
+                ltris.insert(eit->id);
             } else {
-                rtris.insert(eit->tri);
+                rtris.insert(eit->id);
             }
             ++eit;
         }
 
         while (eit != events.end()) {
-            rtris.insert(eit->tri);
+            rtris.insert(eit->id);
             ++eit;
         }
 
-        Triangles lres, rres;
-        for (auto tri_ptr : ltris) {
-            lres.push_back(*tri_ptr);
+        TriangleIds lids, rids;
+        for (auto id : ltris) {
+            lids.push_back(id);
         }
-        for (auto tri_ptr : rtris) {
-            rres.push_back(*tri_ptr);
+        for (auto id : rtris) {
+            rids.push_back(id);
         }
 
         return std::make_tuple(
-            min_cost, min_plane, std::move(lres), std::move(rres));
+            min_cost, min_plane, std::move(lids), std::move(rids));
     }
 
 private:
     std::unique_ptr<Node> root_;
+    Triangles tris_;
+    Box box_;
 };

@@ -7,58 +7,6 @@
 #include <iostream>
 
 
-// Extend the interface of FastKDTree for testing.
-class FastKDTreeTester {
-public:
-    FastKDTreeTester(FastKDTree& tree) : tree(tree) {}
-
-    static size_t height(std::unique_ptr<FastKDTree::Node>& ptr) {
-        if (!ptr) {
-            return 0;
-        }
-        if (ptr->type == FastKDTree::NodeType::LEAF) {
-            return 1;
-        }
-
-        FastKDTree::InnerNode& node = *static_cast<FastKDTree::InnerNode*>(ptr.get());
-
-        return 1 + std::max(height(node.lft), height(node.rht));
-    }
-
-    size_t height() {
-        return height(tree.root_);
-    }
-
-    static size_t size(std::unique_ptr<FastKDTree::Node>& ptr) {
-        if (!ptr) {
-            return 0;
-        }
-        if (ptr->type == FastKDTree::NodeType::LEAF) {
-            return static_cast<FastKDTree::Leaf*>(ptr.get())->tris.size();
-        }
-
-        FastKDTree::InnerNode& node = *static_cast<FastKDTree::InnerNode*>(ptr.get());
-
-        return size(node.lft) + size(node.rht);
-    }
-
-    size_t size() {
-        return size(tree.root_);
-    }
-
-    bool is_leaf() {
-        return tree.root_ && tree.root_->type == FastKDTree::NodeType::LEAF;
-    }
-
-    Triangles& tris() {
-        auto node = static_cast<FastKDTree::Leaf*>(tree.root_.get());
-        return node->tris;
-    }
-
-    FastKDTree& tree;
-};
-
-
 TEST_CASE("Split box at plane", "[box]") {
     Box box{{0, 0, 0}, {2, 2, 2}};
 
@@ -88,15 +36,23 @@ TEST_CASE("Smoke test", "[kdtree]")
     auto a = test_triangle({-1, -1, 0}, {1, -1, 0}, {1, 1, 0});
     auto b = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 2, 0});
     FastKDTree tree(Triangles{a, b});
-    FastKDTreeTester tester(tree);
+    REQUIRE(tree.height() == 0);
+}
 
-    REQUIRE(tester.height() == 1);
-    REQUIRE(tester.is_leaf());
+TEST_CASE("Four separated triangle test", "[kdtree]")
+{
+    auto a = test_triangle({0, 0, 0}, {0, 1, 0}, {1, 0, 0});
+    auto b = test_triangle({2, 0, 0}, {3, 0, 0}, {3, 1, 0});
+    auto c = test_triangle({0, 2, 0}, {0, 3, 0}, {1, 3, 0});
+    auto d = test_triangle({3, 2, 0}, {3, 3, 0}, {2, 3, 0});
+    FastKDTree tree(Triangles{a, b, c, d});
+    REQUIRE(tree.height() == 3);
+    REQUIRE(tree.size() == 4);
 }
 
 TEST_CASE("KDTree stress test", "[kdtree]")
 {
-    static constexpr size_t TRIANGLES_COUNT = 1000;
+    static constexpr size_t TRIANGLES_COUNT = 100;
 
     std::cerr << "\n== Stress test ==" << std::endl;
 
@@ -117,15 +73,14 @@ TEST_CASE("KDTree stress test", "[kdtree]")
 
     std::cerr << "Building a kd-tree of " << TRIANGLES_COUNT << " triangles"
         << std::endl;
+    std::cerr << "Node size (bytes): " << FastKDTree::node_size() << std::endl;
 
     size_t runtime_ms;
     {
         Runtime runtime(runtime_ms);
         FastKDTree tree(triangles);
-        FastKDTreeTester tree_tester(tree);
-        std::cerr << "Height  : " << tree_tester.height() << std::endl;
-        std::cerr << "Size    : " << tree_tester.size() << std::endl;
+        std::cerr << "Height  : " << tree.height() << std::endl;
+        std::cerr << "Size    : " << tree.size() << std::endl;
     }
     std::cerr << "Runtime : " << runtime_ms << "ms" << std::endl;
-
 }
