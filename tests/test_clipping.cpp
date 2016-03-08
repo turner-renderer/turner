@@ -2,7 +2,6 @@
 #include "../lib/clipping.h"
 #include "../lib/output.h"
 #include <catch.hpp>
-#include <iostream>
 
 
 TEST_CASE("Clip polygon at a plane", "[clipping]") {

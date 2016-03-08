@@ -209,12 +209,6 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
             if (points.size() < 2) {
                 return {};
             }
-
-            // std::cerr << normal << " = " << dist << std::endl;
-            // for (auto p : points) {
-                // std::cerr << p << ", ";
-            // }
-            // std::cerr << std::endl;
         }
     }
 
