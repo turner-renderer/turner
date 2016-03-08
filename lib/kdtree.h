@@ -4,6 +4,8 @@
 #include "clipping.h"
 #include <memory>
 #include <algorithm>
+#include "output.h"
+#include <unordered_set>
 
 
 //
@@ -256,8 +258,8 @@ struct Plane {
 };
 
 inline std::pair<Box, Box> split(const Box& box, const Plane plane) {
-    assert(box.min[plane.ax] <= plane.coord);
-    assert(plane.coord <= box.max[plane.ax]);
+    assert(box.min[plane.ax] - EPS <= plane.coord);
+    assert(plane.coord <= box.max[plane.ax] + EPS);
 
     Vec lmax = box.max;
     lmax[plane.ax] = plane.coord;
@@ -304,7 +306,7 @@ enum class Dir { LEFT, RIGHT };
 //   box - AABB to split
 //   num_{l,r}tris - number of triangles in the left resp. right box produces
 //     by splitting `box` at `p`
-//   num_planar_tris - number of triangles lying in the plane `p`
+//   num_ptris - number of triangles lying in the plane `p`
 //
 // Return:
 //   cost to split the box + if the planar triangles should be appended to the
@@ -312,8 +314,13 @@ enum class Dir { LEFT, RIGHT };
 //
 inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Plane p, const Box& box,
-    size_t num_ltris, size_t num_rtris, size_t num_planar_tris)
+    size_t num_ltris, size_t num_rtris, size_t num_ptris)
 {
+    // not splitting at all has infinity cost
+    if (box.min[p.ax] == p.coord || box.max[p.ax] == p.coord) {
+        return {std::numeric_limits<float>::max(), Dir::LEFT};
+    }
+
     Box lbox, rbox;
     std::tie(lbox, rbox) = split(box, p);
     float area = box.surface_area();
@@ -322,10 +329,10 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
 
     auto lpcost = cost(
         larea_ratio, rarea_ratio,
-        num_ltris + num_planar_tris, num_rtris);
+        num_ltris + num_ptris, num_rtris);
     auto rpcost = cost(
         larea_ratio, rarea_ratio,
-        num_ltris, num_planar_tris + num_rtris);
+        num_ltris, num_ptris + num_rtris);
 
     if (lpcost < rpcost) {
         return {lpcost, Dir::LEFT};
@@ -377,37 +384,33 @@ public:
         root_ = build(std::move(tris), box);
     }
 
-    std::unique_ptr<Node> build(Triangles tris, const Box& box) {
-        if (terminate(tris, box)) {
-            return std::make_unique<Leaf>(tris);
-        }
-
-        Plane p;
-        std::tie(std::ignore, p, std::ignore) = find_plane(tris, box);
-
-        Box lft_box, rht_box;
-        std::tie(lft_box, rht_box) = split(box, p);
-        Triangles lft_tris, rht_tris;
-        for (const auto& tri : tris) {
-            if (tri.intersect(lft_box)) {
-                lft_tris.push_back(tri);
-            }
-            if (tri.intersect(rht_box)) {
-                rht_tris.push_back(tri);
-            }
-        }
-
-        return std::make_unique<InnerNode>(p,
-            build(std::move(lft_tris), lft_box),
-            build(std::move(rht_tris), rht_box));
-    }
-
     friend class FastKDTreeTester;
 
 private:
-    bool terminate(const Triangles& /*tris*/, const Box& /*box*/) const {
-        // TODO: Implement
-        return true;
+
+    std::unique_ptr<Node> build(Triangles tris, const Box& box) {
+        // to few triangles -> terminate
+        if (tris.size() < 2) {
+            return std::make_unique<Leaf>(std::move(tris));
+        }
+
+        float min_cost;
+        Plane plane;
+        Triangles ltris, rtris;
+        std::tie(min_cost, plane, ltris, rtris) = find_plane_and_classify(
+            tris, box);
+
+        // automatic termination
+        if (min_cost > COST_INTERSECTION * tris.size()) {
+            return std::make_unique<Leaf>(std::move(tris));
+        }
+
+        Box lbox, rbox;
+        std::tie(lbox, rbox) = split(box, plane);
+
+        return std::make_unique<InnerNode>(plane,
+            build(std::move(ltris), lbox),
+            build(std::move(rtris), rbox));
     }
 
     static constexpr int STARTING = 2;
@@ -420,18 +423,22 @@ private:
         int type;
     };
 
-    std::tuple<float /*cost*/, Plane, Dir /*side*/>
-    find_plane(const Triangles& tris, const Box& box) const {
+    std::tuple<float /*cost*/, Plane, Triangles /*left*/, Triangles /*right*/>
+    find_plane_and_classify(const Triangles& tris, const Box& box) const {
         float min_cost = std::numeric_limits<float>::max();
         Plane min_plane;
         Dir min_side;
 
         Axis ax = Axis::X;
+        std::vector<Event> event_lists[3];
+
         for (int k = 0; k < 3; ++k, ++ax) {
             // generate events
-            std::vector<Event> events;
+            auto& events = event_lists[k];
             for (const auto& tri : tris) {
                 auto clipped_box = clip_triangle_at_aabb(tri, box);
+                assert(!clipped_box.is_trivial());
+
                 if (clipped_box.is_planar(ax)) {
                     events.push_back(
                         Event{&tri, clipped_box.min[ax], PLANAR});
@@ -443,14 +450,16 @@ private:
                 }
             }
 
+            assert(events.size() >= tris.size());
+
             std::sort(events.begin(), events.end(),
                 [](const Event& e1, const Event& e2) {
                     return e1.point < e2.point ||
-                        (eps_zero(e1.point - e2.point) && e1.type < e2.type);
+                        (e1.point == e2.point && e1.type < e2.type);
                 });
 
             // sweep
-            int num_ltris = 0, num_planar_tris = 0, num_rtris = tris.size();
+            int num_ltris = 0, num_ptris = 0, num_rtris = tris.size();
             for (size_t i = 0; i < events.size(); ) {
                 auto& event = events[i];
 
@@ -474,19 +483,19 @@ private:
                 while (i < events.size() && events[i].point == p &&
                     events[i].type == STARTING)
                 {
-                    point_ending += 1;
+                    point_starting += 1;
                     i += 1;
                 }
 
-                num_planar_tris = point_planar;
+                num_ptris = point_planar;
                 num_rtris -= point_planar + point_ending;
 
-                Plane plane{static_cast<Axis>(k), p};
+                Plane plane{ax, p};
 
                 float cost;
                 Dir side;
                 std::tie(cost, side) = surface_area_heuristics(
-                    plane, box, num_ltris, num_rtris, num_planar_tris);
+                    plane, box, num_ltris, num_rtris, num_ptris);
 
                 if (cost < min_cost) {
                     min_cost = cost;
@@ -495,13 +504,52 @@ private:
                 }
 
                 num_ltris += point_starting + point_planar;
-                num_planar_tris = 0;
+                num_ptris = 0;
             }
         }
 
+        // -> min_plane, min_side
+
         // classify
 
-        return std::make_tuple(min_cost, min_plane, min_side);
+        std::unordered_set<const Triangle*> ltris, rtris;
+
+        const auto& events = event_lists[static_cast<int>(min_plane.ax)];
+
+        auto eit = events.begin();
+        while (eit != events.end() && (eit->point < min_plane.coord ||
+            (eit->point == min_plane.coord && eit->type == ENDING)))
+        {
+            ltris.insert(eit->tri);
+            ++eit;
+        }
+
+        while (eit != events.end() &&
+            eit->point == min_plane.coord && eit->type == PLANAR)
+        {
+            if (min_side == Dir::LEFT) {
+                ltris.insert(eit->tri);
+            } else {
+                rtris.insert(eit->tri);
+            }
+            ++eit;
+        }
+
+        while (eit != events.end()) {
+            rtris.insert(eit->tri);
+            ++eit;
+        }
+
+        Triangles lres, rres;
+        for (auto tri_ptr : ltris) {
+            lres.push_back(*tri_ptr);
+        }
+        for (auto tri_ptr : rtris) {
+            rres.push_back(*tri_ptr);
+        }
+
+        return std::make_tuple(
+            min_cost, min_plane, std::move(lres), std::move(rres));
     }
 
 private:

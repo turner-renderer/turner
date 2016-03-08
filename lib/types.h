@@ -84,7 +84,17 @@ struct Box {
 
     // Check if the box is planar in the plane with normal `ax`.
     bool is_planar(Axis ax) {
-        return eps_zero((max - min)[static_cast<int>(ax)]);
+        return !(std::abs((max - min)[static_cast<int>(ax)]) > EPS);
+    }
+
+    bool is_trivial() const {
+        return
+            eps_zero(min[Axis::X]) &&
+            eps_zero(min[Axis::Y]) &&
+            eps_zero(min[Axis::Z]) &&
+            eps_zero(max[Axis::X]) &&
+            eps_zero(max[Axis::Y]) &&
+            eps_zero(max[Axis::Z]);
     }
 };
 Box operator+(const Box& a, const Box& b);
