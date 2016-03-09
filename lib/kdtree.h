@@ -4,8 +4,9 @@
 #include "clipping.h"
 #include <memory>
 #include <algorithm>
-#include <unordered_set>
+#include <unordered_map>
 #include <cstdint>
+#include <stack>
 
 
 //
@@ -241,6 +242,8 @@ private:
     std::shared_ptr<const Node> root_;
 };
 
+// ---------------------------------------------------------------------------
+
 //
 // Implementation of a fast kd-tree following the article:
 //
@@ -260,8 +263,8 @@ struct Plane {
 };
 
 inline std::pair<Box, Box> split(const Box& box, const Plane plane) {
-    assert(box.min[plane.ax] - EPS <= plane.coord);
-    assert(plane.coord <= box.max[plane.ax] + EPS);
+    // assert(box.min[plane.ax] - EPS <= plane.coord);
+    // assert(plane.coord <= box.max[plane.ax] + EPS);
 
     Vec lmax = box.max;
     lmax[plane.ax] = plane.coord;
@@ -346,27 +349,37 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
 
 class FastKDTree {
 
+    using TriangleId = uint32_t;
+    using TriangleIds = std::vector<TriangleId>;
+
+private:
+
     class Node {
     public:
         Node(Axis split_axis, float split_pos, Node* left, Node* right)
-        : flags_(static_cast<size_t>(split_axis) + FLAG_AXIS_X)
+        : flags_(static_cast<TriangleId>(split_axis) + FLAG_AXIS_X)
         , split_pos_(split_pos)
         , left_or_triangle_ids_(static_cast<void*>(left))
         , right_(right)
         {}
 
-        explicit Node(const std::vector<uint32_t>& ids)
+        explicit Node(const std::vector<TriangleId>& ids)
         : flags_(ids.size())
         {
-            uint32_t* triangle_ids = new uint32_t[ids.size()];
-            ::memcpy(triangle_ids, ids.data(), ids.size() * sizeof(uint32_t));
+            TriangleId* triangle_ids = new TriangleId[ids.size()];
+            ::memcpy(
+                triangle_ids, ids.data(), ids.size() * sizeof(TriangleId));
             left_or_triangle_ids_ = static_cast<void*>(triangle_ids);
         }
 
         ~Node() {
             if (is_inner()) {
-                delete left();
-                delete right();
+                if (left()) {
+                    delete left();
+                }
+                if (right()) {
+                    delete right();
+                }
             } else {
                 delete[] triangle_ids();
             }
@@ -383,7 +396,7 @@ class FastKDTree {
         }
 
         Axis split_axis() const {
-            assert(is_inner());
+            // assert(is_inner());
 
             if (flags_ == FLAG_AXIS_X) {
                 return Axis::X;
@@ -397,32 +410,33 @@ class FastKDTree {
         }
 
         float split_pos() const {
-            assert(is_inner());
+            // assert(is_inner());
             return split_pos_;
         }
 
         Node* left() const {
-            assert(is_inner());
+            // assert(is_inner());
             return reinterpret_cast<Node*>(left_or_triangle_ids_);
         }
 
         Node* right() const {
-            assert(is_inner());
+            // assert(is_inner());
             return right_;
         }
 
-        size_t num_tris() const {
-            assert(is_leaf());
+        TriangleId num_tris() const {
+            // assert(is_leaf());
             return flags_;
         }
 
-        size_t* triangle_ids() {
-            assert(is_leaf());
-            return reinterpret_cast<size_t*>(left_or_triangle_ids_);
+        TriangleId* triangle_ids() const {
+            // assert(is_leaf());
+            return reinterpret_cast<TriangleId*>(left_or_triangle_ids_);
         }
 
-        static constexpr uint32_t MAX_ID = \
-            std::numeric_limits<uint32_t>::max() - 3;
+        // the last 3 values are reserved for axis description
+        static constexpr TriangleId MAX_ID = \
+            std::numeric_limits<TriangleId>::max() - 3;
 
         // public interface
 
@@ -430,23 +444,26 @@ class FastKDTree {
             if (is_leaf()) {
                 return 0;
             }
-            return 1 + std::max(left()->height(), right()->height());
+            return 1 + std::max(
+                left() ? left()->height() : 0,
+                right() ? right()->height() : 0);
         }
 
         size_t size() const {
             if (is_leaf()) {
                 return num_tris();
             }
-            return left()->size() + right()->size();
+            return (left() ? left()->size() : 0) +
+                (right() ? right()->size() : 0);
         }
 
     private:
-        static constexpr uint32_t FLAG_AXIS_X = MAX_ID + 1;
-        static constexpr uint32_t FLAG_AXIS_Y = MAX_ID + 2;
-        static constexpr uint32_t FLAG_AXIS_Z = MAX_ID + 3;
+        static constexpr TriangleId FLAG_AXIS_X = MAX_ID + 1;
+        static constexpr TriangleId FLAG_AXIS_Y = MAX_ID + 2;
+        static constexpr TriangleId FLAG_AXIS_Z = MAX_ID + 3;
 
         // flags_ == isLeaf, numTris or splitAxis
-        uint32_t flags_;              // 4 bytes
+        TriangleId flags_;            // 4 bytes
         float split_pos_;             // 4 bytes
         void* left_or_triangle_ids_;  // 8 bytes
         Node* right_;                 // 8 bytes
@@ -454,9 +471,6 @@ class FastKDTree {
     };
 
 public:
-
-    using TriangleId = uint32_t;
-    using TriangleIds = std::vector<TriangleId>;
 
     static constexpr size_t node_size() {
         return sizeof(Node);
@@ -469,7 +483,7 @@ public:
         assert(tris_.size() > 0);
         assert(tris_.size() <= Node::MAX_ID);
 
-        std::vector<uint32_t> ids(tris_.size(), 0);
+        std::vector<TriangleId> ids(tris_.size(), 0);
 
         box_ = tris_.front().bbox();
         for (size_t i = 1; i < tris_.size(); ++i) {
@@ -490,11 +504,83 @@ public:
         return root_->size();
     }
 
+    // algorithms
+
+    //
+    // Args:
+    //   r - distance from ray to triangle (if intersection exists)
+    //   s, t - barycentric coordinates of intersection point
+    //
+    // Not liking the return pointer used as optional here? Me neither.
+    //
+    // Cf. Algorithm 2 in
+    // "Review: Kd-tree Traversal Algorithms for Ray Tracing"
+    // by M. Hapala V. Havran
+    //
+    const Triangle*
+    intersect(const Ray& ray, float& r, float& s, float& t) const {
+        float tenter, texit;
+        if (!ray_box_intersection(ray, box_, tenter, texit)) {
+            return nullptr;
+        }
+
+        std::stack<std::tuple<Node*, float, float>> stack;
+        stack.push(std::make_tuple(root_.get(), tenter, texit));
+
+        Node* node;
+        while (!stack.empty()) {
+            std::tie(node, tenter, texit) = stack.top();
+            stack.pop();
+
+            while (node && node->is_inner()) {
+                auto ax = static_cast<int>(node->split_axis());
+                auto pos = node->split_pos();
+
+                // t at split
+                auto t = (pos - ray.pos[ax]) * ray.invdir[ax];
+
+                // classify near/far with respect to t:
+                // left is near if ray.pos < t, else otherwise
+                Node* near = node->left();
+                Node* far = node->right();
+                if (ray.pos[ax] > pos) {
+                    std::swap(near, far);
+                }
+
+                if (t >= texit || t < 0) {
+                    node = near;
+                } else if (t <= tenter) {
+                    node = far;
+                } else {
+                    stack.push(std::make_tuple(far, t, texit));
+                    node = near;
+                    texit = t;
+                }
+            }
+
+            if (node) {
+                assert(node->is_leaf());
+                auto res = intersect(
+                    node->triangle_ids(), node->num_tris(), ray, r, s, t);
+                if (res) {
+                    return res;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+
 private:
 
     Node* build(TriangleIds tris, const Box& box) {
+        if (tris.size() == 0) {
+            return nullptr;
+        }
+
         // to few triangles -> terminate
-        if (tris.size() < 2) {
+        if (tris.size() <= 3) {
             return new Node(tris);
         }
 
@@ -503,6 +589,11 @@ private:
         TriangleIds ltris, rtris;
         std::tie(min_cost, plane, ltris, rtris) = find_plane_and_classify(
             tris, box);
+
+        // clipped everything away
+        if (min_cost == 0) {
+            return nullptr;
+        }
 
         // automatic termination
         if (min_cost > COST_INTERSECTION * tris.size()) {
@@ -517,34 +608,41 @@ private:
             build(std::move(rtris), rbox));
     }
 
-    static constexpr int STARTING = 2;
-    static constexpr int ENDING = 0;
-    static constexpr int PLANAR = 1;
-
     struct Event {
         TriangleId id;
         float point;
         int type;
     };
 
+    static constexpr int STARTING = 2;
+    static constexpr int ENDING = 0;
+    static constexpr int PLANAR = 1;
+
     std::tuple<
         float /*cost*/, Plane,
         TriangleIds /*left*/, TriangleIds /*right*/>
     find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
+
         float min_cost = std::numeric_limits<float>::max();
         Plane min_plane;
         Dir min_side;
+        float min_ltris, min_rtris, min_ptris;
 
         Axis ax = Axis::X;
         std::vector<Event> event_lists[3];
 
-        for (int k = 0; k < 3; ++k, ++ax) {
-            // generate events
-            auto& events = event_lists[k];
-            for (const auto& id : tris) {
-                auto clipped_box = clip_triangle_at_aabb(tris_[id], box);
-                assert(!clipped_box.is_trivial());
+        // generate events
+        size_t num_tris = 0;
+        for (const auto& id : tris) {
 
+            auto clipped_box = clip_triangle_at_aabb(tris_[id], box);
+            if (clipped_box.is_trivial()) {
+                continue;
+            }
+            num_tris += 1;
+
+            for (int k = 0; k < 3; ++k, ++ax) {
+                auto& events = event_lists[k];
                 if (clipped_box.is_planar(ax)) {
                     events.push_back(
                         Event{id, clipped_box.min[ax], PLANAR});
@@ -555,17 +653,19 @@ private:
                         Event{id, clipped_box.max[ax], ENDING});
                 }
             }
+        }
 
-            assert(events.size() >= tris.size());
-
+        // sweep
+        for (int k = 0; k < 3; ++k, ++ax) {
+            auto& events = event_lists[k];
             std::sort(events.begin(), events.end(),
                 [](const Event& e1, const Event& e2) {
                     return e1.point < e2.point ||
                         (e1.point == e2.point && e1.type < e2.type);
                 });
 
-            // sweep
-            int num_ltris = 0, num_ptris = 0, num_rtris = tris.size();
+            int num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
+
             for (size_t i = 0; i < events.size(); ) {
                 auto& event = events[i];
 
@@ -607,6 +707,9 @@ private:
                     min_cost = cost;
                     min_plane = plane;
                     min_side = side;
+                    min_ltris = num_ltris;
+                    min_rtris = num_rtris;
+                    min_ptris = num_ptris;
                 }
 
                 num_ltris += point_starting + point_planar;
@@ -614,48 +717,137 @@ private:
             }
         }
 
+        // min_cost is still infty --> terminate
+        if (min_cost == std::numeric_limits<float>::max()) {
+            return std::make_tuple(
+                0, Plane{Axis::X, 0}, TriangleIds(), TriangleIds());
+        }
+
         // -> min_plane, min_side
 
         // classify
 
-        std::unordered_set<TriangleId> ltris, rtris;
+        TriangleIds ltris, rtris;
+        ltris.reserve(min_ltris);
+        rtris.reserve(min_rtris);
 
+        std::unordered_map<TriangleId, bool> started_left;
         const auto& events = event_lists[static_cast<int>(min_plane.ax)];
-
-        auto eit = events.begin();
-        while (eit != events.end() && (eit->point < min_plane.coord ||
-            (eit->point == min_plane.coord && eit->type == ENDING)))
-        {
-            ltris.insert(eit->id);
-            ++eit;
-        }
-
-        while (eit != events.end() &&
-            eit->point == min_plane.coord && eit->type == PLANAR)
-        {
-            if (min_side == Dir::LEFT) {
-                ltris.insert(eit->id);
+        for (const auto& event : events) {
+            if (event.point < min_plane.coord) {
+                if (event.type == ENDING || event.type == PLANAR) {
+                    ltris.push_back(event.id);
+                    started_left[event.id] = false;
+                } else {
+                    started_left[event.id] = true;
+                }
+            } else if (event.point == min_plane.coord) {
+                if (event.type == ENDING) {
+                    ltris.push_back(event.id);
+                } else if (event.type == PLANAR) {
+                    if (min_side == Dir::LEFT) {
+                        ltris.push_back(event.id);
+                    } else {
+                        rtris.push_back(event.id);
+                    }
+                } else {
+                    rtris.push_back(event.id);
+                }
             } else {
-                rtris.insert(eit->id);
+                if (event.type == STARTING || event.type == PLANAR) {
+                    rtris.push_back(event.id);
+                } else if (started_left[event.id]) {
+                    ltris.push_back(event.id);
+                    rtris.push_back(event.id);
+                }
             }
-            ++eit;
         }
 
-        while (eit != events.end()) {
-            rtris.insert(eit->id);
-            ++eit;
-        }
-
-        TriangleIds lids, rids;
-        for (auto id : ltris) {
-            lids.push_back(id);
-        }
-        for (auto id : rtris) {
-            rids.push_back(id);
-        }
+        assert(min_ltris + (min_side == Dir::LEFT ? min_ptris : 0)
+            == ltris.size());
+        assert(min_rtris + (min_side == Dir::RIGHT ? min_ptris : 0)
+            == rtris.size());
 
         return std::make_tuple(
-            min_cost, min_plane, std::move(lids), std::move(rids));
+            min_cost, min_plane, std::move(ltris), std::move(rtris));
+    }
+
+    // helper method for recursive call with node
+    const Triangle* intersect(
+        const Node* node, const Box& box,
+        const Ray& ray, float& r, float& s, float& t) const
+    {
+        if (node == nullptr) {
+            return nullptr;
+        }
+
+        // check if ray intersects the box at all
+        if (!ray_box_intersection(ray, box)) {
+            return nullptr;
+        }
+
+        if (node->is_leaf()) {
+            return intersect(
+                node->triangle_ids(), node->num_tris(), ray, r, s, t);
+        }
+
+        Axis ax = node->split_axis();
+        float pos = node->split_pos();
+
+        Vec lmax = box.max;
+        lmax[ax] = pos;
+        Vec rmin = box.min;
+        rmin[ax] = pos;
+
+        Box lbox{box.min, lmax};
+        Box rbox{rmin, box.max};
+        // Plane plane{node->split_axis(), node->split_pos()};
+        // Box lbox, rbox;
+        // std::tie(lbox, rbox) = split(box, plane);
+
+        float lr, ls, lt;
+        auto ltri = intersect(node->left(), lbox, ray, lr, ls, lt);
+
+        float rr, rs, rt;
+        auto rtri = intersect(node->right(), rbox, ray, rr, rs, rt);
+
+        if (ltri && (!rtri || lr < rr)) {
+            r = lr;
+            s = ls;
+            t = lt;
+            return ltri;
+        } else if (rtri) {
+            r = rr;
+            s = rs;
+            t = rt;
+            return rtri;
+        }
+
+        return nullptr;
+    }
+
+    // helper method which intersects a triangle ids array with a ray
+    const Triangle* intersect(
+        const TriangleId* ids, uint32_t num_tris,
+        const Ray& ray, float& min_r, float& min_s, float& min_t) const
+    {
+        min_r = std::numeric_limits<float>::max();
+        const Triangle* res = nullptr;
+        float r, s, t;
+        for (uint32_t i = 0; i != num_tris; ++i) {
+            const auto& tri = tris_[ids[i]];
+            bool intersects = tri.intersect(ray, r, s, t);
+            if (intersects) {
+                if (r < min_r) {
+                    min_r = r;
+                    min_s = s;
+                    min_t = t;
+                    res = &tri;
+                }
+            }
+        }
+
+        return res;
     }
 
 private:
