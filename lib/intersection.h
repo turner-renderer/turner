@@ -78,12 +78,14 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
 //
 // Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
 //
-inline bool ray_box_intersection(const Ray& r, const Box& box) {
+inline bool ray_box_intersection(
+    const Ray& r, const Box& box, float& tmin, float& tmax)
+{
     float tx1 = (box.min.x - r.pos.x) * r.invdir.x;
     float tx2 = (box.max.x - r.pos.x) * r.invdir.x;
 
-    float tmin = std::fmin(tx1, tx2);
-    float tmax = std::fmax(tx1, tx2);
+    tmin = std::fmin(tx1, tx2);
+    tmax = std::fmax(tx1, tx2);
 
     float ty1 = (box.min.y - r.pos.y) * r.invdir.y;
     float ty2 = (box.max.y - r.pos.y) * r.invdir.y;
@@ -98,6 +100,11 @@ inline bool ray_box_intersection(const Ray& r, const Box& box) {
     tmax = std::fmin(tmax, std::fmax(tz1, tz2));
 
     return !(tmax < tmin);
+}
+
+inline bool ray_box_intersection(const Ray& r, const Box& box) {
+    float tmin, tmax;
+    return ray_box_intersection(r, box, tmin, tmax);
 }
 
 

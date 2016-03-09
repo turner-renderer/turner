@@ -8,8 +8,7 @@
 
 
 static constexpr float EPS = 0.00001f;
-    // std::numeric_limits<float>::epsilon()
-    // std::numeric_limits<float>::epsilon();
+static constexpr float FLT_MAX = std::numeric_limits<float>::max();
 
 float eps_zero(float a);
 
@@ -46,6 +45,8 @@ public:
     template <typename... Args>
     Vec(Args... args) : aiVector3D(args...) {}
 
+    using aiVector3D::operator[];
+
     float operator[](const Axis ax) const {
         return *(this->v + static_cast<int>(ax));
     }
@@ -53,6 +54,7 @@ public:
     float& operator[](const Axis ax) {
         return *(this->v + static_cast<int>(ax));
     }
+
 
     bool operator<(const Vec& v) const {
         return x < v.x && y < v.y && z < v.z;

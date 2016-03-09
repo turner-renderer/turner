@@ -152,9 +152,11 @@ int main(int argc, char const *argv[])
     }
 
     // load triangles from the scene into a kd-tree
+    std::cerr << "Loading triangles and building kd-tree..." << std::endl;
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
+    std::cerr << "Kd-Tree height: " << tree.height() << std::endl;
 
     //
     // Raytracer
