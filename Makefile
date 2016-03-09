@@ -1,7 +1,7 @@
 CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
-BINS=renderer test_assimp raycaster raytracer pathtracer
+BINS=renderer test_assimp raycaster raytracer pathtracer radiosity
 
 ifdef COVERAGE
 CXXFLAGS+=-fprofile-arcs -ftest-coverage
@@ -11,14 +11,15 @@ endif
 all: $(BINS)
 
 $(BINS): CC=$(CXX)
-raytracer pathtracer: LDFLAGS += -Lvendor/docopt.cpp
-raytracer pathtracer: LDLIBS += -ldocopt_s -lpthread
+raytracer pathtracer radiosity: LDFLAGS += -Lvendor/docopt.cpp
+raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
 
 renderer: renderer.o
 test_assimp: test_assimp.o
 raycaster: raycaster.o lib/types.o
 raytracer: main.o raytracer.o lib/types.o
 pathtracer: main.o pathtracer.o lib/types.o
+radiosity: main.o radiosity.o lib/types.o
 
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
 
