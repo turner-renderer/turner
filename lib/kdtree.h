@@ -14,9 +14,6 @@
 //
 template<unsigned int LEAF_CAPACITY=10>
 class KDTree {
-
-    // TODO: Change the structure of the node s.t. it fits into a cpu cache
-    // line of 64 bytes.
     struct Node {
         // a leaf contains triangle
         Node(Box bbox, Axis ax, Triangles&& triangles)
@@ -574,6 +571,17 @@ public:
 
 private:
 
+    struct Event {
+        TriangleId id;
+        float point;
+        // auxiliary point
+        // for type == ENDING, point_aux is the starting point
+        // for type == STARTNG, point_aux is the ending point
+        // for type == PLANAR, points_aux is the same point as `point`
+        float point_aux;
+        int type;
+    };
+
     Node* build(TriangleIds tris, const Box& box) {
         if (tris.size() == 0) {
             return nullptr;
@@ -608,12 +616,6 @@ private:
             build(std::move(rtris), rbox));
     }
 
-    struct Event {
-        TriangleId id;
-        float point;
-        int type;
-    };
-
     static constexpr int STARTING = 2;
     static constexpr int ENDING = 0;
     static constexpr int PLANAR = 1;
@@ -643,14 +645,19 @@ private:
 
             for (int k = 0; k < 3; ++k, ++ax) {
                 auto& events = event_lists[k];
+                events.reserve(num_tris);
+
                 if (clipped_box.is_planar(ax)) {
-                    events.push_back(
-                        Event{id, clipped_box.min[ax], PLANAR});
+                    events.emplace_back(
+                        Event{id, clipped_box.min[ax], clipped_box.min[ax],
+                        PLANAR});
                 } else {
-                    events.push_back(
-                        Event{id, clipped_box.min[ax], STARTING});
-                    events.push_back(
-                        Event{id, clipped_box.max[ax], ENDING});
+                    events.emplace_back(
+                        Event{id, clipped_box.min[ax], clipped_box.max[ax],
+                        STARTING});
+                    events.emplace_back(
+                        Event{id, clipped_box.max[ax], clipped_box.min[ax],
+                        ENDING});
                 }
             }
         }
@@ -731,15 +738,17 @@ private:
         ltris.reserve(min_ltris);
         rtris.reserve(min_rtris);
 
-        std::unordered_map<TriangleId, bool> started_left;
         const auto& events = event_lists[static_cast<int>(min_plane.ax)];
         for (const auto& event : events) {
             if (event.point < min_plane.coord) {
-                if (event.type == ENDING || event.type == PLANAR) {
+                if (event.type == ENDING ||
+                    event.type == PLANAR)
+                {
                     ltris.push_back(event.id);
-                    started_left[event.id] = false;
-                } else {
-                    started_left[event.id] = true;
+                } else if (min_plane.coord < event.point_aux) {
+                    // STARTING before and ENDING after min_plane
+                    ltris.push_back(event.id);
+                    rtris.push_back(event.id);
                 }
             } else if (event.point == min_plane.coord) {
                 if (event.type == ENDING) {
@@ -753,13 +762,8 @@ private:
                 } else {
                     rtris.push_back(event.id);
                 }
-            } else {
-                if (event.type == STARTING || event.type == PLANAR) {
-                    rtris.push_back(event.id);
-                } else if (started_left[event.id]) {
-                    ltris.push_back(event.id);
-                    rtris.push_back(event.id);
-                }
+            } else if (event.type == STARTING || event.type == PLANAR) {
+                rtris.push_back(event.id);
             }
         }
 
