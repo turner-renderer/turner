@@ -28,24 +28,24 @@ TEST_CASE("Split box at plane", "[box]") {
 TEST_CASE("Trivial smoke test", "[kdtree]")
 {
     auto tri = random_triangle();
-    FastKDTree kdtree({tri});
+    KDTree kdtree({tri});
 }
 
 TEST_CASE("Smoke test", "[kdtree]")
 {
     auto a = test_triangle({-1, -1, 0}, {1, -1, 0}, {1, 1, 0});
     auto b = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 2, 0});
-    FastKDTree tree(Triangles{a, b});
+    KDTree tree(Triangles{a, b});
     REQUIRE(tree.height() == 0);
 }
 
-TEST_CASE("Four separated triangle test", "[kdtree]")
+TEST_CASE("Four separated triangles test", "[kdtree]")
 {
     auto a = test_triangle({0, 0, 1}, {0, 1, 1}, {1, 0, 1});
     auto b = test_triangle({2, 0, 1}, {3, 0, 1}, {3, 1, 1});
     auto c = test_triangle({0, 2, 1}, {0, 3, 1}, {1, 3, 1});
     auto d = test_triangle({3, 2, 1}, {3, 3, 1}, {2, 3, 1});
-    FastKDTree tree(Triangles{a, b, c, d});
+    KDTree tree(Triangles{a, b, c, d});
     REQUIRE(tree.height() == 1);
     REQUIRE(tree.size() == 4);
 
@@ -120,13 +120,13 @@ TEST_CASE("KDTree stress test", "[kdtree]")
 
     std::cerr << "Building a fast kd-tree of "
         << TRIANGLES_COUNT << " triangles" << std::endl;
-    std::cerr << "Node size (bytes): " << FastKDTree::node_size() << std::endl;
-    FastKDTree tree(triangles);
+    std::cerr << "Node size (bytes): " << KDTree::node_size() << std::endl;
+    KDTree tree(triangles);
     std::cerr << "Height  : " << tree.height() << std::endl;
     std::cerr << "Size    : " << tree.size() << std::endl;
     std::cerr << std::endl;
 
-    // test fast kd tree
+    // test
 
     std::cerr << "Computing ray fast kd tree intersections" << std::endl;
 
@@ -146,30 +146,4 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     std::cerr << "# Hits   : " << hits_fast << std::endl;
     std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
     std::cerr << std::endl;
-
-    // test normal kd tree
-
-    std::cerr << "Building a fast kd-tree of "
-        << TRIANGLES_COUNT << " triangles" << std::endl;
-
-    static constexpr unsigned int LEAF_CAPACITY = 10;
-    KDTree<LEAF_CAPACITY> tree2(triangles);
-    std::cerr << "Height   : " << tree2.height() << std::endl;
-
-    std::cerr << "Computing ray normal kd tree intersections" << std::endl;
-
-    size_t hits_naive = 0;
-    {
-        Runtime runtime(runtime_ms);
-        for (const auto& ray : rays) {
-            if (tree2.intersect(ray, r, s, t)) {
-                hits_naive += 1;
-            }
-        }
-    }
-    std::cerr << "Runtime  : " << runtime_ms << "ms" << std::endl;
-    std::cerr << "# Hits   : " << hits_naive << std::endl;
-    std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
-
-    REQUIRE(hits_fast == hits_naive);
 }

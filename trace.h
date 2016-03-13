@@ -5,8 +5,7 @@
 #include <vector>
 #include <sstream>
 
-// using Tree = KDTree<10>;
-using Tree = FastKDTree;
+using Tree = KDTree;
 
 class Configuration {
 
