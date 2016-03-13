@@ -103,6 +103,7 @@ int main(int argc, char const *argv[])
                              };
 
     // import scene
+    std::cerr << "Loading scene..." << std::endl;
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
         args["<filename>"].asString().c_str(),

@@ -374,7 +374,11 @@ private:
         }
 
         // automatic termination
-        if (min_cost > COST_INTERSECTION * tris.size()) {
+        // remove lambda factor from cost again, otherwise we may stuck in an
+        // empty space split forever
+        if (COST_INTERSECTION * tris.size()
+            < min_cost / lambda(ltris.size(), rtris.size()))
+        {
             return new Node(tris);
         }
 
