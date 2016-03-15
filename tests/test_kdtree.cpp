@@ -147,3 +147,29 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
     std::cerr << std::endl;
 }
+
+TEST_CASE("Test cube in kdtree", "[kdtree]") {
+    // cube made of triangles
+    // front
+    auto a1 = test_triangle({-1, -1, -1}, {1, -1, -1}, {1, 1, -1});
+    auto a2 = test_triangle({-1, -1, -1}, {-1, 1, -1}, {1, 1, -1});
+    // back
+    auto a3 = test_triangle({-1, -1, 1}, {1, -1, 1}, {1, 1, 1});
+    auto a4 = test_triangle({-1, -1, 1}, {-1, 1, 1}, {1, 1, 1});
+    // left
+    auto b1 = test_triangle({-1, -1, -1}, {-1, -1, 1}, {-1, 1, 1});
+    auto b2 = test_triangle({-1, -1, -1}, {-1, 1, -1}, {-1, 1, 1});
+    // right
+    auto b3 = test_triangle({1, -1, -1}, {1, -1, 1}, {1, 1, 1});
+    auto b4 = test_triangle({1, -1, -1}, {1, 1, -1}, {1, 1, 1});
+    // top
+    auto c1 = test_triangle({-1, 1, -1}, {-1, 1, 1}, {1, 1, 1});
+    auto c2 = test_triangle({-1, 1, -1}, {1, 1, -1}, {1, 1, 1});
+    // bottom
+    auto c3 = test_triangle({-1, -1, -1}, {-1, -1, 1}, {1, -1, 1});
+    auto c4 = test_triangle({-1, -1, -1}, {1, -1, -1}, {1, -1, 1});
+
+    KDTree tree(Triangles{a1, a2, a3, a4, b1, b2, b3, b4, c1, c2, c3, c4});
+    REQUIRE(tree.height() == 0);
+    REQUIRE(tree.size() == 12);
+}

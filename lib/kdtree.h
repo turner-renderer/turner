@@ -88,11 +88,6 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Plane p, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_ptris)
 {
-    // not splitting at all has infinity cost
-    if (box.min[p.ax] == p.coord || box.max[p.ax] == p.coord) {
-        return {std::numeric_limits<float>::max(), Dir::LEFT};
-    }
-
     Box lbox, rbox;
     std::tie(lbox, rbox) = split(box, p);
     float area = box.surface_area();
@@ -163,7 +158,7 @@ private:
         }
 
         Axis split_axis() const {
-            // assert(is_inner());
+            assert(is_inner());
 
             if (flags_ == FLAG_AXIS_X) {
                 return Axis::X;
@@ -177,27 +172,27 @@ private:
         }
 
         float split_pos() const {
-            // assert(is_inner());
+            assert(is_inner());
             return split_pos_;
         }
 
         Node* left() const {
-            // assert(is_inner());
+            assert(is_inner());
             return reinterpret_cast<Node*>(left_or_triangle_ids_);
         }
 
         Node* right() const {
-            // assert(is_inner());
+            assert(is_inner());
             return right_;
         }
 
         TriangleId num_tris() const {
-            // assert(is_leaf());
+            assert(is_leaf());
             return flags_;
         }
 
         TriangleId* triangle_ids() const {
-            // assert(is_leaf());
+            assert(is_leaf());
             return reinterpret_cast<TriangleId*>(left_or_triangle_ids_);
         }
 
@@ -291,10 +286,12 @@ public:
             return nullptr;
         }
 
-        std::stack<std::tuple<Node*, float, float>> stack;
+        std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
         stack.push(std::make_tuple(root_.get(), tenter, texit));
 
         Node* node;
+        const Triangle* res = nullptr;
+        r = std::numeric_limits<float>::max();
         while (!stack.empty()) {
             std::tie(node, tenter, texit) = stack.top();
             stack.pop();
@@ -310,13 +307,16 @@ public:
                 // left is near if ray.pos < t, else otherwise
                 Node* near = node->left();
                 Node* far = node->right();
-                if (ray.pos[ax] > pos) {
+                if (ray.pos[ax] >= pos) {
                     std::swap(near, far);
                 }
 
-                if (t >= texit || t < 0) {
+                // Should we use a fat plane here? We would say, no!
+                // t, texit and tenter are computed in exactly the same way.
+                // Cf. the implementation of ray_box_intersection.
+                if (t > texit || t < 0) {
                     node = near;
-                } else if (t <= tenter) {
+                } else if (t < tenter) {
                     node = far;
                 } else {
                     stack.push(std::make_tuple(far, t, texit));
@@ -327,15 +327,21 @@ public:
 
             if (node) {
                 assert(node->is_leaf());
-                auto res = intersect(
-                    node->triangle_ids(), node->num_tris(), ray, r, s, t);
-                if (res) {
-                    return res;
+
+                float next_r, next_s, next_t;
+                auto next = intersect(
+                    node->triangle_ids(), node->num_tris(), ray,
+                    next_r, next_s, next_t);
+                if (next && next_r < r) {
+                    res = next;
+                    r = next_r;
+                    s = next_s;
+                    t = next_t;
                 }
             }
         }
 
-        return nullptr;
+        return res;
     }
 
 
@@ -377,7 +383,7 @@ private:
         // remove lambda factor from cost again, otherwise we may stuck in an
         // empty space split forever
         if (COST_INTERSECTION * tris.size()
-            < min_cost / lambda(ltris.size(), rtris.size()))
+            * lambda(ltris.size(), rtris.size()) < min_cost)
         {
             return new Node(tris);
         }
@@ -417,6 +423,7 @@ private:
             }
             num_tris += 1;
 
+            ax = Axis::X;
             for (int k = 0; k < 3; ++k, ++ax) {
                 auto& events = event_lists[k];
                 events.reserve(num_tris);
@@ -437,6 +444,7 @@ private:
         }
 
         // sweep
+        ax = Axis::X;
         for (int k = 0; k < 3; ++k, ++ax) {
             auto& events = event_lists[k];
             std::sort(events.begin(), events.end(),
@@ -550,60 +558,6 @@ private:
             min_cost, min_plane, std::move(ltris), std::move(rtris));
     }
 
-    // helper method for recursive call with node
-    const Triangle* intersect(
-        const Node* node, const Box& box,
-        const Ray& ray, float& r, float& s, float& t) const
-    {
-        if (node == nullptr) {
-            return nullptr;
-        }
-
-        // check if ray intersects the box at all
-        if (!ray_box_intersection(ray, box)) {
-            return nullptr;
-        }
-
-        if (node->is_leaf()) {
-            return intersect(
-                node->triangle_ids(), node->num_tris(), ray, r, s, t);
-        }
-
-        Axis ax = node->split_axis();
-        float pos = node->split_pos();
-
-        Vec lmax = box.max;
-        lmax[ax] = pos;
-        Vec rmin = box.min;
-        rmin[ax] = pos;
-
-        Box lbox{box.min, lmax};
-        Box rbox{rmin, box.max};
-        // Plane plane{node->split_axis(), node->split_pos()};
-        // Box lbox, rbox;
-        // std::tie(lbox, rbox) = split(box, plane);
-
-        float lr, ls, lt;
-        auto ltri = intersect(node->left(), lbox, ray, lr, ls, lt);
-
-        float rr, rs, rt;
-        auto rtri = intersect(node->right(), rbox, ray, rr, rs, rt);
-
-        if (ltri && (!rtri || lr < rr)) {
-            r = lr;
-            s = ls;
-            t = lt;
-            return ltri;
-        } else if (rtri) {
-            r = rr;
-            s = rs;
-            t = rt;
-            return rtri;
-        }
-
-        return nullptr;
-    }
-
     // helper method which intersects a triangle ids array with a ray
     const Triangle* intersect(
         const TriangleId* ids, uint32_t num_tris,
@@ -615,13 +569,11 @@ private:
         for (uint32_t i = 0; i != num_tris; ++i) {
             const auto& tri = tris_[ids[i]];
             bool intersects = tri.intersect(ray, r, s, t);
-            if (intersects) {
-                if (r < min_r) {
-                    min_r = r;
-                    min_s = s;
-                    min_t = t;
-                    res = &tri;
-                }
+            if (intersects && r < min_r) {
+                min_r = r;
+                min_s = s;
+                min_t = t;
+                res = &tri;
             }
         }
 
