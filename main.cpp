@@ -17,7 +17,6 @@
 #include <vector>
 #include <map>
 #include <iostream>
-#include <chrono>
 
 
 Triangles triangles_from_scene(const aiScene* scene) {
