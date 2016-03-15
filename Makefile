@@ -19,9 +19,10 @@ test_assimp: test_assimp.o
 raycaster: raycaster.o lib/types.o
 raytracer: main.o raytracer.o lib/types.o
 pathtracer: main.o pathtracer.o lib/types.o
-radiosity: main.o radiosity.o lib/types.o
+radiosity: radiosity.o lib/types.o
 
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
+radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
 
 bootstrap: ASSIMP_BUILD_OPTS = \
 	-DBUILD_SHARED_LIBS=OFF \
