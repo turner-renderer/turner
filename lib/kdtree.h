@@ -74,15 +74,15 @@ enum class Dir { LEFT, RIGHT };
 // SAH function
 //
 // Args:
-//   p - splitting plane
-//   box - AABB to split
-//   num_{l,r}tris - number of triangles in the left resp. right box produces
+//   p; splitting plane
+//   box: AABB to split
+//   num_{l,r}tris: number of triangles in the left resp. right box produces
 //     by splitting `box` at `p`
-//   num_ptris - number of triangles lying in the plane `p`
+//   num_ptris: number of triangles lying in the plane `p`
 //
 // Return:
-//   cost to split the box + if the planar triangles should be appended to the
-//   lhs or rhs of the box
+//   cost to split the box + wether the planar triangles should be appended to
+//   the lhs or rhs of the box
 //
 inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Plane p, const Box& box,
@@ -94,17 +94,17 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     float larea_ratio = lbox.surface_area()/area;
     float rarea_ratio = rbox.surface_area()/area;
 
-    auto lpcost = cost(
+    auto left_planar_cost = cost(
         larea_ratio, rarea_ratio,
         num_ltris + num_ptris, num_rtris);
-    auto rpcost = cost(
+    auto right_planar_cost = cost(
         larea_ratio, rarea_ratio,
         num_ltris, num_ptris + num_rtris);
 
-    if (lpcost < rpcost) {
-        return {lpcost, Dir::LEFT};
+    if (left_planar_cost < right_planar_cost) {
+        return {left_planar_cost, Dir::LEFT};
     } else {
-        return {rpcost, Dir::RIGHT};
+        return {right_planar_cost, Dir::RIGHT};
     }
 }
 
@@ -224,10 +224,18 @@ private:
         static constexpr TriangleId FLAG_AXIS_Y = MAX_ID + 2;
         static constexpr TriangleId FLAG_AXIS_Z = MAX_ID + 3;
 
-        // flags_ == isLeaf, numTris or splitAxis
+        // If flags_ in [0, MAX_ID], then this node is a leaf node and this
+        // member is the number of triangles in the leaf. Otherwise, this node
+        // is an inner node. In this case, flags is in [FLAG_AXIS_X,
+        // FLAG_AXIS_Y, FLAG_AXIS_Z] and describes the splitting axis.
         TriangleId flags_;            // 4 bytes
+        // Used only in an inner node
         float split_pos_;             // 4 bytes
+        // Depending whether this node is an inner node or a leaf, this member
+        // is a pointer to the left child or resp. the array containing the
+        // triangles.
         void* left_or_triangle_ids_;  // 8 bytes
+        // Used only in an inner node
         Node* right_;                 // 8 bytes
                                       // == 24 bytes
     };
