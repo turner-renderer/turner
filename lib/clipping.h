@@ -51,15 +51,15 @@ inline OutCode compute_outcode(const Vec& v, const Box& box) {
 //   that case p0 and p1 are updated, and describe the clipped line.
 //
 inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
-    auto outcode0 = compute_outcode(p0, box);
-    auto outcode1 = compute_outcode(p1, box);
+    auto outcode_p0 = compute_outcode(p0, box);
+    auto outcode_p1 = compute_outcode(p1, box);
 
-    while (outcode0 || outcode1) {
-        if (outcode0 & outcode1) {
+    while (outcode_p0 || outcode_p1) {
+        if (outcode_p0 & outcode_p1) {
             return false;
         }
 
-        auto outcode_out = outcode0 ? outcode0 : outcode1;
+        auto outcode_out = outcode_p0 ? outcode_p0 : outcode_p1;
 
         float x, y, z, t;
         if (outcode_out & TOP) {
@@ -94,16 +94,16 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
             z = box.min.z;
         }
 
-        if (outcode_out == outcode0) {
+        if (outcode_out == outcode_p0) {
             p0.x = x;
             p0.y = y;
             p0.z = z;
-            outcode0 = compute_outcode(p0, box);
+            outcode_p0 = compute_outcode(p0, box);
         } else {
             p1.x = x;
             p1.y = y;
             p1.z = z;
-            outcode1 = compute_outcode(p1, box);
+            outcode_p1 = compute_outcode(p1, box);
         }
     }
 
@@ -116,7 +116,7 @@ enum class PointPlanePos {
 };
 
 //
-// Classify point to the plane given by equation `n * x = d`.
+// Classify point to the thick plane given by equation `n * x = d`.
 //
 inline PointPlanePos classify_point_to_plane(
     const Vec& pt, const Vec& n, float d)
