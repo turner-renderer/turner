@@ -23,20 +23,17 @@ static constexpr int COST_TRAVERSAL = 15;
 static constexpr int COST_INTERSECTION = 20;
 
 
-struct Plane {
-    Axis ax;        // 1 byte
-    float coord;    // 4 bytes
-                    // = 8 bytes
-};
-
-inline std::pair<Box, Box> split(const Box& box, const Plane plane) {
-    assert(box.min[plane.ax] - EPS <= plane.coord);
-    assert(plane.coord <= box.max[plane.ax] + EPS);
+// Split `box` on the plane defined by the position `pos` at axis `ax`.
+inline std::pair<Box, Box> split(
+    const Box& box, Axis plane_ax, float plane_pos)
+{
+    assert(box.min[plane_ax] - EPS <= plane_pos);
+    assert(plane_pos <= box.max[plane_ax] + EPS);
 
     Vec lmax = box.max;
-    lmax[plane.ax] = plane.coord;
+    lmax[plane_ax] = plane_pos;
     Vec rmin = box.min;
-    rmin[plane.ax] = plane.coord;
+    rmin[plane_ax] = plane_pos;
 
     return {{box.min, lmax}, {rmin, box.max}};
 }
@@ -74,7 +71,7 @@ enum class Dir { LEFT, RIGHT };
 // SAH function
 //
 // Args:
-//   p; splitting plane
+//   ax, pos: splitting plane
 //   box: AABB to split
 //   num_{l,r}tris: number of triangles in the left resp. right box produces
 //     by splitting `box` at `p`
@@ -85,11 +82,11 @@ enum class Dir { LEFT, RIGHT };
 //   the lhs or rhs of the box
 //
 inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
-    Plane p, const Box& box,
+    Axis ax, float pos, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_ptris)
 {
     Box lbox, rbox;
-    std::tie(lbox, rbox) = split(box, p);
+    std::tie(lbox, rbox) = split(box, ax, pos);
     float area = box.surface_area();
     float larea_ratio = lbox.surface_area()/area;
     float rarea_ratio = rbox.surface_area()/area;
@@ -377,10 +374,10 @@ private:
         }
 
         float min_cost;
-        Plane plane;
+        Axis plane_ax; float plane_pos;  // plane
         TriangleIds ltris, rtris;
-        std::tie(min_cost, plane, ltris, rtris) = find_plane_and_classify(
-            tris, box);
+        std::tie(min_cost, plane_ax, plane_pos, ltris, rtris) =
+            find_plane_and_classify(tris, box);
 
         // clipped everything away
         if (min_cost == 0) {
@@ -397,9 +394,9 @@ private:
         }
 
         Box lbox, rbox;
-        std::tie(lbox, rbox) = split(box, plane);
+        std::tie(lbox, rbox) = split(box, plane_ax, plane_pos);
 
-        return new Node(plane.ax, plane.coord,
+        return new Node(plane_ax, plane_pos,
             build(std::move(ltris), lbox),
             build(std::move(rtris), rbox));
     }
@@ -409,13 +406,14 @@ private:
     static constexpr int PLANAR = 1;
 
     std::tuple<
-        float /*cost*/, Plane,
+        float /*cost*/, Axis /* plane axis */, float /* plane pos */,
         TriangleIds /*left*/, TriangleIds /*right*/>
     find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
 
         float min_cost = std::numeric_limits<float>::max();
-        Plane min_plane;
+        Axis min_plane_ax; float min_plane_pos;
         Dir min_side;
+        // we also store those for asserts below
         float min_ltris, min_rtris, min_ptris;
 
         std::vector<Event> event_lists[AXES.size()];
@@ -490,16 +488,15 @@ private:
                 num_ptris = point_planar;
                 num_rtris -= point_planar + point_ending;
 
-                Plane plane{ax, p};
-
                 float cost;
                 Dir side;
                 std::tie(cost, side) = surface_area_heuristics(
-                    plane, box, num_ltris, num_rtris, num_ptris);
+                    ax, p, box, num_ltris, num_rtris, num_ptris);
 
                 if (cost < min_cost) {
                     min_cost = cost;
-                    min_plane = plane;
+                    min_plane_ax = ax;
+                    min_plane_pos = p;
                     min_side = side;
                     min_ltris = num_ltris;
                     min_rtris = num_rtris;
@@ -514,7 +511,7 @@ private:
         // min_cost is still infty --> terminate
         if (min_cost == std::numeric_limits<float>::max()) {
             return std::make_tuple(
-                0, Plane{Axis::X, 0}, TriangleIds(), TriangleIds());
+                0, Axis::X, 0, TriangleIds(), TriangleIds());
         }
 
         // -> min_plane, min_side
@@ -525,19 +522,19 @@ private:
         ltris.reserve(min_ltris);
         rtris.reserve(min_rtris);
 
-        const auto& events = event_lists[static_cast<int>(min_plane.ax)];
+        const auto& events = event_lists[static_cast<int>(min_plane_ax)];
         for (const auto& event : events) {
-            if (event.point < min_plane.coord) {
+            if (event.point < min_plane_pos) {
                 if (event.type == ENDING ||
                     event.type == PLANAR)
                 {
                     ltris.push_back(event.id);
-                } else if (min_plane.coord < event.point_aux) {
+                } else if (min_plane_pos < event.point_aux) {
                     // STARTING before and ENDING after min_plane
                     ltris.push_back(event.id);
                     rtris.push_back(event.id);
                 }
-            } else if (event.point == min_plane.coord) {
+            } else if (event.point == min_plane_pos) {
                 if (event.type == ENDING) {
                     ltris.push_back(event.id);
                 } else if (event.type == PLANAR) {
@@ -560,7 +557,8 @@ private:
             == rtris.size());
 
         return std::make_tuple(
-            min_cost, min_plane, std::move(ltris), std::move(rtris));
+            min_cost, min_plane_ax, min_plane_pos,
+            std::move(ltris), std::move(rtris));
     }
 
     // helper method which intersects a triangle ids array with a ray
