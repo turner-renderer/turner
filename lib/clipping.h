@@ -134,7 +134,7 @@ inline PointPlanePos classify_point_to_plane(
 // Sutherland-Hodgman polygon clipping at a (thick) plane.
 //
 inline std::vector<Vec>
-clip_polygon_at_plane(const std::vector<Vec> poly, const Vec& n, float d) {
+clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
     assert(poly.size() > 1);
 
     std::vector<Vec> points;

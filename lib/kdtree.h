@@ -282,7 +282,7 @@ public:
     const Triangle*
     intersect(const Ray& ray, float& r, float& s, float& t) const {
         float tenter, texit;
-        if (!ray_box_intersection(ray, box_, tenter, texit)) {
+        if (!intersect_ray_box(ray, box_, tenter, texit)) {
             return nullptr;
         }
 
