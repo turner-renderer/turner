@@ -75,7 +75,7 @@ struct Box {
     Vec min, max;
 
     // Check if the box is planar in the plane with normal `ax`.
-    bool is_planar(Axis ax) {
+    bool is_planar(Axis ax) const {
         return !(std::abs((max - min)[static_cast<int>(ax)]) > EPS);
     }
 
@@ -144,8 +144,3 @@ private:
     aiMatrix3x3 trafo_;
     float delta_x_, delta_y_;
 };
-
-
-std::vector<std::string> split(const std::string& s, char delim);
-
-aiColor4D parse_color4(const std::string& str);

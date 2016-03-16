@@ -244,7 +244,7 @@ public:
     }
 
 
-    KDTree(Triangles tris)
+    explicit KDTree(Triangles tris)
         : tris_(std::move(tris))
     {
         assert(tris_.size() > 0);
