@@ -69,10 +69,7 @@ TEST_CASE("Test bbox of triangle", "[triangle]")
 
 TEST_CASE("Test is_planar of triangle", "[triangle]")
 {
-    Axis ax = Axis::X;
-    for (int n = 0; n < 3; ++n) {
-        ++ax;
-
+    for (auto ax : AXES) {
         Vec vs[3] = {random_vec(), random_vec(), random_vec()};
         for (int i = 0; i < 3; ++i) {
             vs[i][ax] = 0.f;

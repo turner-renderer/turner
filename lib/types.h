@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <sstream>
 #include <vector>
+#include <array>
 
 
 static constexpr float EPS = 0.00001f;
@@ -23,18 +24,7 @@ inline constexpr float max(float a, float b, float c) {
 
 
 enum class Axis : char { X = 0, Y = 1, Z = 2};
-
-inline Axis operator++(Axis& ax) {
-    if (ax == Axis::X) {
-        ax = Axis::Y;
-        return Axis::Y;
-    } else if (ax == Axis::Y) {
-        ax = Axis::Z;
-        return Axis::Z;
-    }
-    ax = Axis::X;
-    return Axis::X;
-}
+static constexpr std::array<Axis, 3> AXES = {{Axis::X, Axis::Y, Axis::Z}};
 
 
 //
