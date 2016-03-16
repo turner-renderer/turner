@@ -195,8 +195,7 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     std::vector<Vec> points(tri.vertices.begin(), tri.vertices.end());
 
     // clip at 6 planes defined by box
-    Axis ax = Axis::X;
-    for (int i = 0; i < 3; ++i, ++ax) {
+    for (auto ax : AXES) {
         for (int j = 0; j < 2; ++j) {
             Vec normal;
             normal[ax] = j == 0 ? 1 : -1;
@@ -214,7 +213,7 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
         { std::numeric_limits<float>::max()
         , std::numeric_limits<float>::lowest()
         };
-    for (int i = 0; i < 3; ++i, ++ax) {
+    for (auto ax : AXES) {
         for (const auto& pt : points) {
             if (pt[ax] < res.min[ax]) {
                 res.min[ax] = pt[ax];

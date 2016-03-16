@@ -410,8 +410,7 @@ private:
         Dir min_side;
         float min_ltris, min_rtris, min_ptris;
 
-        Axis ax = Axis::X;
-        std::vector<Event> event_lists[3];
+        std::vector<Event> event_lists[AXES.size()];
 
         // generate events
         size_t num_tris = 0;
@@ -423,9 +422,8 @@ private:
             }
             num_tris += 1;
 
-            ax = Axis::X;
-            for (int k = 0; k < 3; ++k, ++ax) {
-                auto& events = event_lists[k];
+            for (auto ax : AXES) {
+                auto& events = event_lists[static_cast<int>(ax)];
                 events.reserve(num_tris);
 
                 if (clipped_box.is_planar(ax)) {
@@ -444,9 +442,8 @@ private:
         }
 
         // sweep
-        ax = Axis::X;
-        for (int k = 0; k < 3; ++k, ++ax) {
-            auto& events = event_lists[k];
+        for (auto ax : AXES) {
+            auto& events = event_lists[static_cast<int>(ax)];
             std::sort(events.begin(), events.end(),
                 [](const Event& e1, const Event& e2) {
                     return e1.point < e2.point ||
