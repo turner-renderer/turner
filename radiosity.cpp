@@ -18,6 +18,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <unordered_set>
 #include <chrono>
 
 Color trace(const Vec& origin, const Vec& dir,
@@ -38,14 +39,6 @@ Color trace(const Vec& origin, const Vec& dir,
         aiRay(origin, dir), dist_to_triangle, s, t);
     if (!triangle_pt) {
         return conf.bg_color;
-    }
-
-    // draw edge of mesh
-    // if one barycentric coordinate is close to 0.0 we are close to a border
-    float r = 1.f - s - t;
-    float EPS = 0.005f;
-    if ( r < EPS || s < EPS || t < EPS) {
-        return {};
     }
 
     // simple raycast
@@ -257,6 +250,53 @@ int main(int argc, char const *argv[])
             std::cerr.flush();
         }
         std::cerr << std::endl;
+
+        std::cerr << "Drawing mesh lines ..." << std::endl;
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                float dist_to_triangle, s, t;
+                std::unordered_set<std::uintptr_t> triangle_ids;
+                const float offset = 1.f;
+
+                // Shoot center ray.
+                auto cam_dir = cam.raster2cam(
+                    aiVector2D(x + 0.5f, y + 0.5f), width, height);
+                auto center_id = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                triangle_ids.insert(center_id);
+
+                // Sample disc rays around center.
+                cam_dir = cam.raster2cam(
+                    aiVector2D(x, y), width, height);
+                auto triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                triangle_ids.insert(triangle_pt);
+
+                cam_dir = cam.raster2cam(
+                    aiVector2D(x + offset, y), width, height);
+                triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                triangle_ids.insert(triangle_pt);
+
+                cam_dir = cam.raster2cam(
+                    aiVector2D(x + offset, y + offset), width, height);
+                triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                triangle_ids.insert(triangle_pt);
+
+                cam_dir = cam.raster2cam(
+                    aiVector2D(x, y + offset), width, height);
+                triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                triangle_ids.insert(triangle_pt);
+
+                const int M = 4;
+                const float M_2 = 0.5f * M;
+                const int m = triangle_ids.size() - 1; // without center
+                float e = 1.f - std::pow( std::abs(m - M_2) / M_2, 10 );
+                image(x, y) = image(x, y) * (1.f - e);
+            }
+        }
     }
 
     // output stats
