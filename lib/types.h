@@ -12,6 +12,8 @@ float eps_zero(float a);
 using Vec = aiVector3D;
 Vec operator/(int a, const Vec& v);
 
+using Vec2 = aiVector2D;
+
 using Color = aiColor4D;
 
 float fmin(float x, float y, float z);
