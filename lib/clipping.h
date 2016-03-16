@@ -150,7 +150,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
             if (a_side == PointPlanePos::BEHIND_PLANE) {
                 // intersect (a, b) at plane
                 float t;
-                assert(intersect_segment_plane(a, b, n, d, t));
+                bool intersects = intersect_segment_plane(a, b, n, d, t);
+                assert(intersects);
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
@@ -162,7 +163,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
             if (a_side == PointPlanePos::IN_FRONT_OF_PLANE) {
                 // intesect (a, b) at plane
                 float t;
-                assert(intersect_segment_plane(a, b, n, d, t));
+                bool intersects = intersect_segment_plane(a, b, n, d, t);
+                assert(intersects);
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
@@ -196,10 +198,10 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
 
     // clip at 6 planes defined by box
     for (auto ax : AXES) {
-        for (int j = 0; j < 2; ++j) {
+        for (int side = 0; side < 2; ++side) {
             Vec normal;
-            normal[ax] = j == 0 ? 1 : -1;
-            float dist = j == 0 ? box.min[ax] : -box.max[ax];
+            normal[ax] = side == 0 ? 1 : -1;
+            float dist = side == 0 ? box.min[ax] : -box.max[ax];
 
             points = clip_polygon_at_plane(points, normal, dist);
             if (points.size() < 2) {
