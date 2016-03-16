@@ -4,26 +4,38 @@
 #include "triangle.h"
 
 
+//
+// Test segment and plane intersection
+//
+// Args:
+//   a, b: start and end points of the segment
+//   n, d: define the plane by the equation `n * x = d`
+//   t: out param defining the intersection point by `a + (b - a) * t`
+//
+// Return:
+//   true, if the segment intersects the plane, otherwise false
+//
 inline bool intersect_segment_plane(
     const Vec& a, const Vec& b, const Vec& n, float d, float& t)
 {
     auto ab = b - a;
     t = (d - n * a) / (n * ab);
-    if (0.f <= t && t <= 1.f) {
-        return true;
-    }
-    return false;
+    return 0.f <= t && t <= 1.f;
 }
 
 //
 // Return min infinity if there is no intersection, otherwise return r s.t. the
-// intersection point is P0 + r * (P1 - P0).
+// intersection point is `ray.pos + ray.dir * r`.
 //
 // If n is normalized, then r is exactly the Euclidean distance from the ray to
 // the plane. Note: r may be negative.
 //
 // Args:
+//   ray: ray to intersect
 //   v0, n: Plane through v0 with normal n
+//
+// Return:
+//   true, if the ray intersects the plane, otherwise false
 //
 // Cf. http://geomalgorithms.com/a06-_intersect-2.html
 //
@@ -39,10 +51,17 @@ inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
 
 
 //
-// Intersect Ray triangle intersection is implemented in triangle.cpp due to a lot of
-// precomputed values stored as private members in triangle.
+// Intersect a ray and a triangle
 //
-
+// Args:
+//   ray: ray to intersect
+//   tri: triangle to intersect
+//   r: out param defining the intersection point by `ray.pos + ray.dir * r`
+//   s, t: baricentric coordinates on `tri` of the intersection point
+//
+// Return:
+//   true, if the ray intersects the triangle, otherwise false
+//
 inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
     float& r, float& s, float& t)
 {
@@ -76,25 +95,34 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
 //
 // Test ray AABB (axis-aligned bounding box) intersection
 //
+// Args:
+//   ray: ray to intersect
+//   box: aabb to intersect
+//   tmin, tmax: out params defining the enter resp. exit intersection of the
+//     halbray with the box by the equation `ray.pos + ray.dir * t`.
+//
+// Return:
+//   true, if the ray intersects the box, otherwise false
+//
 // Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
 //
-inline bool ray_box_intersection(
-    const Ray& r, const Box& box, float& tmin, float& tmax)
+inline bool intersect_ray_box(
+    const Ray& ray, const Box& box, float& tmin, float& tmax)
 {
-    float tx1 = (box.min.x - r.pos.x) * r.invdir.x;
-    float tx2 = (box.max.x - r.pos.x) * r.invdir.x;
+    float tx1 = (box.min.x - ray.pos.x) * ray.invdir.x;
+    float tx2 = (box.max.x - ray.pos.x) * ray.invdir.x;
 
     tmin = std::fmin(tx1, tx2);
     tmax = std::fmax(tx1, tx2);
 
-    float ty1 = (box.min.y - r.pos.y) * r.invdir.y;
-    float ty2 = (box.max.y - r.pos.y) * r.invdir.y;
+    float ty1 = (box.min.y - ray.pos.y) * ray.invdir.y;
+    float ty2 = (box.max.y - ray.pos.y) * ray.invdir.y;
 
     tmin = std::fmax(tmin, std::fmin(ty1, ty2));
     tmax = std::fmin(tmax, std::fmax(ty1, ty2));
 
-    float tz1 = (box.min.z - r.pos.z) * r.invdir.z;
-    float tz2 = (box.max.z - r.pos.z) * r.invdir.z;
+    float tz1 = (box.min.z - ray.pos.z) * ray.invdir.z;
+    float tz2 = (box.max.z - ray.pos.z) * ray.invdir.z;
 
     tmin = std::fmax(tmin, std::fmin(tz1, tz2));
     tmax = std::fmin(tmax, std::fmax(tz1, tz2));
@@ -102,9 +130,9 @@ inline bool ray_box_intersection(
     return !(tmax < tmin);
 }
 
-inline bool ray_box_intersection(const Ray& r, const Box& box) {
+inline bool intersect_ray_box(const Ray& ray, const Box& box) {
     float tmin, tmax;
-    return ray_box_intersection(r, box, tmin, tmax);
+    return intersect_ray_box(ray, box, tmin, tmax);
 }
 
 
@@ -112,22 +140,22 @@ inline bool ray_box_intersection(const Ray& r, const Box& box) {
 // Test plane ABBB intersection
 //
 // Args:
-//   normal, d: define plane by n * x = d
+//   n, d: define plane by n * x = d
 //   box: box to test with
 //
 // Return:
 //   true, if intersection exists, otherwise false
 //
-inline bool intersect_plane_box(const Vec& normal, float d, const Box& box) {
+inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
     auto center = (box.max + box.min) * 0.5f;
     auto extents = box.max - center;
 
     float r =
-        extents.x * std::abs(normal.x) +
-        extents.y * std::abs(normal.y) +
-        extents.z * std::abs(normal.z);
+        extents.x * std::abs(n.x) +
+        extents.y * std::abs(n.y) +
+        extents.z * std::abs(n.z);
 
-    float dist = normal * center - d;
+    float dist = n * center - d;
 
     return std::abs(dist) <= r;
 }
