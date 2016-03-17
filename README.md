@@ -90,7 +90,7 @@ required for rendering.
 - [x] Barycentric Interpolation
 - [x] Monte Carlo Integration for Hemisphere Sampling
 - [x] Polar Coordinates to Cartesian Coordinates
-- [ ] KD-Tree
+- [x] KD-Tree
 
 ## Thanks
 * Sean Barrett for [stb](https://github.com/nothings/stb)'s image writer
