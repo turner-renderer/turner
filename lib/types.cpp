@@ -1,7 +1,8 @@
 #include "types.h"
 
+
 float eps_zero(float a) {
-    return std::abs(a) < std::numeric_limits<float>::epsilon();
+    return std::abs(a) < EPS;
 }
 
 Vec operator/(int a, const Vec& v) {
@@ -63,27 +64,4 @@ aiVector3D Camera::raster2cam(const aiVector2D& p, const float w, const float h)
         -delta_x_ * (1 - 2 * p.x / w),
         delta_y_ * (1 - 2 * p.y / h),
         -1);
-}
-
-std::vector<std::string> split(const std::string& s, char delim) {
-    std::vector<std::string> tokens;
-    std::stringstream ss(s);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-        if (!item.empty()) {
-            tokens.push_back(item);
-        }
-    }
-    return tokens;
-}
-
-aiColor4D parse_color4(const std::string& str) {
-    const auto tokens = split(str, ' ');
-    assert(tokens.size() == 4);
-    return
-        { std::stof(tokens[0])
-        , std::stof(tokens[1])
-        , std::stof(tokens[2])
-        , std::stof(tokens[3])
-        };
 }
