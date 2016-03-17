@@ -1,39 +1,16 @@
 #pragma once
 
 #include "types.h"
-#include "intersection.h"
 #include <vector>
 #include <array>
-
-
-enum class Axis : char { X = 0, Y = 1, Z = 2};
-inline Axis operator++(const Axis& ax) {
-    if (ax == Axis::X) {
-        return Axis::Y;
-    } else if (ax == Axis::Y) {
-        return Axis::Z;
-    }
-    return Axis::X;
-}
-
-// Projection onto axis ax.
-inline float axis_proj(Axis ax, const Vec& v) {
-    if (ax == Axis::X) {
-        return v.x;
-    } else if (ax == Axis::Y) {
-        return v.y;
-    } else if (ax == Axis::Z) {
-        return v.z;
-    }
-    assert(false);
-}
 
 
 //
 // Be aware of modifying data in the triangle after its construction. The
 // precomputed values won't be updated.
 //
-struct Triangle {
+class Triangle {
+public:
     Triangle(
         std::array<Vec, 3> vs,
         std::array<Vec, 3> ns,
@@ -52,31 +29,14 @@ struct Triangle {
     , denom(uv * uv - uu * vv)
     {}
 
-    bool intersect(const Ray& ray, float& r, float& s, float& t) const {
-        r = ray_plane_intersection(ray, vertices[0], normal);
-        if (r < 0) {
-            return false;
-        }
+    // Intersect Triangle Ray
+    bool intersect(const Ray& ray, float& r, float& s, float& t) const;
+    friend bool intersect_ray_triangle(
+        const Ray& ray, const Triangle& tri,
+        float& r, float& s, float& t);
 
-        auto P_int = ray.pos + r * ray.dir;
-        auto w = P_int - vertices[0];
-
-        // precompute scalar products
-        auto wv = w*v;
-        auto wu = w*u;
-
-        s = (uv * wv - vv * wu) / denom;
-        if (s < 0) {
-            return false;
-        }
-
-        t = (uv * wu - uu * wv) / denom;
-        if (t < 0 || s + t > 1) {
-            return false;
-        }
-
-        return true;
-    }
+    // Triangle AABB intersection test
+    bool intersect(const Box& box) const;
 
     //
     // Interpolate normal using barycentric coordinates.
@@ -138,6 +98,11 @@ struct Triangle {
     Vec normal;
 private:
     float uv, vv, uu, denom;
+
+private:
+
+    // Helper functions for triangle aabb intersection
+    bool axis_intersection(const Axis ax, const Vec& box_halfsize) const;
 };
 
 using Triangles = std::vector<Triangle>;
