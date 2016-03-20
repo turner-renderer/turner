@@ -255,15 +255,16 @@ int main(int argc, char const *argv[])
         // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
         std::cerr << "Drawing mesh lines ";
         std::vector<std::future<void>> mesh_tasks;
+        float offset = 1.f;
         std::vector<Vec2> offsets =
             { Vec2(0.f, 0.f)
-            , Vec2(1.f, 0.f)
-            , Vec2(1.f, 1.f)
-            , Vec2(0.f, 1.f)
-            , Vec2(0.f, 0.5f)
-            , Vec2(0.5f, 1.f)
-            , Vec2(1.f, 0.5f)
-            , Vec2(0.5f, 0.f)
+            , Vec2(offset, 0.f)
+            , Vec2(offset, offset)
+            , Vec2(0.f, offset)
+            , Vec2(0.f, offset / 2)
+            , Vec2(offset / 2, offset)
+            , Vec2(offset, offset / 2)
+            , Vec2(offset / 2, 0.f)
             };
         for (int y = 0; y < height; ++y) {
             mesh_tasks.emplace_back(pool.enqueue([
