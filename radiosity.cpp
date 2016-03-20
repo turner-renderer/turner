@@ -197,7 +197,7 @@ int main(int argc, char const *argv[])
     {
         Runtime rt(Stats::instance().runtime_ms);
 
-        std::cerr << "Rendering ";
+        std::cerr << "Rendering          ";
 
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
@@ -242,7 +242,7 @@ int main(int argc, char const *argv[])
             float progress = static_cast<float>(completed) / tasks.size();
             int bar_width = progress * 20;
             std::cerr
-                << "\rRendering "
+                << "\rRendering          "
                 << "[" << std::string(bar_width, '-')
                 << std::string(20 - bar_width, ' ') << "] "
                 << std::setfill(' ') << std::setw(6)
@@ -251,7 +251,10 @@ int main(int argc, char const *argv[])
         }
         std::cerr << std::endl;
 
-        std::cerr << "Drawing mesh lines ..." << std::endl;
+        // Render feature lines after
+        // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
+        std::cerr << "Drawing mesh lines ";
+        std::vector<std::future<void>> mesh_tasks;
         std::vector<Vec2> offsets =
             { Vec2(0.f, 0.f)
             , Vec2(1.f, 0.f)
@@ -262,36 +265,56 @@ int main(int argc, char const *argv[])
             , Vec2(1.f, 0.5f)
             , Vec2(0.5f, 0.f)
             };
-        // Render feature lines after
-        // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
         for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                float dist_to_triangle, s, t;
-                std::unordered_set<std::uintptr_t> triangle_ids;
+            mesh_tasks.emplace_back(pool.enqueue([
+                    &image, &offsets, &cam, &tree, &lights, width, height, y, &conf]()
+            {
+                for (int x = 0; x < width; ++x) {
+                    float dist_to_triangle, s, t;
+                    std::unordered_set<std::uintptr_t> triangle_ids;
 
-                // Shoot center ray.
-                auto cam_dir = cam.raster2cam(
-                    aiVector2D(x + 0.5f, y + 0.5f), width, height);
-                auto center_id = reinterpret_cast<std::uintptr_t>(tree.intersect(
-                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
-                triangle_ids.insert(center_id);
-
-                // Sample disc rays around center.
-                // TODO: Sample disc with Poisson or similar.
-                for ( auto offset : offsets) {
-                    cam_dir = cam.raster2cam(
-                        aiVector2D(x + offset[0], y + offset[1]), width, height);
-                    auto triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                    // Shoot center ray.
+                    auto cam_dir = cam.raster2cam(
+                        aiVector2D(x + 0.5f, y + 0.5f), width, height);
+                    auto center_id = reinterpret_cast<std::uintptr_t>(tree.intersect(
                         Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
-                    triangle_ids.insert(triangle_pt);
-                }
+                    triangle_ids.insert(center_id);
 
-                const float M_2 = 0.5f * offsets.size();
-                const float m = triangle_ids.size() - 1.f; // without center
-                float e = 1.f - std::pow( std::abs(m - M_2) / M_2, 10 );
-                image(x, y) = image(x, y) * (1.f - e);
-            }
+                    // Sample disc rays around center.
+                    // TODO: Sample disc with Poisson or similar.
+                    for ( auto offset : offsets) {
+                        cam_dir = cam.raster2cam(
+                            aiVector2D(x + offset[0], y + offset[1]), width, height);
+                        auto triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
+                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                        triangle_ids.insert(triangle_pt);
+                    }
+
+                    const float M_2 = 0.5f * offsets.size();
+                    // All hit primitives except the one hit by center.
+                    const float m = triangle_ids.size() - 1.f;
+                    float e = 1.f - std::pow( std::abs(m - M_2) / M_2, 10 );
+                    image(x, y) = image(x, y) * (1.f - e);
+                }
+            }));
         }
+
+
+        completed = 0;
+        for (auto& task: mesh_tasks) {
+            task.get();
+            completed += 1;
+            float progress = static_cast<float>(completed) / mesh_tasks.size();
+            int bar_width = progress * 20;
+            std::cerr
+                << "\rDrawing mesh lines "
+                << "[" << std::string(bar_width, '-')
+                << std::string(20 - bar_width, ' ') << "] "
+                << std::setfill(' ') << std::setw(6)
+                << std::fixed << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
+        }
+        std::cerr << std::endl;
     }
 
     // output stats
