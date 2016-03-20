@@ -66,11 +66,11 @@ NodeIntersection ray_node_intersection(
     const aiMesh* min_mesh = nullptr;
     const aiFace* min_face = nullptr;
 
-    for (int i = 0; i < node.mNumMeshes; ++i) {
+    for (size_t i = 0; i < node.mNumMeshes; ++i) {
         const auto& mesh = *scene.mMeshes[node.mMeshes[i]];
         const auto& T = node.mTransformation;
 
-        for (int i = 0; i < mesh.mNumFaces; ++i) {
+        for (size_t i = 0; i < mesh.mNumFaces; ++i) {
             const auto& face = mesh.mFaces[i];
             assert(face.mNumIndices == 3);
 
@@ -164,7 +164,7 @@ int main(int argc, char const *argv[])
     std::cerr << "Cam Trafo: " << CT << std::endl;
 
     std::vector<aiNode*> geometry_nodes;
-    for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
+    for (size_t i = 0; i < scene->mRootNode->mNumChildren; ++i) {
         auto node = scene->mRootNode->mChildren[i];
         if (node->mNumMeshes > 0) {
             std::cerr << "DEBUG: " << "Adding new geometry node: "
