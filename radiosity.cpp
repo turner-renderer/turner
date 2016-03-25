@@ -294,8 +294,8 @@ int main(int argc, char const *argv[])
                     const float M_2 = 0.5f * offsets.size();
                     // All hit primitives except the one hit by center.
                     const float m = triangle_ids.size() - 1.f;
-                    float e = 1.f - std::pow( std::abs(m - M_2) / M_2, 10 );
-                    image(x, y) = image(x, y) * (1.f - e);
+                    float e = std::pow( std::abs(m - M_2) / M_2, 10 );
+                    image(x, y) = image(x, y) * (e);
                 }
             }));
         }
