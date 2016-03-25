@@ -16,10 +16,10 @@ raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
 
 renderer: renderer.o
 test_assimp: test_assimp.o
-raycaster: raycaster.o lib/types.o
-raytracer: main.o raytracer.o lib/types.o
-pathtracer: main.o pathtracer.o lib/types.o
-radiosity: radiosity.o lib/types.o
+raycaster: raycaster.o lib/types.o lib/triangle.o
+raytracer: main.o raytracer.o lib/types.o lib/triangle.o
+pathtracer: main.o pathtracer.o lib/types.o lib/triangle.o
+radiosity: radiosity.o lib/types.o lib/triangle.o
 
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
 radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt.cpp -pthread
@@ -57,14 +57,12 @@ distclean: clean
 
 TESTS = \
 	test_intersection \
+	test_clipping \
 	test_lambertian \
 	test_types \
 	test_sampling \
-	test_config
-
-test-all: genfiles/stress_test_kdtree test
-	$<
-
+	test_config \
+	test_kdtree
 
 
 include tests/tests.mk

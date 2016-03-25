@@ -65,20 +65,20 @@ int main(int argc, char const *argv[])
     std::cout << *scene->mRootNode << std::endl;
     std::cout << scene->mRootNode->mTransformation << std::endl;
 
-    for (int i = 0; i < scene->mRootNode->mNumChildren; ++i) {
+    for (size_t i = 0; i < scene->mRootNode->mNumChildren; ++i) {
         const auto& node = *scene->mRootNode->mChildren[i];
         std::cout << "\nList faces of " << node.mName << std::endl;
-        for (int j = 0; j < node.mNumMeshes; ++j) {
+        for (size_t j = 0; j < node.mNumMeshes; ++j) {
             const auto& mesh = *scene->mMeshes[node.mMeshes[j]];
 
             aiString name;
             scene->mMaterials[mesh.mMaterialIndex]->Get(AI_MATKEY_NAME, name);
             std::cout << "Material: " << name << std::endl;
 
-            for (int k = 0; k < mesh.mNumFaces; ++k) {
+            for (size_t k = 0; k < mesh.mNumFaces; ++k) {
                 std::cout << "Face" << std::endl;
                 const auto& face = mesh.mFaces[k];
-                for (int idx = 0; idx < face.mNumIndices; ++idx) {
+                for (size_t idx = 0; idx < face.mNumIndices; ++idx) {
                     std::cout << mesh.mVertices[face.mIndices[idx]] << " ";
                     std::cout << "n=" << mesh.mNormals[face.mIndices[idx]] << "\n";
                 }

@@ -39,8 +39,6 @@ Color trace(const Vec& origin, const Vec& dir,
     for (auto& light : lights) {
         // light direction
         auto light_dir = (light.position - p).Normalize();
-
-        light_dir = (light.position - p2).Normalize();
         float dist_to_light = (light.position - p2).Length();
         float dist_to_next_triangle;
         auto has_shadow = triangles.intersect(

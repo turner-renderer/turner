@@ -7,6 +7,31 @@
 #include <catch.hpp>
 
 
+TEST_CASE("Test min and max", "[helper]") {
+    REQUIRE(min(1, 2, 3) == 1);
+    REQUIRE(min(2, 1, 3) == 1);
+    REQUIRE(min(3, 2, 1) == 1);
+
+    REQUIRE(max(1, 2, 3) == 3);
+    REQUIRE(max(2, 1, 3) == 3);
+    REQUIRE(max(3, 2, 1) == 3);
+
+    REQUIRE(min(1, 1, 1) == 1);
+    REQUIRE(max(1, 1, 1) == 1);
+}
+
+
+TEST_CASE("Test surface area of box", "[box]") {
+    Box box{{0, 0, 0}, {1, 1, 1}};
+    REQUIRE(box.surface_area() == 6);
+
+    box = Box{{-10, -10, -10}, {10, 10, 10}};
+    REQUIRE(box.surface_area() == 2400);
+
+    box = Box{{0, 0, 0}, {1, 1, 0}};
+    REQUIRE(box.surface_area() == 4);
+}
+
 TEST_CASE("Test Box union", "[box]")
 {
     Box box{{0, 0, 0}, {1, 1, 1}};
@@ -44,13 +69,10 @@ TEST_CASE("Test bbox of triangle", "[triangle]")
 
 TEST_CASE("Test is_planar of triangle", "[triangle]")
 {
-    Axis ax = Axis::X;
-    for (int n = 0; n < 3; ++n) {
-        ++ax;
-
+    for (auto ax : AXES) {
         Vec vs[3] = {random_vec(), random_vec(), random_vec()};
         for (int i = 0; i < 3; ++i) {
-            vs[i][static_cast<int>(ax)] = 0.f;
+            vs[i][ax] = 0.f;
         }
 
         Triangle triangle = test_triangle(vs[0], vs[1], vs[2]);

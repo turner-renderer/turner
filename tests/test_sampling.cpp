@@ -5,7 +5,7 @@
 
 TEST_CASE("Test Hemisphere sampling", "[sampling]")
 {
-    static constexpr int NUM_VECS = 1000;
+    static constexpr int NUM_VECS = 100;
     static constexpr int NUM_SAMPLES = 100;
 
     Hemisphere hsph;

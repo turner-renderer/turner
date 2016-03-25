@@ -5,7 +5,7 @@
 #include <vector>
 #include <sstream>
 
-using Tree = KDTree<10>;
+using Tree = KDTree;
 
 class Configuration {
 
