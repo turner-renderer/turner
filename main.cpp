@@ -17,7 +17,6 @@
 #include <vector>
 #include <map>
 #include <iostream>
-#include <chrono>
 
 
 Triangles triangles_from_scene(const aiScene* scene) {
@@ -103,6 +102,7 @@ int main(int argc, char const *argv[])
                              };
 
     // import scene
+    std::cerr << "Loading scene..." << std::endl;
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
         args["<filename>"].asString().c_str(),
@@ -152,9 +152,13 @@ int main(int argc, char const *argv[])
     }
 
     // load triangles from the scene into a kd-tree
+    std::cerr << "Loading triangles and building kd-tree..." << std::endl;
+    Runtime loading_time;
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
+    Stats::instance().loading_time_ms = loading_time();
+    Stats::instance().kdtree_height = tree.height();
 
     //
     // Raytracer

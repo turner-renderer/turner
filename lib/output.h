@@ -119,10 +119,12 @@ inline std::ostream& operator<<(std::ostream& os, const Box& box) {
 inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
     return os
         << "Triangles      : " << stats.num_triangles << std::endl
+        << "Kd-Tree Height : " << stats.kdtree_height << std::endl
         << "Rays           : " << stats.num_rays << std::endl
         << "Rays (primary) : " << stats.num_prim_rays << std::endl
         << "Rays/sec       : "
         << 1000 * stats.num_rays / stats.runtime_ms << std::endl
+        << "Loading time   : " << 1.0 * stats.loading_time_ms / 1000 << " sec"
+            << std::endl
         << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
 }
-
