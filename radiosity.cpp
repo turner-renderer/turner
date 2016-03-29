@@ -22,7 +22,7 @@
 #include <chrono>
 
 Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles_tree, const std::vector<Light>& lights,
+        const Tree& triangles_tree, const std::vector<Light>& /* lights */,
         int depth, const Configuration& conf)
 {
     //xorshift64star<float> uniform{4};
@@ -272,13 +272,13 @@ int main(int argc, char const *argv[])
             {
                 for (int x = 0; x < width; ++x) {
                     float dist_to_triangle, s, t;
-                    std::unordered_set<std::uintptr_t> triangle_ids;
+                    std::unordered_set<const Triangle*> triangle_ids;
 
                     // Shoot center ray.
                     auto cam_dir = cam.raster2cam(
                         aiVector2D(x + 0.5f, y + 0.5f), width, height);
-                    auto center_id = reinterpret_cast<std::uintptr_t>(tree.intersect(
-                        Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                    auto center_id = tree.intersect(
+                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
                     triangle_ids.insert(center_id);
 
                     // Sample disc rays around center.
@@ -286,8 +286,8 @@ int main(int argc, char const *argv[])
                     for ( auto offset : offsets) {
                         cam_dir = cam.raster2cam(
                             aiVector2D(x + offset[0], y + offset[1]), width, height);
-                        auto triangle_pt = reinterpret_cast<std::uintptr_t>(tree.intersect(
-                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t));
+                        auto triangle_pt = tree.intersect(
+                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
                         triangle_ids.insert(triangle_pt);
                     }
 
