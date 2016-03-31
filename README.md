@@ -14,9 +14,7 @@ make test       # optional: run tests
 
 ## Next
 
-* Path Tracer with Monte Carlo Sampling
-* Metropolis Light Transport
-* Radiosity Rendering
+* Hierarchical Radiosity Rendering
 
 ## Done
 
