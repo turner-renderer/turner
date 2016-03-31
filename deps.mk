@@ -24,7 +24,7 @@ vendor/assimp: vendor
 assimp: vendor/assimp
 	cd vendor/assimp \
 		&& git fetch \
-        && git checkout $(COMMIT) \
+        && git checkout $(COMMIT)
 	cd vendor/assimp/contrib/zlib \
 		&& cmake . $(ZLIB_BUILD_OPTIONS) \
 		&& make \
