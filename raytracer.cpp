@@ -43,14 +43,12 @@ Color trace(const Vec& origin, const Vec& dir,
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
         auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-        // TODO: Multiplication by reflective color is not correct. Replace by
-        // Fresnel function.
-        auto reflected_color = triangle.reflective * triangle.diffuse * trace(
+        auto reflected_color = trace(
             p2, reflected_ray_dir,
             triangles_tree, lights, depth + 1, conf);
 
         color = (1.f - triangle.reflectivity) * direct_lightning
-            + triangle.reflectivity * reflected_color;
+            + triangle.reflectivity * triangle.reflective * reflected_color;
     }
 
     // shadow
