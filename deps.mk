@@ -1,4 +1,4 @@
-.PHONY: build-deps dep-a dep-b assimp catch docopt ThreadPool
+.PHONY: build-deps assimp catch docopt ThreadPool
 
 build-deps: assimp catch docopt ThreadPool
 
