@@ -91,5 +91,3 @@ required for rendering.
 - [x] Polar Coordinates to Cartesian Coordinates
 - [x] KD-Tree
 
-## Thanks
-* Sean Barrett for [stb](https://github.com/nothings/stb)'s image writer
