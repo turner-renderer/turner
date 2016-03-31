@@ -47,3 +47,5 @@ test_assimp
 ./*.jpg
 ./*.tiff
 dna.txt
+
+vendor
