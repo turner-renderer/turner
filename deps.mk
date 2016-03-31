@@ -7,7 +7,7 @@ vendor:
 	mkdir -p vendor
 
 vendor/.last-build: deps.mk
-	make build-deps
+	make build-deps -j4
 	touch vendor/.last-build
 
 
