@@ -8,7 +8,6 @@ Prototype implementations of unbiased renderers.
 ## Build
 
 ```
-make bootstrap  # download and build dependencies
 make            # build renderers
 make test       # optional: run tests
 ```
