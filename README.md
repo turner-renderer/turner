@@ -33,6 +33,7 @@ convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 We just use the distance to the eye of the camera as a light measure. So there
 is no real lighting.
 
+### Raytracing
 
 [![Cornell box rendered by our raytracer](scenes/cornell_raytrace_small.png)](scenes/cornell_raytrace.png)
 
