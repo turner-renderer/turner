@@ -80,7 +80,7 @@ it in your projects.
 
 ## Algorithm Implementations from Scratch
 
-The following algorithm have been implemented from scratch. While most are not
+The following algorithms have been implemented from scratch. While most are not
 that complicated it is good practice and gives a nice overview of all things
 required for rendering.
 
