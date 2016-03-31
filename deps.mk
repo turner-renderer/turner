@@ -1,4 +1,4 @@
-.PHONY: build-deps dep-a dep-b
+.PHONY: build-deps dep-a dep-b assimp catch docopt ThreadPool
 
 build-deps: assimp catch docopt ThreadPool
 
@@ -11,6 +11,7 @@ vendor/.last-build: deps.mk
 	touch vendor/.last-build
 
 
+assimp: REPO = https://github.com/assimp/assimp
 assimp: COMMIT = 1d8dba1
 assimp: ASSIMP_BUILD_OPTS = \
 	-DBUILD_SHARED_LIBS=OFF \
@@ -19,12 +20,10 @@ assimp: ASSIMP_BUILD_OPTS = \
 	-DASSIMP_BUILD_TESTS=OFF
 assimp: ZLIB_BUILD_OPTIONS = \
 	-DASSIMP_LIB_INSTALL_DIR=$$(pwd)/../../lib
-vendor/assimp: vendor
-	git clone https://github.com/assimp/assimp vendor/assimp
+vendor/assimp: | vendor
+	git clone $(REPO) $@
 assimp: vendor/assimp
-	cd vendor/assimp \
-		&& git fetch \
-        && git checkout $(COMMIT)
+	cd $< && git fetch && git checkout $(COMMIT)
 	cd vendor/assimp/contrib/zlib \
 		&& cmake . $(ZLIB_BUILD_OPTIONS) \
 		&& make \
@@ -33,28 +32,24 @@ assimp: vendor/assimp
 		&& cmake . $(ASSIMP_BUILD_OPTS) \
 		&& make -j8
 
+catch: REPO = https://github.com/philsquared/Catch
 catch: COMMIT = c984fc3
-vendor/catch: vendor
-	git clone https://github.com/philsquared/Catch vendor/catch
+vendor/catch: | vendor
+	git clone $(REPO) $@
 catch: vendor/catch
-	cd vendor/catch \
-		&& git fetch \
-		&& git checkout $(COMMIT)
+	cd $< && git fetch && git checkout $(COMMIT)
 
+docopt: REPO = https://github.com/docopt/docopt.cpp.git
 docopt: COMMIT = a4177cc
-vendor/docopt: vendor
-	git clone https://github.com/docopt/docopt.cpp.git vendor/docopt
+vendor/docopt: | vendor
+	git clone $(REPO) $@
 docopt: vendor/docopt
-	cd vendor/docopt \
-		&& git fetch \
-		&& git checkout $(COMMIT) \
-		&& cmake . \
-		&& make
+	cd $< && git fetch && git checkout $(COMMIT) \
+		&& cmake . && make
 
+ThreadPool: REPO = https://github.com/progschj/ThreadPool.git
 ThreadPool: COMMIT = 9a42ec1
-vendor/ThreadPool: vendor
-	git clone https://github.com/progschj/ThreadPool.git vendor/ThreadPool
+vendor/ThreadPool: | vendor
+	git clone $(REPO) $@
 ThreadPool: vendor/ThreadPool
-	cd vendor/ThreadPool \
-		&& git fetch \
-		&& git checkout $(COMMIT)
+	cd $< && git fetch && git checkout $(COMMIT)
