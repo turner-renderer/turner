@@ -256,7 +256,7 @@ int main(int argc, char const *argv[])
         std::cerr << "Drawing mesh lines ";
         std::vector<std::future<void>> mesh_tasks;
         float offset = 1.f;
-        std::vector<Vec2> offsets =
+        std::array<Vec2, 8> offsets =
             { Vec2(0.f, 0.f)
             , Vec2(offset, 0.f)
             , Vec2(offset, offset)

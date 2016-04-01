@@ -8,16 +8,13 @@ Prototype implementations of unbiased renderers.
 ## Build
 
 ```
-make bootstrap  # download and build dependencies
 make            # build renderers
 make test       # optional: run tests
 ```
 
 ## Next
 
-* Path Tracer with Monte Carlo Sampling
-* Metropolis Light Transport
-* Radiosity Rendering
+* Hierarchical Radiosity Rendering
 
 ## Done
 
@@ -34,6 +31,7 @@ convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 We just use the distance to the eye of the camera as a light measure. So there
 is no real lighting.
 
+### Raytracing
 
 [![Cornell box rendered by our raytracer](scenes/cornell_raytrace_small.png)](scenes/cornell_raytrace.png)
 
@@ -80,7 +78,7 @@ it in your projects.
 
 ## Algorithm Implementations from Scratch
 
-The following algorithm have been implemented from scratch. While most are not
+The following algorithms have been implemented from scratch. While most are not
 that complicated it is good practice and gives a nice overview of all things
 required for rendering.
 
@@ -92,5 +90,3 @@ required for rendering.
 - [x] Polar Coordinates to Cartesian Coordinates
 - [x] KD-Tree
 
-## Thanks
-* Sean Barrett for [stb](https://github.com/nothings/stb)'s image writer
