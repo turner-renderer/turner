@@ -31,20 +31,25 @@ Color trace(const Vec& origin, const Vec& dir,
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light
-    auto direct_lightning = 0.9f * lambertian(
+    auto direct_lightning = lambertian(
         light_dir, normal, triangle.diffuse, light.color);
 
     // move slightly in direction of normal
     auto p2 = p + normal * 0.0001f;
 
-    // reflection
-    // compute reflected ray from incident ray
-    auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-    auto reflected_color = triangle.diffuse * 0.1f * trace(
-        p2, reflected_ray_dir,
-        triangles_tree, lights, depth + 1, conf);
+    auto color = direct_lightning;
 
-    auto result = direct_lightning + reflected_color;
+    // reflection
+    if (triangle.reflectivity > 0) {
+        // compute reflected ray from incident ray
+        auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+        auto reflected_color = trace(
+            p2, reflected_ray_dir,
+            triangles_tree, lights, depth + 1, conf);
+
+        color = (1.f - triangle.reflectivity) * direct_lightning
+            + triangle.reflectivity * triangle.reflective * reflected_color;
+    }
 
     // shadow
     float dist_to_next_triangle;
@@ -55,8 +60,8 @@ Color trace(const Vec& origin, const Vec& dir,
         aiRay(p2, light_dir), dist_to_next_triangle, s, t);
 
     if (has_shadow && dist_to_next_triangle < dist_to_light) {
-        result -= result * conf.shadow_intensity;
+        color -= color * conf.shadow_intensity;
     }
 
-    return result;
+    return color;
 }

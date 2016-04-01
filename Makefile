@@ -8,7 +8,7 @@ CXXFLAGS+=-fprofile-arcs -ftest-coverage
 LDFLAGS+=--coverage
 endif
 
-all: bootstrap $(BINS)
+all: $(BINS)
 
 $(BINS): CC=$(CXX)
 raytracer pathtracer: LDFLAGS += -Lvendor/docopt
@@ -22,6 +22,8 @@ pathtracer: main.o pathtracer.o lib/types.o lib/triangle.o
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
 
 bootstrap: vendor/.last-build
+# run bootstrap before building anything
+*.o **/*.o: | bootstrap
 
 clean:
 	rm -rf *.o lib/*.o test_assimp *.dSYM *.gcov *.gcno *.gcda genfiles $(BINS)
