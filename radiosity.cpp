@@ -291,7 +291,7 @@ int main(int argc, char const *argv[])
                         triangle_ids.insert(triangle_pt);
                     }
 
-                    const float M_2 = 0.5f * offsets.size();
+                    constexpr float M_2 = 0.5f * offsets.size();
                     // All hit primitives except the one hit by center.
                     const float m = triangle_ids.size() - 1.f;
                     float e = std::pow( std::abs(m - M_2) / M_2, 10 );
