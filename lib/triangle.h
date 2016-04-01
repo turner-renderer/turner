@@ -15,11 +15,15 @@ public:
         std::array<Vec, 3> vs,
         std::array<Vec, 3> ns,
         const aiColor4D& ambient,
-        const aiColor4D& diffuse)
+        const aiColor4D& diffuse,
+        const aiColor4D& reflective,
+        const float reflectivity)
     : vertices(vs)
     , normals(ns)
     , ambient(ambient)
     , diffuse(diffuse)
+    , reflective(reflective)        // reflective color
+    , reflectivity(reflectivity)    // reflectivity factor
     , u(vertices[1] - vertices[0])
     , v(vertices[2] - vertices[0])
     , normal(u^v)
@@ -86,6 +90,8 @@ public:
     std::array<Vec, 3> normals;
     aiColor4D ambient;
     aiColor4D diffuse;
+    aiColor4D reflective;
+    float reflectivity;
 
     // precomputed
     // Edges of the triangle from point 0 to points 1 resp. 2
