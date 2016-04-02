@@ -1,7 +1,7 @@
 CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
-BINS=test_assimp raycaster raytracer pathtracer
+BINS=test_assimp raycaster raytracer pathtracer radiosity
 
 ifdef COVERAGE
 CXXFLAGS+=-fprofile-arcs -ftest-coverage
@@ -11,15 +11,17 @@ endif
 all: $(BINS)
 
 $(BINS): CC=$(CXX)
-raytracer pathtracer: LDFLAGS += -Lvendor/docopt
-raytracer pathtracer: LDLIBS += -ldocopt_s -lpthread
+raytracer pathtracer radiosity: LDFLAGS += -Lvendor/docopt
+raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
 
 test_assimp: test_assimp.o
 raycaster: raycaster.o lib/types.o lib/triangle.o
 raytracer: main.o raytracer.o lib/types.o lib/triangle.o
 pathtracer: main.o pathtracer.o lib/types.o lib/triangle.o
+radiosity: radiosity.o lib/types.o lib/triangle.o
 
 main.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
+radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
 
 bootstrap: vendor/.last-build
 # run bootstrap before building anything
