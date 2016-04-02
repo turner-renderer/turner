@@ -57,6 +57,19 @@ public:
 
 Vec operator/(int a, const Vec& v);
 
+struct Vec2 {
+
+    float operator[](unsigned int i) const {
+        return *(&x + i);
+    }
+
+    union {
+        struct {
+            float x, y;
+        };
+        float vec[2];
+    };
+};
 
 using Color = aiColor4D;
 
