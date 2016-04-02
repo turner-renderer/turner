@@ -63,12 +63,15 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
+            const auto& material = scene->mMaterials[mesh.mMaterialIndex];
 
-            aiColor4D ambient, diffuse;
-            scene->mMaterials[mesh.mMaterialIndex]->Get(
-                AI_MATKEY_COLOR_AMBIENT, ambient);
-            scene->mMaterials[mesh.mMaterialIndex]->Get(
-                AI_MATKEY_COLOR_DIFFUSE, diffuse);
+            aiColor4D ambient, diffuse, reflective;
+            material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
+            material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+            material->Get(AI_MATKEY_COLOR_REFLECTIVE, reflective);
+
+            float reflectivity = 0.f;
+            material->Get(AI_MATKEY_REFLECTIVITY, reflectivity);
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
@@ -86,7 +89,9 @@ Triangles triangles_from_scene(const aiScene* scene) {
                         Tp * mesh.mNormals[face.mIndices[2]]
                     }},
                     ambient,
-                    diffuse
+                    diffuse,
+                    reflective,
+                    reflectivity
                 });
             }
         }
@@ -257,14 +262,14 @@ int main(int argc, char const *argv[])
         std::vector<std::future<void>> mesh_tasks;
         constexpr float offset = 1.f;
         constexpr std::array<Vec2, 8> offsets =
-            { Vec2(0.f, 0.f)
-            , Vec2(offset, 0.f)
-            , Vec2(offset, offset)
-            , Vec2(0.f, offset)
-            , Vec2(0.f, offset / 2)
-            , Vec2(offset / 2, offset)
-            , Vec2(offset, offset / 2)
-            , Vec2(offset / 2, 0.f)
+            { Vec2{0.f, 0.f}
+            , Vec2{offset, 0.f}
+            , Vec2{offset, offset}
+            , Vec2{0.f, offset}
+            , Vec2{0.f, offset / 2}
+            , Vec2{offset / 2, offset}
+            , Vec2{offset, offset / 2}
+            , Vec2{offset / 2, 0.f}
             };
         for (int y = 0; y < height; ++y) {
             mesh_tasks.emplace_back(pool.enqueue([
