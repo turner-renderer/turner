@@ -57,7 +57,17 @@ public:
 
 Vec operator/(int a, const Vec& v);
 
-using Vec2 = aiVector2D;
+struct Vec2 {
+
+    Vec2(): x(0.0f), y(0.0f) {}
+    constexpr Vec2(float _x, float _y) : x(_x), y(_y) {}
+
+    float operator[](unsigned int i) const {
+        return *(&x + i);
+    }
+
+    float x, y;
+};
 
 using Color = aiColor4D;
 
