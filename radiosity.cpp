@@ -255,8 +255,8 @@ int main(int argc, char const *argv[])
         // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
         std::cerr << "Drawing mesh lines ";
         std::vector<std::future<void>> mesh_tasks;
-        float offset = 1.f;
-        std::array<Vec2, 8> offsets =
+        constexpr float offset = 1.f;
+        constexpr std::array<Vec2, 8> offsets =
             { Vec2(0.f, 0.f)
             , Vec2(offset, 0.f)
             , Vec2(offset, offset)
