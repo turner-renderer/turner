@@ -9,7 +9,7 @@ Triangle test_triangle(Vec a, Vec b, Vec c) {
 }
 
 Vec random_vec() {
-    static std::default_random_engine gen;
+    static std::default_random_engine gen(0);
     static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
     return {rnd(gen), rnd(gen), rnd(gen)};
 };
