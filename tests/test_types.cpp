@@ -1,7 +1,6 @@
 #include "helper.h"
 #include "../lib/types.h"
 #include "../lib/triangle.h"
-#include "../lib/kdtree.h"
 #include "../lib/output.h"
 #include "../lib/runtime.h"
 #include <catch.hpp>
@@ -44,6 +43,23 @@ TEST_CASE("Test Box union", "[box]")
     REQUIRE((box + Box{{-1, 0, 0},{1, 1, 1}}) == (Box{{-1, 0, 0},{0, 0, 0}}));
     REQUIRE((box + Box{{0, -1, 0},{1, 1, 1}}) == (Box{{0, -1, 0},{0, 0, 0}}));
     REQUIRE((box + Box{{0, 0, -1},{1, 1, 1}}) == (Box{{0, 0, -1},{0, 0, 0}}));
+}
+
+TEST_CASE("Split box at plane", "[box]") {
+    Box box{{0, 0, 0}, {2, 2, 2}};
+
+    Box l, r;
+    std::tie(l, r) = box.split(Axis::X, 1);
+    REQUIRE(l == (Box{{0, 0, 0}, {1, 2, 2}}));
+    REQUIRE(r == (Box{{1, 0, 0}, {2, 2, 2}}));
+
+    std::tie(l, r) = box.split(Axis::Y, 1);
+    REQUIRE(l == (Box{{0, 0, 0}, {2, 1, 2}}));
+    REQUIRE(r == (Box{{0, 1, 0}, {2, 2, 2}}));
+
+    std::tie(l, r) = box.split(Axis::Z, 1);
+    REQUIRE(l == (Box{{0, 0, 0}, {2, 2, 1}}));
+    REQUIRE(r == (Box{{0, 0, 1}, {2, 2, 2}}));
 }
 
 
