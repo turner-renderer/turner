@@ -129,11 +129,6 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     std::cerr << "# Hits   : " << hits_fast << std::endl;
     std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
     std::cerr << std::endl;
-
-    // empirical values
-    REQUIRE(tree.height() == 10);
-    REQUIRE(tree.size() == 115);
-    REQUIRE(hits_fast == 4);
 }
 
 TEST_CASE("Test cube in kdtree", "[kdtree]") {
