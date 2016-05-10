@@ -1,5 +1,5 @@
 #include "helper.h"
-#include "../lib/monte_carlo.h"
+#include "../lib/sampling.h"
 #include <catch.hpp>
 
 
