@@ -1,6 +1,6 @@
 #include "trace.h"
 #include "lib/lambertian.h"
-#include "lib/monte_carlo.h"
+#include "lib/sampling.h"
 #include "lib/stats.h"
 #include "lib/output.h"
 

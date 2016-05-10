@@ -1,10 +1,11 @@
 #pragma once
 
+#include "triangle.h"
 #include "types.h"
 #include "xorshift.h"
 
 #include <cmath>
-
+#include <tuple>
 
 namespace {
     static constexpr float M_2PI = 2.f * M_PI;
@@ -32,3 +33,22 @@ private:
     // TODO: Use seed and make sure it is thread safe
     xorshift64star<float> uniform{4};
 };
+
+class TriangleSampling {
+public:
+    Vec sample(Triangle& triangle) {
+        while(true) {
+            float r1 = uniform();
+            float r2 = uniform();
+
+            if ((r1 + r2) <= 1.f) {
+                return r1 * triangle.u + r2 * triangle.v;
+            }
+        }
+    }
+
+private:
+    // TODO: Use seed and make sure it is thread safe
+    xorshift64star<float> uniform{4};
+};
+
