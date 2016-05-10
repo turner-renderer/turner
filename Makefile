@@ -19,7 +19,7 @@ test_assimp: test_assimp.o
 raycaster: raycaster.o $(LIB_OBJS)
 raytracer: main.o raytracer.o $(LIB_OBJS)
 pathtracer: main.o pathtracer.o $(LIB_OBJS)
-radiosity: radiosity.o lib/types.o $(LIB_OBJS)
+radiosity: radiosity.o $(LIB_OBJS)
 
 main.o radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
 
