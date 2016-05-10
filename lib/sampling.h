@@ -36,7 +36,7 @@ private:
 
 class TriangleSampling {
 public:
-    Vec sample(Triangle& triangle) {
+    Vec sample(const Triangle& triangle) {
         while(true) {
             float r1 = uniform();
             float r2 = uniform();
