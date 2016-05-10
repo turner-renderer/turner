@@ -101,6 +101,20 @@ struct Box {
             eps_zero(max[Axis::Y]) &&
             eps_zero(max[Axis::Z]);
     }
+
+    // Split `box` on the plane defined by the position `pos` at axis `ax`.
+    std::pair<Box, Box> split(Axis plane_ax, float plane_pos) const
+    {
+        assert(this->min[plane_ax] - EPS <= plane_pos);
+        assert(plane_pos <= this->max[plane_ax] + EPS);
+
+        Vec lmax = this->max;
+        lmax[plane_ax] = plane_pos;
+        Vec rmin = this->min;
+        rmin[plane_ax] = plane_pos;
+
+        return {{this->min, lmax}, {rmin, this->max}};
+    }
 };
 Box operator+(const Box& a, const Box& b);
 
