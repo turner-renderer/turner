@@ -1,5 +1,6 @@
 #include "trace.h"
 #include "lib/output.h"
+#include "lib/sampling.h"
 #include "lib/image.h"
 #include "lib/lambertian.h"
 #include "lib/range.h"
@@ -48,6 +49,40 @@ Color trace(const Vec& origin, const Vec& dir,
     //Color result { uniform(), uniform(), uniform(), dist_to_triangle};
     return result;
 }
+
+
+// Precondition: p2 lies on triangle target
+float check_visibility(
+    const Vec& p1, const Vec& p2, const Triangle& target, const Tree& tree)
+{
+    float r, s, t;
+    const auto triangle_pt = tree.intersect(Ray{p1, p2 - p1}, r, s, t);
+    return triangle_pt == &target;
+}
+
+
+float form_factor(
+    const Triangle& from, const Triangle& to, size_t num_samples,
+    const Tree& tree)
+{
+    static TriangleSampling sampler;
+
+    float factor = 0;
+    for (size_t i = 0; i != num_samples; ++i) {
+        auto p1 = sampler.sample(from);
+        auto p2 = sampler.sample(to);
+        if (check_visibility(p1, p2, to, tree)) {
+            auto v = (p2 - p1).Normalize();
+            auto cos_theta1 = std::fmax(0, v * from.normal);
+            auto cos_theta2 = std::fmax(0, (-v) * from.normal);
+            auto G = M_1_PI * cos_theta1 * cos_theta2 / v.SquareLength();
+
+            factor += G * to.area() / num_samples;
+        }
+    }
+    return factor;
+}
+
 
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;

@@ -75,6 +75,10 @@ public:
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
     }
 
+    float area() const {
+        return (u^v).Length() / 2.f;
+    }
+
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {
         if (ax == Axis::X) {
