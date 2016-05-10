@@ -41,6 +41,7 @@ raycaster
 raytracer
 pathtracer
 test_assimp
+radiosity
 .DS_Store
 
 ./*.png
