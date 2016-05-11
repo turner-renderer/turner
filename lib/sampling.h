@@ -5,7 +5,6 @@
 #include "xorshift.h"
 
 #include <cmath>
-#include <thread>
 #include <tuple>
 
 namespace {
@@ -36,7 +35,7 @@ namespace sampling {
             float r2 = uniform();
 
             if ((r1 + r2) <= 1.f) {
-                return r1 * triangle.u + r2 * triangle.v;
+                return triangle.vertices[0] + r1 * triangle.u + r2 * triangle.v;
             }
         }
     }

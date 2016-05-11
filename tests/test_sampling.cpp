@@ -1,4 +1,5 @@
 #include "helper.h"
+#include "../lib/output.h"
 #include "../lib/sampling.h"
 #include <catch.hpp>
 
@@ -20,9 +21,28 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
             auto sampled_vec = trafo * res.first;
             auto cos_vec = sampled_vec * vec;
 
-            REQUIRE(sampled_vec.Length() - 1.f < 0.0001f);
+            REQUIRE(sampled_vec.Length() == Approx(1.f));
             REQUIRE(0.f <= cos_vec);
             REQUIRE(cos_vec <= 1.f);
         }
+    }
+}
+
+TEST_CASE("Test Triangle sampling", "[sampling]")
+{
+    static constexpr int NUM_SAMPLES = 100;
+    float r, s, t;
+
+    for (int j = 0; j < NUM_SAMPLES; ++j) {
+        Triangle triangle = random_triangle();
+
+        Vec sample = sampling::triangle(triangle);
+        float length = sample.Length();
+
+        // Verify that point is on triangle.
+        bool intersect =
+            triangle.intersect(Ray{Vec{0, 0, 0}, sample.Normalize()}, r, s, t);
+        REQUIRE(intersect);
+        REQUIRE(length == Approx(r));
     }
 }
