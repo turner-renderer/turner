@@ -1,6 +1,7 @@
 #pragma once
 
 #include "image.h"
+#include "triangle.h"
 #include "types.h"
 #include "stats.h"
 
@@ -39,6 +40,14 @@ inline std::ostream& operator<<(std::ostream& os, const aiMatrix3x3& mat) {
 
 inline std::ostream& operator<<(std::ostream& os, const aiString& str) {
     return os << str.C_Str();
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Triangle tri) {
+    return os << "Triangle("
+        << "vertices=[" << tri.vertices[0] << " "
+                        << tri.vertices[1] << " "
+                        << tri.vertices[2]
+        << "])";
 }
 
 inline std::ostream& operator<<(std::ostream& os, const aiNode& node) {
