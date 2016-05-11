@@ -57,14 +57,13 @@ Color trace(const Vec& origin, const Vec& dir,
 
     Color indirect_lightning;
 
-    static Hemisphere hemisphere;
     // Turn hemisphere according normal, i.e. Up(0, 0, 1) is turned so that
     // it lies on normal of the hit point.
     aiMatrix3x3 mTrafo;
     aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, normal, mTrafo);
 
     for(int run = 0; run < conf.num_monte_carlo_samples; run++) {
-        auto dir_theta = hemisphere.sample();
+        auto dir_theta = sampling::hemisphere();
         auto dir = mTrafo * dir_theta.first;
         auto cos_theta = dir_theta.second;
 

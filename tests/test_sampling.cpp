@@ -8,7 +8,6 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
     static constexpr int NUM_VECS = 100;
     static constexpr int NUM_SAMPLES = 100;
 
-    Hemisphere hsph;
     Vec vec;
     aiMatrix3x3 trafo;
 
@@ -17,7 +16,7 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
         aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, vec, trafo);
 
         for (int j = 0; j < NUM_SAMPLES; ++j) {
-            auto res = hsph.sample();
+            auto res = sampling::hemisphere();
             auto sampled_vec = trafo * res.first;
             auto cos_vec = sampled_vec * vec;
 

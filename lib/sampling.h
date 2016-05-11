@@ -5,17 +5,18 @@
 #include "xorshift.h"
 
 #include <cmath>
+#include <thread>
 #include <tuple>
 
 namespace {
     static constexpr float M_2PI = 2.f * M_PI;
 }
 
+namespace sampling {
 
-class Hemisphere {
-public:
-    // TODO: Docs
-    std::pair<Vec, float> sample() {
+    xorshift64star<float> uniform{4};
+
+    std::pair<Vec, float> hemisphere() {
         // draw coordinates
         float u1 = uniform();
         float u2 = uniform();
@@ -29,14 +30,7 @@ public:
         return std::make_pair(Vec{x, y, z}, u1);
     }
 
-private:
-    // TODO: Use seed and make sure it is thread safe
-    xorshift64star<float> uniform{4};
-};
-
-class TriangleSampling {
-public:
-    Vec sample(const Triangle& triangle) {
+    Vec triangle(const Triangle& triangle) {
         while(true) {
             float r1 = uniform();
             float r2 = uniform();
@@ -46,9 +40,5 @@ public:
             }
         }
     }
-
-private:
-    // TODO: Use seed and make sure it is thread safe
-    xorshift64star<float> uniform{4};
-};
+}
 
