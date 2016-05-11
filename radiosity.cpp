@@ -65,12 +65,10 @@ float form_factor(
     const Triangle& from, const Triangle& to, size_t num_samples,
     const Tree& tree)
 {
-    static TriangleSampling sampler;
-
     float factor = 0;
     for (size_t i = 0; i != num_samples; ++i) {
-        auto p1 = sampler.sample(from);
-        auto p2 = sampler.sample(to);
+        auto p1 = sampling::triangle(from);
+        auto p2 = sampling::triangle(to);
         if (check_visibility(p1, p2, to, tree)) {
             auto v = (p2 - p1).Normalize();
             auto cos_theta1 = std::fmax(0, v * from.normal);
