@@ -4,11 +4,10 @@ namespace {
 
 static constexpr float M_2PI = 2.f * M_PI;
 
+__thread static xorshift64star<float> uniform{4};
 }
 
 namespace sampling {
-
-__thread static xorshift64star<float> uniform{4};
 
 std::pair<Vec, float> hemisphere() {
     // draw coordinates
