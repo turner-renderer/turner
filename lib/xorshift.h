@@ -20,7 +20,9 @@ class xorshift64star;
 template<>
 class xorshift64star<uint64_t> {
 public:
-    explicit xorshift64star(uint64_t seed) : seed_(seed) { assert(seed != 0); }
+    constexpr explicit xorshift64star(uint64_t seed) : seed_(seed) {
+        assert(seed != 0);
+    }
     uint64_t operator()() {
         seed_ ^= seed_ >> 12; // a
         seed_ ^= seed_ << 25; // b
@@ -36,7 +38,7 @@ private:
 template<typename T>
 class xorshift64star {
 public:
-    explicit xorshift64star(uint64_t seed) : gen_(seed) {
+    constexpr explicit xorshift64star(uint64_t seed) : gen_(seed) {
         assert(seed != 0);
     }
     T operator()() {
