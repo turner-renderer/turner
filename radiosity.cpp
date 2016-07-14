@@ -105,10 +105,11 @@ Triangles triangles_from_scene(const aiScene* scene) {
             const auto& mesh = *scene->mMeshes[mesh_index];
             const auto& material = scene->mMaterials[mesh.mMaterialIndex];
 
-            aiColor4D ambient, diffuse, reflective;
+            aiColor4D ambient, diffuse, emissive, reflective;
             material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
             material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
             material->Get(AI_MATKEY_COLOR_REFLECTIVE, reflective);
+            material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
 
             float reflectivity = 0.f;
             material->Get(AI_MATKEY_REFLECTIVITY, reflectivity);
@@ -130,6 +131,7 @@ Triangles triangles_from_scene(const aiScene* scene) {
                     }},
                     ambient,
                     diffuse,
+                    emissive,
                     reflective,
                     reflectivity
                 });

@@ -16,21 +16,28 @@ public:
         std::array<Vec, 3> ns,
         const aiColor4D& ambient,
         const aiColor4D& diffuse,
+        const aiColor4D& emissive,
         const aiColor4D& reflective,
-        const float reflectivity)
-    : vertices(vs)
-    , normals(ns)
-    , ambient(ambient)
-    , diffuse(diffuse)
-    , reflective(reflective)        // reflective color
-    , reflectivity(reflectivity)    // reflectivity factor
-    , u(vertices[1] - vertices[0])
-    , v(vertices[2] - vertices[0])
-    , normal(u^v)
-    , uv(u*v)
-    , vv(v*v)
-    , uu(u*u)
-    , denom(uv * uv - uu * vv)
+        const float reflectivity
+    )
+        : vertices(vs)
+        , normals(ns)
+        , ambient(ambient)
+        , diffuse(diffuse)
+        , emissive(emissive)
+        , reflective(reflective)        // reflective color
+        , reflectivity(reflectivity)    // reflectivity factor
+        , u(vertices[1] - vertices[0])
+        , v(vertices[2] - vertices[0])
+        , normal(u^v)
+        , uv(u*v)
+        , vv(v*v)
+        , uu(u*u)
+        , denom(uv * uv - uu * vv)
+    {}
+
+    Triangle(std::array<Vec, 3> vs)
+        : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
     {}
 
     // Intersect Triangle Ray
@@ -94,6 +101,7 @@ public:
     std::array<Vec, 3> normals;
     aiColor4D ambient;
     aiColor4D diffuse;
+    aiColor4D emissive;
     aiColor4D reflective;
     float reflectivity;
 
