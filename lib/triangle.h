@@ -36,6 +36,7 @@ public:
         , denom(uv * uv - uu * vv)
     {}
 
+    // minimal constructor
     Triangle(std::array<Vec, 3> vs)
         : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
     {}
