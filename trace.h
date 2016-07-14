@@ -73,3 +73,6 @@ Color trace(const Vec& origin, const Vec& dir,
         const Tree& triangles_tree, const std::vector<Light>& lights,
         int depth, const Configuration& conf);
 
+Color trace(const Vec& origin, const Vec& dir,
+        const Tree& triangles_tree, const std::vector<Color>& radiosity,
+        const Configuration& conf);
