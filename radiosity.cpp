@@ -36,14 +36,14 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_pt = triangles_tree.intersect(
+    auto triangle_id = triangles_tree.intersect(
         aiRay(origin, dir), dist_to_triangle, s, t);
-    if (!triangle_pt) {
+    if (!triangle_id) {
         return conf.bg_color;
     }
 
     // simple raycast
-    const auto& triangle = *triangle_pt;
+    const auto& triangle = triangles_tree[triangle_id];
     auto result = triangle.diffuse;
     result.a = dist_to_triangle;
     //Color result { uniform(), uniform(), uniform(), dist_to_triangle};
@@ -53,23 +53,30 @@ Color trace(const Vec& origin, const Vec& dir,
 
 // Precondition: p2 lies on triangle target
 float check_visibility(
-    const Vec& p1, const Vec& p2, const Triangle& target, const Tree& tree)
+    const Tree& tree,
+    const Vec& p1, const Vec& p2, const Tree::TriangleId to_id)
 {
     float r, s, t;
-    const auto triangle_pt = tree.intersect(Ray{p1, p2 - p1}, r, s, t);
-    return triangle_pt == &target;
+    auto triangle_id = tree.intersect(Ray{p1, p2 - p1}, r, s, t);
+    return triangle_id == Tree::OptionalId{to_id};
 }
 
 
 float form_factor(
-    const Triangle& from, const Triangle& to, size_t num_samples,
-    const Tree& tree)
+    const Tree& tree,
+    const Tree::TriangleId from_id,
+    const Tree::TriangleId to_id,
+    size_t num_samples = 32)
 {
     float factor = 0;
     for (size_t i = 0; i != num_samples; ++i) {
+        auto from = tree[from_id];
+        auto to = tree[to_id];
+
         auto p1 = sampling::triangle(from);
         auto p2 = sampling::triangle(to);
-        if (check_visibility(p1, p2, to, tree)) {
+
+        if (check_visibility(tree, p1, p2, to_id)) {
             auto v = (p2 - p1).Normalize();
             auto cos_theta1 = std::fmax(0, v * from.normal);
             auto cos_theta2 = std::fmax(0, (-v) * from.normal);
@@ -310,7 +317,7 @@ int main(int argc, char const *argv[])
             {
                 for (int x = 0; x < width; ++x) {
                     float dist_to_triangle, s, t;
-                    std::unordered_set<const Triangle*> triangle_ids;
+                    std::unordered_set<Tree::OptionalId> triangle_ids;
 
                     // Shoot center ray.
                     auto cam_dir = cam.raster2cam(
@@ -324,9 +331,9 @@ int main(int argc, char const *argv[])
                     for ( auto offset : offsets) {
                         cam_dir = cam.raster2cam(
                             aiVector2D(x + offset[0], y + offset[1]), width, height);
-                        auto triangle_pt = tree.intersect(
+                        auto triangle_id = tree.intersect(
                             Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
-                        triangle_ids.insert(triangle_pt);
+                        triangle_ids.insert(triangle_id);
                     }
 
                     constexpr float M_2 = 0.5f * offsets.size();
