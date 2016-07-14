@@ -233,7 +233,7 @@ namespace std {
 
 template<>
 struct std::hash<KDTree::OptionalId> {
-    size_t operator()(const KDTree::OptionalId& id);
+    size_t operator()(const KDTree::OptionalId& id) const;
 };
 
 } // namespace std
