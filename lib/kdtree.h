@@ -160,15 +160,40 @@ private:
 
 class KDTree {
 
-    using TriangleId = impl::TriangleId;
     using TriangleIds = impl::TriangleIds;
     using Node = impl::Node;
 
 public:
+
+    using TriangleId = impl::TriangleId;
+
+    class OptionalId {
+    public:
+        OptionalId() : id_(Node::MAX_ID + 1) {};
+        explicit OptionalId(TriangleId id) : id_(id) {}
+
+        operator bool() const { return id_ <= Node::MAX_ID; }
+        operator TriangleId() const { assert(*this); return id_; }
+        bool operator==(const OptionalId& other) const {
+            return id_ == other.id_;
+        }
+
+    private:
+        TriangleId id_;
+    };
+
     explicit KDTree(Triangles tris);
 
     size_t height() const { return root_->height(); }
     size_t size() const { return root_->size(); }
+    size_t num_triangles() const { return tris_.size(); }
+    const Triangle& operator[](const TriangleId id) const {
+        return tris_[id];
+    }
+    const Triangle& at(const TriangleId id) const {
+        return tris_.at(id);
+    }
+
     static constexpr size_t node_size() { return sizeof(Node); }
 
     //
@@ -178,9 +203,7 @@ public:
     //   r - distance from ray to triangle (if intersection exists)
     //   s, t - barycentric coordinates of intersection point
     //
-    // Not liking the return pointer used as optional here? Me neither.
-    //
-    const Triangle*
+    const OptionalId
     intersect(const Ray& ray, float& r, float& s, float& t) const;
 
 private:
@@ -194,7 +217,7 @@ private:
     find_plane_and_classify(const TriangleIds& tris, const Box& box) const;
 
     // Helper method which intersects a triangle ids array with a ray
-    const Triangle* intersect(
+    const OptionalId intersect(
         const TriangleId* ids, uint32_t num_tris,
         const Ray& ray, float& min_r, float& min_s, float& min_t) const;
 
@@ -203,3 +226,15 @@ private:
     Triangles tris_;
     Box box_;
 };
+
+
+// custom hash for OptionalId
+namespace std {
+
+template<>
+struct std::hash<KDTree::OptionalId> {
+    size_t operator()(const KDTree::OptionalId& id);
+};
+
+} // namespace std
+

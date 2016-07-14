@@ -309,18 +309,18 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 }
 
 
-const Triangle*
+const KDTree::OptionalId
 KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
     float tenter, texit;
     if (!intersect_ray_box(ray, box_, tenter, texit)) {
-        return nullptr;
+        return OptionalId{};
     }
 
     std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
     stack.push(std::make_tuple(root_.get(), tenter, texit));
 
     Node* node;
-    const Triangle* res = nullptr;
+    OptionalId res;
     r = std::numeric_limits<float>::max();
     while (!stack.empty()) {
         std::tie(node, tenter, texit) = stack.top();
@@ -375,12 +375,12 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
 }
 
 
-const Triangle* KDTree::intersect(
+const KDTree::OptionalId KDTree::intersect(
     const KDTree::TriangleId* ids, uint32_t num_tris,
     const Ray& ray, float& min_r, float& min_s, float& min_t) const
 {
     min_r = std::numeric_limits<float>::max();
-    const Triangle* res = nullptr;
+    OptionalId res;
     float r, s, t;
     for (uint32_t i = 0; i != num_tris; ++i) {
         const auto& tri = tris_[ids[i]];
@@ -389,9 +389,19 @@ const Triangle* KDTree::intersect(
             min_r = r;
             min_s = s;
             min_t = t;
-            res = &tri;
+            res = OptionalId{ids[i]};
         }
     }
 
     return res;
 }
+
+
+namespace std {
+
+size_t std::hash<KDTree::OptionalId>::operator()(const KDTree::OptionalId& id)
+{
+    return std::hash<KDTree::TriangleId>()(id);
+}
+
+} // namespace std
