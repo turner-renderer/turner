@@ -402,7 +402,7 @@ namespace std {
 size_t std::hash<KDTree::OptionalId>::operator()(
     const KDTree::OptionalId& id) const
 {
-    return std::hash<KDTree::TriangleId>()(id);
+    return std::hash<KDTree::TriangleId>()(id.id_);
 }
 
 } // namespace std

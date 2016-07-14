@@ -174,9 +174,15 @@ public:
 
         operator bool() const { return id_ <= Node::MAX_ID; }
         operator TriangleId() const { assert(*this); return id_; }
+        operator size_t() const { assert(*this); return id_; }
         bool operator==(const OptionalId& other) const {
             return id_ == other.id_;
         }
+        bool operator==(const TriangleId& id) const {
+            return static_cast<bool>(id_) && id_ == id;
+        }
+
+        friend struct std::hash<OptionalId>;
 
     private:
         TriangleId id_;
