@@ -35,8 +35,21 @@ Color trace(
         return conf.bg_color;
     }
 
+    // (!) dirty workaround
+    Color c = radiosity[id];
+    if (c.r < 0) {
+        c.r = 0;
+    }
+    if (c.g < 0) {
+        c.g = 0;
+    }
+    if (c.b < 0) {
+        c.b = 0;
+    }
+
     Stats::instance().num_rays += 1;
-    return radiosity[id] * 10.f;
+    // (!) workaround, let's give it more light
+    return c * 10.f;
 }
 
 //
@@ -61,8 +74,10 @@ float form_factor(
     const Tree& tree,
     const Tree::TriangleId from_id,
     const Tree::TriangleId to_id,
-    const size_t num_samples)
+    const size_t num_samples = 128)
 {
+    assert(from_id != to_id);
+
     const auto& from = tree[from_id];
     const auto& to = tree[to_id];
 
@@ -104,27 +119,27 @@ auto compute_radiosity(const Tree& tree) {
     Eigen::VectorXf E_b(num_triangles);
 
     for (size_t i = 0; i < num_triangles; ++i) {
-        const auto& from = tree[i];
 
         // construct form factor matrix (F_ij)
-        for (size_t j = i; j < num_triangles; ++j) {
+        for (size_t j = 0; j < num_triangles; ++j) {
             if (i == j) {
                 F(i, i) = 0.f;
             } else {
-                F(i, j) = form_factor(tree, i, j, 128);
-                F(j, i) = F(i, j);
+                F(i, j) = form_factor(tree, i, j);
             }
         }
 
+        const auto& triangle = tree[i];
+
         // construct material diagonal matrix (ρ_i)
-        rho_r(i) = from.diffuse.r;
-        rho_g(i) = from.diffuse.g;
-        rho_b(i) = from.diffuse.b;
+        rho_r(i) = triangle.diffuse.r;
+        rho_g(i) = triangle.diffuse.g;
+        rho_b(i) = triangle.diffuse.b;
 
         // construct vector of emittors
-        E_r(i) = from.emissive.r;
-        E_g(i) = from.emissive.g;
-        E_b(i) = from.emissive.b;
+        E_r(i) = triangle.emissive.r;
+        E_g(i) = triangle.emissive.g;
+        E_b(i) = triangle.emissive.b;
     }
 
     // solve radiosity equation
