@@ -1,5 +1,5 @@
 
-# Renderer [![Build Status](https://travis-ci.org/blacklab/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer) [![Coverage Status](https://coveralls.io/repos/github/blacklab/renderer/badge.svg?branch=master)](https://coveralls.io/github/blacklab/renderer?branch=master) [![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer) [![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+# Renderer [![Build Status](https://travis-ci.org/jeschkies/renderer.svg?branch=master)](https://travis-ci.org/blacklab/renderer) [![Coverage Status](https://coveralls.io/repos/github/blacklab/renderer/badge.svg?branch=master)](https://coveralls.io/github/blacklab/renderer?branch=master) [![Stories in Ready](https://badge.waffle.io/blacklab/renderer.png?label=ready&title=Ready)](https://waffle.io/blacklab/renderer) [![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 Prototype implementations of unbiased renderers.
 
