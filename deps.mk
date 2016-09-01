@@ -19,7 +19,7 @@ assimp: ASSIMP_BUILD_OPTS = \
 	-DASSIMP_BUILD_SAMPLES=OFF \
 	-DASSIMP_BUILD_TESTS=OFF
 assimp: ZLIB_BUILD_OPTIONS = \
-	-DASSIMP_LIB_INSTALL_DIR=$$(pwd)/../../lib
+	-DASSIMP_LIB_INSTALL_DIR="$$(pwd)/../../lib"
 vendor/assimp: | vendor
 	git clone $(REPO) $@
 assimp: vendor/assimp
