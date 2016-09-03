@@ -1,4 +1,4 @@
-node {
+node('turner') {
    stage 'Checkout'
    git 'https://github.com/jeschkies/renderer'
    stash name: 'scenes', includes: 'scenes/cornell_box.blend'
