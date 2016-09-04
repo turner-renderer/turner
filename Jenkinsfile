@@ -1,9 +1,11 @@
+// Configure project to build on new push.
 properties([
     pipelineTriggers([
       [$class: "GitHubPushTrigger"]
     ])
   ])
 
+// Run everything on build agents with label 'truner'.
 node('turner') {
    stage 'Checkout'
    git 'https://github.com/jeschkies/renderer'
