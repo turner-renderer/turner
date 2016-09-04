@@ -3,8 +3,6 @@ node('turner') {
    git 'https://github.com/jeschkies/renderer'
    stash name: 'scenes', includes: 'scenes/cornell_box.blend'
 
-   step([$class: 'GitHubSetCommitStatusBuilder'])
-
    stage 'Bootstrap'
    sh 'CXX=clang++ CC=clang make bootstrap'
 
