@@ -1,3 +1,9 @@
+properties([
+    pipelineTriggers([
+      [$class: "GitHubPushTrigger"]
+    ])
+  ])
+
 node('turner') {
    stage 'Checkout'
    git 'https://github.com/jeschkies/renderer'
