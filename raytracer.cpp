@@ -16,9 +16,9 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_pt = triangles_tree.intersect(
+    auto triangle_id = triangles_tree.intersect(
         aiRay(origin, dir), dist_to_triangle, s, t);
-    if (!triangle_pt) {
+    if (!triangle_id) {
         return conf.bg_color;
     }
 
@@ -27,7 +27,7 @@ Color trace(const Vec& origin, const Vec& dir,
     auto light_dir = (light.position - p).Normalize();
 
     // interpolate normal
-    const auto& triangle = *triangle_pt;
+    const auto& triangle = triangles_tree[triangle_id];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light

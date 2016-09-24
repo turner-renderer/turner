@@ -5,7 +5,7 @@
 
 // Construct a triangle with trivial normals and colors.
 Triangle test_triangle(Vec a, Vec b, Vec c) {
-    return Triangle({{a, b, c}}, {{Vec{}, Vec{}, Vec{}}}, {}, {}, {}, 0.f);
+    return Triangle({a, b, c});
 }
 
 Vec random_vec() {

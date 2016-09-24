@@ -11,8 +11,12 @@
 static constexpr float EPS = 0.00001f;
 static constexpr float FLT_MAX = std::numeric_limits<float>::max();
 
-float eps_zero(float a);
+bool is_eps_zero(float a);
 
+/**
+ * If abs(a) < EPS return 0, else a.
+ */
+float eps_zero(float a);
 
 inline constexpr float min(float a, float b, float c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
@@ -94,12 +98,12 @@ struct Box {
 
     bool is_trivial() const {
         return
-            eps_zero(min[Axis::X]) &&
-            eps_zero(min[Axis::Y]) &&
-            eps_zero(min[Axis::Z]) &&
-            eps_zero(max[Axis::X]) &&
-            eps_zero(max[Axis::Y]) &&
-            eps_zero(max[Axis::Z]);
+            is_eps_zero(min[Axis::X]) &&
+            is_eps_zero(min[Axis::Y]) &&
+            is_eps_zero(min[Axis::Z]) &&
+            is_eps_zero(max[Axis::X]) &&
+            is_eps_zero(max[Axis::Y]) &&
+            is_eps_zero(max[Axis::Z]);
     }
 
     // Split `box` on the plane defined by the position `pos` at axis `ax`.

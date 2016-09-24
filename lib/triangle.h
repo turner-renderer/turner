@@ -16,21 +16,29 @@ public:
         std::array<Vec, 3> ns,
         const aiColor4D& ambient,
         const aiColor4D& diffuse,
+        const aiColor4D& emissive,
         const aiColor4D& reflective,
-        const float reflectivity)
-    : vertices(vs)
-    , normals(ns)
-    , ambient(ambient)
-    , diffuse(diffuse)
-    , reflective(reflective)        // reflective color
-    , reflectivity(reflectivity)    // reflectivity factor
-    , u(vertices[1] - vertices[0])
-    , v(vertices[2] - vertices[0])
-    , normal(u^v)
-    , uv(u*v)
-    , vv(v*v)
-    , uu(u*u)
-    , denom(uv * uv - uu * vv)
+        const float reflectivity
+    )
+        : vertices(vs)
+        , normals(ns)
+        , ambient(ambient)
+        , diffuse(diffuse)
+        , emissive(emissive)
+        , reflective(reflective)        // reflective color
+        , reflectivity(reflectivity)    // reflectivity factor
+        , u(vertices[1] - vertices[0])
+        , v(vertices[2] - vertices[0])
+        , normal(u^v)
+        , uv(u*v)
+        , vv(v*v)
+        , uu(u*u)
+        , denom(uv * uv - uu * vv)
+    {}
+
+    // minimal constructor
+    Triangle(std::array<Vec, 3> vs)
+        : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
     {}
 
     // Intersect Triangle Ray
@@ -75,14 +83,18 @@ public:
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
     }
 
+    float area() const {
+        return (u^v).Length() / 2.f;
+    }
+
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {
         if (ax == Axis::X) {
-            return eps_zero(normal.y) && eps_zero(normal.z);
+            return is_eps_zero(normal.y) && is_eps_zero(normal.z);
         } else if (ax == Axis::Y) {
-            return eps_zero(normal.x) && eps_zero(normal.z);
+            return is_eps_zero(normal.x) && is_eps_zero(normal.z);
         }
-        return eps_zero(normal.x) && eps_zero(normal.y);
+        return is_eps_zero(normal.x) && is_eps_zero(normal.y);
     }
 
     // members
@@ -90,6 +102,7 @@ public:
     std::array<Vec, 3> normals;
     aiColor4D ambient;
     aiColor4D diffuse;
+    aiColor4D emissive;
     aiColor4D reflective;
     float reflectivity;
 
