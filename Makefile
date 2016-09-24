@@ -22,6 +22,7 @@ pathtracer: main.o pathtracer.o $(LIB_OBJS)
 radiosity: radiosity.o $(LIB_OBJS)
 
 main.o radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
+radiosity.o: CXXFLAGS += -Ivendor/eigen
 
 bootstrap: vendor/.last-build
 # run bootstrap before building anything

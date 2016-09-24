@@ -31,33 +31,33 @@ TEST_CASE("Four separated triangles test", "[kdtree]")
     REQUIRE(tree.height() == 1);
     REQUIRE(tree.size() == 4);
 
-    const Triangle* hit;
+    KDTree::OptionalId hit;
     float r, s, t;
 
     hit = tree.intersect({{0, 0, 0}, {0.5f, 0.5f, 1}}, r, s, t);
-    REQUIRE(hit != nullptr);
-    REQUIRE(*hit == a);
+    REQUIRE(hit);
+    REQUIRE(tree.at(hit) == a);
     REQUIRE(r == 1);
     REQUIRE(s == 0.5f);
     REQUIRE(t == 0.5f);
 
     hit = tree.intersect({{0, 0, 0}, {2.5f, 0.5f, 1}}, r, s, t);
-    REQUIRE(hit != nullptr);
-    REQUIRE(*hit == b);
+    REQUIRE(hit);
+    REQUIRE(tree.at(hit) == b);
     REQUIRE(r == 1);
     REQUIRE(s == 0);
     REQUIRE(t == 0.5f);
 
     hit = tree.intersect({{0, 0, 0}, {0.5f, 2.5f, 1}}, r, s, t);
-    REQUIRE(hit != nullptr);
-    REQUIRE(*hit == c);
+    REQUIRE(hit);
+    REQUIRE(tree.at(hit) == c);
     REQUIRE(r == 1);
     REQUIRE(s == 0);
     REQUIRE(t == 0.5f);
 
     hit = tree.intersect({{0, 0, 0}, {2.5f, 2.5f, 1}}, r, s, t);
-    REQUIRE(hit != nullptr);
-    REQUIRE(*hit == d);
+    REQUIRE(hit);
+    REQUIRE(tree.at(hit) == d);
     REQUIRE(r == 1);
     REQUIRE(s == 0);
     REQUIRE(t == 0.5f);
