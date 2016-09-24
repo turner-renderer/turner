@@ -30,26 +30,15 @@ Color trace(
 {
     // intersection
     float dist_to_triangle, s, t;
-    auto id = tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
-    if (!id) {
+    auto triangle_id =
+        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+    if (!triangle_id) {
         return conf.bg_color;
-    }
-
-    // (!) dirty workaround
-    Color c = radiosity[id];
-    if (c.r < 0) {
-        c.r = 0;
-    }
-    if (c.g < 0) {
-        c.g = 0;
-    }
-    if (c.b < 0) {
-        c.b = 0;
     }
 
     Stats::instance().num_rays += 1;
     // (!) workaround, let's give it more light
-    return c * 10.f;
+    return radiosity[triangle_id] * 10.f;
 }
 
 //
@@ -154,8 +143,9 @@ auto compute_radiosity(const Tree& tree) {
 
     // combine results in a vector
     std::vector<Color> B;
-    for (size_t id = 0; id != num_triangles; ++id) {
-        B.emplace_back(B_r(id), B_g(id), B_b(id), 1.f);
+    for (size_t i = 0; i != num_triangles; ++i) {
+        B.emplace_back(eps_zero(B_r(i)), eps_zero(B_g(i)), eps_zero(B_b(i)),
+                       1.f);
     }
     return B;
 }
