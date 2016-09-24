@@ -16,16 +16,16 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_pt = triangles.intersect(
+    auto triangle_id = triangles.intersect(
         Ray(origin, dir), dist_to_triangle, s, t);
-    if (!triangle_pt) {
+    if (!triangle_id) {
         return conf.bg_color;
     }
 
     auto p = origin + dist_to_triangle * dir;
 
     // interpolate normal
-    const auto& triangle = *triangle_pt;
+    const auto& triangle = triangles[triangle_id];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     auto p2 = p + normal * 0.0001f;
