@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++1y -Wall -Wextra -O3 -g -Ivendor/assimp/include
+CXXFLAGS=-std=c++1y -Wall -Wextra -Wno-missing-braces -O3 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
 BINS=test_assimp raycaster raytracer pathtracer radiosity
@@ -22,6 +22,7 @@ pathtracer: main.o pathtracer.o $(LIB_OBJS)
 radiosity: radiosity.o $(LIB_OBJS)
 
 main.o radiosity.o: CXXFLAGS += -Ivendor/ThreadPool -Ivendor/docopt -pthread
+radiosity.o: CXXFLAGS += -Ivendor/eigen
 
 bootstrap: vendor/.last-build
 # run bootstrap before building anything

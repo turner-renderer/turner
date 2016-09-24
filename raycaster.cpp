@@ -79,7 +79,7 @@ NodeIntersection ray_node_intersection(
             auto V2 = T * mesh.mVertices[face.mIndices[2]];
 
             float r, s, t;
-            Triangle triangle{{{V0, V1, V2}}, {}, {}, {}, {}, 0};
+            Triangle triangle{{{V0, V1, V2}}};
             auto intersect = triangle.intersect(ray, r, s, t);
 
             if (!intersect) {

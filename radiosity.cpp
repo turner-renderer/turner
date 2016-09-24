@@ -1,5 +1,6 @@
 #include "trace.h"
 #include "lib/output.h"
+#include "lib/sampling.h"
 #include "lib/image.h"
 #include "lib/lambertian.h"
 #include "lib/range.h"
@@ -13,6 +14,8 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <docopt.h>
 #include <ThreadPool.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <math.h>
 #include <vector>
@@ -21,32 +24,130 @@
 #include <unordered_set>
 #include <chrono>
 
-Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles_tree, const std::vector<Light>& /* lights */,
-        int depth, const Configuration& conf)
+Color trace(
+    const Vec& origin, const Vec& dir, const Tree& tree,
+    const std::vector<Color>& radiosity, const Configuration& conf)
 {
-    //xorshift64star<float> uniform{4};
-
-    Stats::instance().num_rays += 1;
-
-    if (depth > conf.max_depth) {
-        return {};
-    }
-
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_pt = triangles_tree.intersect(
-        aiRay(origin, dir), dist_to_triangle, s, t);
-    if (!triangle_pt) {
+    auto triangle_id =
+        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+    if (!triangle_id) {
         return conf.bg_color;
     }
 
-    // simple raycast
-    const auto& triangle = *triangle_pt;
-    auto result = triangle.diffuse;
-    result.a = dist_to_triangle;
-    //Color result { uniform(), uniform(), uniform(), dist_to_triangle};
-    return result;
+    Stats::instance().num_rays += 1;
+    // (!) workaround, let's give it more light
+    return radiosity[triangle_id] * 10.f;
+}
+
+//
+// The form factor between faces `from` (i) and `to` (j) is defined as
+//
+// F_ij = 1/A_i ∫_x ∫_y G'(x, y) dA_y dA_x
+//      ≈ 1/A_j A_j/L ∑_{l = 1...L} (A_i/K ∑_{k = 1...K} G'(x^l, y^k))
+//      = A_j/N ∑_{n = 1...N} G'(x^n, y^n)
+//
+// Here, x and y are points on face i and j, A_i is the area of i, and A_i, and
+// A_j are infinitesimal areas around x and y. Further,
+//
+// G'(x, y) = V(x, y) * cos+(θ_i) * cos+(θ_j) / (π * ||x-y||^2), where
+//
+// V(x, y) - visibility indicator between x and y (1 if visible, 0 else)
+// θ_i - angle between normal of x and vector to y (ω)
+// θ_j - angle between normal of y and vector to x (-ω)
+//
+// The above integrals are approximated by Monte-Carlo.
+//
+float form_factor(
+    const Tree& tree,
+    const Tree::TriangleId from_id,
+    const Tree::TriangleId to_id,
+    const size_t num_samples = 128)
+{
+    assert(from_id != to_id);
+
+    const auto& from = tree[from_id];
+    const auto& to = tree[to_id];
+
+    float sum = 0;
+    for (size_t i = 0; i != num_samples; ++i) {
+        auto p1 = sampling::triangle(from);
+        auto p2 = sampling::triangle(to);
+
+        auto v = p2 - p1;
+        float unused;
+        auto id = tree.intersect(Ray{p1, v}, unused, unused, unused);
+        auto visibility = id && (id == from_id || id == to_id);
+        if (!visibility) {
+            continue;
+        }
+
+        auto square_length = v.SquareLength();
+
+        v.Normalize();
+        auto cos_theta1 = std::fmax(0, v * from.normal);
+        auto cos_theta2 = std::fmax(0, (-v) * to.normal);
+        auto G = cos_theta1 * cos_theta2 / square_length;
+        sum += G;
+    }
+
+    return M_1_PI * sum * to.area() / num_samples;
+}
+
+auto compute_radiosity(const Tree& tree) {
+    size_t num_triangles = tree.num_triangles();
+
+    // compute matrices
+    Eigen::MatrixXf F(num_triangles, num_triangles);
+    Eigen::VectorXf rho_r(num_triangles);
+    Eigen::VectorXf rho_g(num_triangles);
+    Eigen::VectorXf rho_b(num_triangles);
+    Eigen::VectorXf E_r(num_triangles);
+    Eigen::VectorXf E_g(num_triangles);
+    Eigen::VectorXf E_b(num_triangles);
+
+    for (size_t i = 0; i < num_triangles; ++i) {
+
+        // construct form factor matrix (F_ij)
+        for (size_t j = 0; j < num_triangles; ++j) {
+            if (i == j) {
+                F(i, i) = 0.f;
+            } else {
+                F(i, j) = form_factor(tree, i, j);
+            }
+        }
+
+        const auto& triangle = tree[i];
+
+        // construct material diagonal matrix (ρ_i)
+        rho_r(i) = triangle.diffuse.r;
+        rho_g(i) = triangle.diffuse.g;
+        rho_b(i) = triangle.diffuse.b;
+
+        // construct vector of emittors
+        E_r(i) = triangle.emissive.r;
+        E_g(i) = triangle.emissive.g;
+        E_b(i) = triangle.emissive.b;
+    }
+
+    // solve radiosity equation
+    auto I = Eigen::MatrixXf::Identity(num_triangles, num_triangles);
+
+    Eigen::VectorXf B_r = (I - rho_r.asDiagonal() * F)
+        .colPivHouseholderQr().solve(E_r);
+    Eigen::VectorXf B_g = (I - rho_g.asDiagonal() * F)
+        .colPivHouseholderQr().solve(E_g);
+    Eigen::VectorXf B_b = (I - rho_b.asDiagonal() * F)
+        .colPivHouseholderQr().solve(E_b);
+
+    // combine results in a vector
+    std::vector<Color> B;
+    for (size_t i = 0; i != num_triangles; ++i) {
+        B.emplace_back(eps_zero(B_r(i)), eps_zero(B_g(i)), eps_zero(B_b(i)),
+                       1.f);
+    }
+    return B;
 }
 
 Triangles triangles_from_scene(const aiScene* scene) {
@@ -65,10 +166,11 @@ Triangles triangles_from_scene(const aiScene* scene) {
             const auto& mesh = *scene->mMeshes[mesh_index];
             const auto& material = scene->mMaterials[mesh.mMaterialIndex];
 
-            aiColor4D ambient, diffuse, reflective;
+            aiColor4D ambient, diffuse, reflective, emissive;
             material->Get(AI_MATKEY_COLOR_AMBIENT, ambient);
             material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
             material->Get(AI_MATKEY_COLOR_REFLECTIVE, reflective);
+            material->Get(AI_MATKEY_COLOR_EMISSIVE, emissive);
 
             float reflectivity = 0.f;
             material->Get(AI_MATKEY_REFLECTIVITY, reflectivity);
@@ -90,6 +192,7 @@ Triangles triangles_from_scene(const aiScene* scene) {
                     }},
                     ambient,
                     diffuse,
+                    emissive,
                     reflective,
                     reflectivity
                 });
@@ -107,13 +210,7 @@ Options:
   -a --aspect=<num>                 Aspect ratio of the image. If the model has
                                     specified the aspect ratio, it will be
                                     used. Otherwise default value is 1.
-  -d --max-depth=<int>              Maximum recursion depth for raytracing
-                                    [default: 3].
-  --shadow=<float>                  Intensity of shadow [default: 0.5].
   --background=<3x float>           Background color [default: 0 0 0].
-  -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
-  -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
-                                    Used only in pathtracer.
   -t --threads=<int>                Number of threads [default: 1].
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
@@ -126,15 +223,13 @@ int main(int argc, char const *argv[])
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    const Configuration conf { args["--max-depth"].asLong()
-                             , std::stof(args["--shadow"].asString())
-                             , args["--pixel-samples"].asLong()
-                             , args["--monte-carlo-samples"].asLong()
-                             , args["--threads"].asLong()
-                             , args["--background"].asString()
-                             , std::stof(args["--inverse-gamma"].asString())
-                             , args["--no-gamma-correction"].asBool()
-                             };
+    const Configuration conf
+        { 1, 0, 1, 0  // unused configuration arguments
+        , args["--threads"].asLong()
+        , args["--background"].asString()
+        , std::stof(args["--inverse-gamma"].asString())
+        , args["--no-gamma-correction"].asBool()
+        };
 
     // import scene
     Assimp::Importer importer;
@@ -164,34 +259,16 @@ int main(int argc, char const *argv[])
     assert(camNode != nullptr);
     const Camera cam(camNode->mTransformation, sceneCam);
 
-    // setup light
-    // we can deal only with one single or no light at all
-    assert(scene->mNumLights == 0 || scene->mNumLights == 1);
-    std::vector<Light> lights;
-    if(scene->mNumLights == 1) {
-        auto& rawLight = *scene->mLights[0];
-
-        auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
-        assert(lightNode != nullptr);
-        const auto& LT = lightNode->mTransformation;
-        lights.push_back(
-            { LT * aiVector3D()
-            , aiColor4D
-                { rawLight.mColorDiffuse.r
-                , rawLight.mColorDiffuse.g
-                , rawLight.mColorDiffuse.b
-                , 1
-                }
-            });
-    }
-
     // load triangles from the scene into a kd-tree
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
 
+    // compute radiosity
+    auto radiosity = compute_radiosity(tree);
+
     //
-    // Raytracer
+    // Raycaster
     //
 
     int width = args["--width"].asLong();
@@ -209,25 +286,17 @@ int main(int argc, char const *argv[])
 
         for (int y = 0; y < height; ++y) {
             tasks.emplace_back(pool.enqueue([
-                    &image, &cam, &tree, &lights, width, height, y, &conf]()
+                &image, &cam, &tree, &radiosity, width, height, y, &conf]()
             {
-                float dx, dy;
-                xorshift64star<float> gen(42);
-
                 for (int x = 0; x < width; ++x) {
                     for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                        dx = gen();
-                        dy = gen();
-
                         auto cam_dir = cam.raster2cam(
-                            aiVector2D(x + dx, y + dy), width, height);
+                            aiVector2D(x, y), width, height);
 
                         Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                            lights, 0, conf);
+                        image(x, y) += trace(
+                            cam.mPosition, cam_dir, tree, radiosity, conf);
                     }
-                    image(x, y) /=
-                        static_cast<float>(conf.num_pixel_samples);
 
                     // gamma correction
                     if (conf.gamma_correction_enabled) {
@@ -273,11 +342,11 @@ int main(int argc, char const *argv[])
             };
         for (int y = 0; y < height; ++y) {
             mesh_tasks.emplace_back(pool.enqueue([
-                    &image, &offsets, &cam, &tree, &lights, width, height, y, &conf]()
+                &image, &offsets, &cam, &tree, width, height, y, &conf]()
             {
                 for (int x = 0; x < width; ++x) {
                     float dist_to_triangle, s, t;
-                    std::unordered_set<const Triangle*> triangle_ids;
+                    std::unordered_set<Tree::OptionalId> triangle_ids;
 
                     // Shoot center ray.
                     auto cam_dir = cam.raster2cam(
@@ -288,19 +357,19 @@ int main(int argc, char const *argv[])
 
                     // Sample disc rays around center.
                     // TODO: Sample disc with Poisson or similar.
-                    for ( auto offset : offsets) {
+                    for (auto offset : offsets) {
                         cam_dir = cam.raster2cam(
                             aiVector2D(x + offset[0], y + offset[1]), width, height);
-                        auto triangle_pt = tree.intersect(
+                        auto id = tree.intersect(
                             Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
-                        triangle_ids.insert(triangle_pt);
+                        triangle_ids.insert(id);
                     }
 
                     constexpr float M_2 = 0.5f * offsets.size();
                     // All hit primitives except the one hit by center.
                     const float m = triangle_ids.size() - 1.f;
-                    float e = std::pow( std::abs(m - M_2) / M_2, 10 );
-                    image(x, y) = image(x, y) * (e);
+                    float e = std::pow(std::abs(m - M_2) / M_2, 10);
+                    image(x, y) = image(x, y) * e;
                 }
             }));
         }

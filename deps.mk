@@ -1,6 +1,6 @@
 .PHONY: build-deps assimp catch docopt ThreadPool
 
-build-deps: assimp catch docopt ThreadPool
+build-deps: assimp catch docopt ThreadPool eigen
 
 
 vendor:
@@ -53,3 +53,10 @@ vendor/ThreadPool: | vendor
 	git clone $(REPO) $@
 ThreadPool: vendor/ThreadPool
 	cd $< && git fetch && git checkout $(COMMIT)
+
+eigen: SRC = http://bitbucket.org/eigen/eigen/get/3.2.7.tar.bz2
+vendor/eigen: | vendor
+	mkdir $@ && cd $@ && \
+	wget $(SRC) && \
+	tar xjf 3.2.7.tar.bz2 --strip-components=1
+eigen: vendor/eigen
