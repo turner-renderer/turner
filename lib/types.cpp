@@ -1,8 +1,15 @@
 #include "types.h"
 
 
-float eps_zero(float a) {
+bool is_eps_zero(float a) {
     return std::abs(a) < EPS;
+}
+
+float eps_zero(float a) {
+    if (is_eps_zero(a)) {
+        return 0;
+    }
+    return a;
 }
 
 Vec operator/(int a, const Vec& v) {

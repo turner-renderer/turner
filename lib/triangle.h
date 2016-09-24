@@ -90,11 +90,11 @@ public:
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {
         if (ax == Axis::X) {
-            return eps_zero(normal.y) && eps_zero(normal.z);
+            return is_eps_zero(normal.y) && is_eps_zero(normal.z);
         } else if (ax == Axis::Y) {
-            return eps_zero(normal.x) && eps_zero(normal.z);
+            return is_eps_zero(normal.x) && is_eps_zero(normal.z);
         }
-        return eps_zero(normal.x) && eps_zero(normal.y);
+        return is_eps_zero(normal.x) && is_eps_zero(normal.y);
     }
 
     // members
