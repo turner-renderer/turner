@@ -37,7 +37,8 @@ Color trace(
     }
 
     Stats::instance().num_rays += 1;
-    // (!) workaround, let's give it more light
+    // (!) Workaround, let's give it more light. Since we are not iterating the
+    // calculation of the form factors (one bounce), our color is too dark.
     return radiosity[triangle_id] * 10.f;
 }
 

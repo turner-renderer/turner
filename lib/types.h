@@ -18,6 +18,16 @@ bool is_eps_zero(float a);
  */
 float eps_zero(float a);
 
+template<typename Number>
+Number clamp(Number input, Number min = 0, Number max = 255) {
+    if (input < min) {
+        return min;
+    } else if (max < input) {
+        return max;
+    }
+    return input;
+}
+
 inline constexpr float min(float a, float b, float c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
 }
