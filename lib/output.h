@@ -95,7 +95,7 @@ inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
 }
 
 //
-// Output image in PPM format.
+// Output image in PBM format.
 //
 // Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
 //
@@ -110,11 +110,11 @@ inline std::ostream& operator<<(std::ostream& os, const Image& img) {
         }
 
         os << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(255 * color.r * color.a) << " "
+           << static_cast<int>(clamp(255 * color.r * color.a)) << " "
            << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(255 * color.g * color.a) << " "
+           << static_cast<int>(clamp(255 * color.g * color.a)) << " "
            << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(255 * color.b * color.a) << " ";
+           << static_cast<int>(clamp(255 * color.b * color.a)) << " ";
     }
 
     return os;

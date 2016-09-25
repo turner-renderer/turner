@@ -95,3 +95,18 @@ TEST_CASE("Test is_planar of triangle", "[triangle]")
         REQUIRE(triangle.is_planar(ax));
     }
 }
+
+TEST_CASE("Test clamping", "[clamping]")
+{
+    REQUIRE(clamp(-1, 0, 2) == 0);
+    REQUIRE(clamp(0, 0, 2) == 0);
+    REQUIRE(clamp(1, 0, 2) == 1);
+    REQUIRE(clamp(2, 0, 2) == 2);
+    REQUIRE(clamp(3, 0, 2) == 2);
+
+    REQUIRE(clamp(-1.f, 0.f, 1.f) == 0.f);
+    REQUIRE(clamp(0.f, 0.f, 1.f) == 0.f);
+    REQUIRE(clamp(0.5f, 0.f, 1.f) == 0.5f);
+    REQUIRE(clamp(1.f, 0.f, 1.f) == 1.f);
+    REQUIRE(clamp(2.f, 0.f, 1.f) == 1.f);
+}
