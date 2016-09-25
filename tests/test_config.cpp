@@ -27,6 +27,9 @@ SCENARIO("Create config from options", "[config]") {
     GIVEN("A gamma correction flag") {
         bool no_gamma = false;
 
+    GIVEN("A maximum visibility") {
+        float max_visibility = 3.f;
+
     WHEN("the configuration is created") {
         Configuration config { max_depth
                              , shadow_intensity
@@ -36,6 +39,7 @@ SCENARIO("Create config from options", "[config]") {
                              , bg_color
                              , inv_gamma
                              , no_gamma
+                             , max_visibility
                              };
 
     THEN("the configuration holds all variables") {
@@ -46,5 +50,6 @@ SCENARIO("Create config from options", "[config]") {
         REQUIRE(config.num_threads == 4);
         REQUIRE(config.gamma_correction_enabled == true);
         REQUIRE(config.bg_color == Color(0.0f, 0.3f, 1.0f, 1.0f));
-    }}}}}}}}}}
+        REQUIRE(config.max_visibility - 3.0f < 0.00001f);
+    }}}}}}}}}}}
 }

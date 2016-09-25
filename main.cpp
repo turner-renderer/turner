@@ -90,6 +90,8 @@ Options:
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
+  --max-visibility=<float>          Any object farther away is dark. [default: 2.0]
+                                    Used only in raycaster.
 )";
 
 int main(int argc, char const *argv[])
@@ -106,6 +108,7 @@ int main(int argc, char const *argv[])
                              , args["--background"].asString()
                              , std::stof(args["--inverse-gamma"].asString())
                              , args["--no-gamma-correction"].asBool()
+                             , std::stof(args["--max-visibility"].asString())
                              };
 
     // import scene

@@ -12,11 +12,11 @@ endif
 all: $(BINS)
 
 $(BINS): CC=$(CXX)
-raytracer pathtracer radiosity: LDFLAGS += -Lvendor/docopt
-raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
+raycaster raytracer pathtracer radiosity: LDFLAGS += -Lvendor/docopt
+raycaster raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
 
 test_assimp: test_assimp.o
-raycaster: raycaster.o $(LIB_OBJS)
+raycaster: main.o raycaster.o $(LIB_OBJS)
 raytracer: main.o raytracer.o $(LIB_OBJS)
 pathtracer: main.o pathtracer.o $(LIB_OBJS)
 radiosity: radiosity.o $(LIB_OBJS)
