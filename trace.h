@@ -19,14 +19,16 @@ public:
             long num_threads,
             const std::string& bg_color_str,
             float inverse_gamma,
-            const bool no_gamma_correction):
+            const bool no_gamma_correction,
+            float max_visibility):
         max_depth(max_depth),
         shadow_intensity(shadow_intensity),
         num_pixel_samples(num_pixel_samples),
         num_monte_carlo_samples(num_monte_carlo_samples),
         num_threads(num_threads),
         inverse_gamma(inverse_gamma),
-        gamma_correction_enabled(!no_gamma_correction)
+        gamma_correction_enabled(!no_gamma_correction),
+        max_visibility(max_visibility)
     {
         check();
 
@@ -55,6 +57,7 @@ private:
         assert(1 <= num_pixel_samples);
         assert(0 <= num_monte_carlo_samples);
         assert(1 <= num_threads);
+        assert(0.f <= max_visibility);
     }
 
 public:
@@ -67,6 +70,7 @@ public:
     float inverse_gamma;
     bool gamma_correction_enabled;
     Color bg_color;
+    float max_visibility;
 };
 
 Color trace(const Vec& origin, const Vec& dir,
