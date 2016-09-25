@@ -24,16 +24,48 @@
 #include <unordered_set>
 #include <chrono>
 
-/**
- * Returns three equisized subtriangles.
- */
-std::tuple<Triangle, Triangle, Triangle> subdivide(const Triangle& tri) {
-    Vec centroid = tri.midpoint();
+std::tuple<Triangle, Triangle, Triangle, Triangle, Triangle, Triangle>
+subdivide6(const Triangle& tri) {
+    const auto& a = tri.vertices[0];
+    const auto& b = tri.vertices[1];
+    const auto& c = tri.vertices[2];
+
+    const auto& na = tri.normals[0];
+    const auto& nb = tri.normals[1];
+    const auto& nc = tri.normals[2];
+
+    auto m = tri.midpoint();
+    auto ma = (b + c) / 2.f;
+    auto mb = (a + c) / 2.f;
+    auto mc = (a + b) / 2.f;
+
+    auto nm = tri.interpolate_normal(1.f/3, 1.f/3, 1.f/3);
+    auto nma = tri.interpolate_normal(0.f, 0.5f, 0.5f);
+    auto nmb = tri.interpolate_normal(0.5f, 0.f, 0.5f);
+    auto nmc = tri.interpolate_normal(0.5f, 0.5f, 0.f);
+
+    auto copy_tri = [&tri](
+        const Vec& a, const Vec& b, const Vec& c,
+        const Vec& na, const Vec& nb, const Vec& nc)
+    {
+        return Triangle{
+            {a, b, c},
+            {na, nb, nc},
+            tri.ambient,
+            tri.diffuse,
+            tri.emissive,
+            tri.reflective,
+            tri.reflectivity
+        };
+    };
 
     return {
-    Triangle { { tri.vertices[0], tri.vertices[1], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity },
-    Triangle { { tri.vertices[1], tri.vertices[2], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity },
-    Triangle { { tri.vertices[2], tri.vertices[3], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity }
+        copy_tri(a, mc, m, na, nmc, nm),
+        copy_tri(mc, b, m, nmc, nb, nmc),
+        copy_tri(b, m, ma, nb, nm, nma),
+        copy_tri(ma, c, m, nma, nc, nm),
+        copy_tri(c, mb, m, nc, nmb, nm),
+        copy_tri(mb, a, m, nmb, na, nm)
     };
 }
 
@@ -276,21 +308,22 @@ int main(int argc, char const *argv[])
     // load triangles from the scene into a kd-tree
     auto raw_triangles = triangles_from_scene(scene);
     Triangles triangles;
-    triangles.reserve(3 * raw_triangles.size());
-
-    std::cerr << "Subdivide triangles" << std::endl;
-
+    triangles.reserve(6 * raw_triangles.size());
     for (const auto& tri : raw_triangles) {
-        auto sub_tris = subdivide(tri);
+        auto sub_tris = subdivide6(tri);
         triangles.push_back(std::get<0>(sub_tris));
         triangles.push_back(std::get<1>(sub_tris));
         triangles.push_back(std::get<2>(sub_tris));
+        triangles.push_back(std::get<3>(sub_tris));
+        triangles.push_back(std::get<4>(sub_tris));
+        triangles.push_back(std::get<5>(sub_tris));
     }
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
 
     // compute radiosity
-    auto radiosity = compute_radiosity(tree);
+    // auto radiosity = compute_radiosity(tree);
+    std::vector<Color> radiosity;
 
     //
     // Raycaster
