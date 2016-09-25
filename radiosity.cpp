@@ -24,6 +24,19 @@
 #include <unordered_set>
 #include <chrono>
 
+/**
+ * Returns three equisized subtriangles.
+ */
+std::tuple<Triangle, Triangle, Triangle> subdivide(const Triangle& tri) {
+    Vec centroid = tri.midpoint();
+
+    return {
+    Triangle { { tri.vertices[0], tri.vertices[1], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity },
+    Triangle { { tri.vertices[1], tri.vertices[2], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity },
+    Triangle { { tri.vertices[2], tri.vertices[3], centroid }, tri.normals, tri.ambient, tri.diffuse, tri.emissive, tri.reflective, tri.reflectivity }
+    };
+}
+
 Color trace(
     const Vec& origin, const Vec& dir, const Tree& tree,
     const std::vector<Color>& radiosity, const Configuration& conf)
@@ -261,7 +274,18 @@ int main(int argc, char const *argv[])
     const Camera cam(camNode->mTransformation, sceneCam);
 
     // load triangles from the scene into a kd-tree
-    auto triangles = triangles_from_scene(scene);
+    auto raw_triangles = triangles_from_scene(scene);
+    Triangles triangles;
+    triangles.reserve(3 * raw_triangles.size());
+
+    std::cerr << "Subdivide triangles" << std::endl;
+
+    for (const auto& tri : raw_triangles) {
+        auto sub_tris = subdivide(tri);
+        triangles.push_back(std::get<0>(sub_tris));
+        triangles.push_back(std::get<1>(sub_tris));
+        triangles.push_back(std::get<2>(sub_tris));
+    }
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
 
