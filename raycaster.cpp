@@ -29,7 +29,7 @@ Color trace(const Vec& origin, const Vec& dir,
     auto res = triangles[triangle_id].diffuse;
 
     // The light is at camera position. The farther away an object the darker it
-    // is. It's not visible beyonf max visibility.
+    // is. It's not visible beyond max visibility.
     res.a = clamp(1.f - (dist_to_triangle / conf.max_visibility), 0.f, 1.f);
     return res;
 }
