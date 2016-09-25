@@ -317,7 +317,7 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
     }
 
     std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
-    stack.push(std::make_tuple(root_.get(), tenter, texit));
+    stack.emplace(root_.get(), tenter, texit);
 
     Node* node;
     OptionalId res;
@@ -344,12 +344,12 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
             // Should we use a fat plane here? We would say, no!
             // t, texit and tenter are computed in exactly the same way.
             // Cf. the implementation of ray_box_intersection.
-            if (t > texit || t < 0) {
+            if (t + EPS < 0 || texit + EPS < t) {
                 node = near;
-            } else if (t < tenter) {
+            } else if (t + EPS < tenter) {
                 node = far;
             } else {
-                stack.push(std::make_tuple(far, t, texit));
+                stack.emplace(far, t, texit);
                 node = near;
                 texit = t;
             }
