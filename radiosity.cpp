@@ -24,7 +24,7 @@
 #include <unordered_set>
 #include <chrono>
 
-std::tuple<Triangle, Triangle, Triangle, Triangle, Triangle, Triangle>
+std::array<Triangle, 6>
 subdivide6(const Triangle& tri) {
     const auto& a = tri.vertices[0];
     const auto& b = tri.vertices[1];
