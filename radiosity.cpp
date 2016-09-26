@@ -320,10 +320,10 @@ int main(int argc, char const *argv[])
     }
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
+    assert(tree.num_triangles() == Stats::instance().num_triangles);
 
     // compute radiosity
-    // auto radiosity = compute_radiosity(tree);
-    std::vector<Color> radiosity;
+    auto radiosity = compute_radiosity(tree);
 
     //
     // Raycaster
