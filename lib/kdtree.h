@@ -164,7 +164,6 @@ class KDTree {
     using Node = impl::Node;
 
 public:
-
     using TriangleId = impl::TriangleId;
 
     class OptionalId {
@@ -243,4 +242,3 @@ struct std::hash<KDTree::OptionalId> {
 };
 
 } // namespace std
-

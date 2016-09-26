@@ -96,7 +96,16 @@ struct Box {
         auto e0 = max[Axis::X] - min[Axis::X];
         auto e1 = max[Axis::Y] - min[Axis::Y];
         auto e2 = max[Axis::Z] - min[Axis::Z];
-        return 2.f * (e0 * e1 + e0 * e2 + e1 * e0);
+
+        if (is_eps_zero(e0)) {
+            return e1 * e2;
+        } else if (is_eps_zero(e1)) {
+            return e0 * e2;
+        } else if (is_eps_zero(e2)) {
+            return e0 * e1;
+        }
+
+        return 2.f * (e0 * e1 + e0 * e2 + e1 * e2);
     }
 
     Vec min, max;

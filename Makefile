@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++1y -Wall -Wextra -Wno-missing-braces -O0 -g -Ivendor/assimp/include
+CXXFLAGS=-std=c++1y -Wall -Wextra -Wno-missing-braces -O3 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
 BINS=test_assimp raycaster raytracer pathtracer radiosity
