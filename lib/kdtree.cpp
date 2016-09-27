@@ -191,7 +191,8 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 
     // all clipped?
     if (num_tris == 0) {
-        return std::make_tuple(0, Axis::X, 0, TriangleIds(), TriangleIds());
+        return std::make_tuple(std::numeric_limits<float>::max(), Axis::X, 0,
+                               TriangleIds(), TriangleIds());
     }
 
     // sweep for min_cost
