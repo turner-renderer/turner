@@ -156,3 +156,29 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
     REQUIRE(tree.height() == 0);
     REQUIRE(tree.size() == 12);
 }
+
+TEST_CASE("All triangles are in the same plane", "[kdtree]")
+{
+    static std::default_random_engine gen(0);
+    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
+
+    for (Axis ax : AXES) {
+        Triangles tris;
+        for (size_t i = 0; i < 1000; ++i) {
+            tris.push_back(random_triangle_on_unit_sphere(ax, 0));
+        }
+        KDTree tree(std::move(tris));
+
+        float r, s, t;
+        // intersection with parallel ray
+        auto ray_pos = Vec{1, 1, 1};
+        auto ray_dir = random_vec_on_unit_sphere(ax, 0);
+
+        Ray parallel_ray(ray_pos, ray_dir);
+        REQUIRE(!tree.intersect(parallel_ray, r, s, t));
+
+        // intersection with ray through zero
+        Ray ray_through_zero({-1, -1, -1}, {1, 1, 1});
+        REQUIRE(tree.intersect(ray_through_zero, r, s, t));
+    }
+}
