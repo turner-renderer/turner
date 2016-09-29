@@ -1,5 +1,7 @@
 #include "../lib/types.h"
 #include "../lib/triangle.h"
+
+#include <math.h>
 #include <random>
 
 
@@ -14,8 +16,33 @@ Vec random_vec() {
     return {rnd(gen), rnd(gen), rnd(gen)};
 };
 
+// Construct a random vector lying on the unit sphere in the plane ax = pos.
+Vec random_vec_on_unit_sphere(Axis ax, float pos) {
+    static std::default_random_engine gen(0);
+    static std::uniform_real_distribution<float> rnd(0, 2*M_PI);
+
+    auto phi = rnd(gen);
+    auto x = cos(phi);
+    auto y = sin(phi);
+
+    Vec v;
+    size_t ax_num = static_cast<size_t>(ax);
+    v[AXES[ax_num]] = pos;
+    v[AXES[(ax_num + 1) % 3]] = x;
+    v[AXES[(ax_num + 2) % 3]] = y;
+    return v;
+}
+
 Triangle random_triangle() {
     return test_triangle(random_vec(), random_vec(), random_vec());
+}
+
+// Construct a random triangle with vertices lying on the unit sphere in the
+// plane ax = pos.
+Triangle random_triangle_on_unit_sphere(Axis ax, float pos) {
+    return test_triangle(random_vec_on_unit_sphere(ax, pos),
+                         random_vec_on_unit_sphere(ax, pos),
+                         random_vec_on_unit_sphere(ax, pos));
 }
 
 // We need this operator only for tests.
