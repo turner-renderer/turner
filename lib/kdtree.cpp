@@ -78,65 +78,7 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     }
 }
 
-std::pair<std::vector<impl::FlatNode> /* nodes */,
-          std::vector<impl::TriangleId> /* triangle ids */>
-flatten(std::unique_ptr<impl::Node> root) {
-    using impl::Node;
-    using impl::FlatNode;
-    using impl::TriangleId;
-
-    std::vector<FlatNode> nodes;
-    std::vector<TriangleId> triangle_ids;
-    std::stack<std::tuple<Node*, TriangleId /* parent_index */,
-        bool /* is_left */>> stack;
-
-    nodes.emplace_back(0, 0);  // add sentinel
-
-    stack.emplace(root.get(), 0, false);
-    while (!stack.empty()) {
-        Node* node;
-        TriangleId parent_index;
-        bool is_left;
-        std::tie(node, parent_index, is_left) = stack.top();
-        stack.pop();
-
-        TriangleId index = nodes.size();
-
-        // update parent references for non-root nodes
-        if (parent_index != 0) {
-            if (is_left) {
-                nodes[parent_index].set_left(index);
-            } else {
-                nodes[parent_index].set_right(index);
-            }
-        }
-
-        if (node->is_inner()) {
-            // Note: 0 is invalid index for left or right; will be set in child
-            // node
-            nodes.emplace_back(node->split_axis(), node->split_pos(), 0, 0);
-
-            if (node->left()) {
-                stack.emplace(node->left(), index, true);
-            }
-            if (node->right()) {
-                stack.emplace(node->right(), index, false);
-            }
-        } else {
-            nodes.emplace_back(node->num_tris(), triangle_ids.size());
-
-            size_t num_triangles = node->num_tris();
-            TriangleId* triangle_id = node->triangle_ids();
-            while (num_triangles--) {
-                triangle_ids.push_back(*triangle_id++);
-            }
-        }
-    }
-
-    return std::make_pair(std::move(nodes), std::move(triangle_ids));
 }
-
-} // namespace anonymous
 
 
 KDTree::KDTree(Triangles tris)
@@ -153,8 +95,7 @@ KDTree::KDTree(Triangles tris)
         ids[i] = i;
     }
 
-    std::tie(nodes_, tris_ids_) =
-        flatten(std::unique_ptr<Node>(build(std::move(ids), box_)));
+    root_ = std::unique_ptr<Node>(build(std::move(ids), box_));
 }
 
 KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
@@ -375,54 +316,51 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
         return OptionalId{};
     }
 
-    std::stack<std::tuple<TriangleId, float /*tenter*/, float /*texit*/>>
-        stack;
-    stack.emplace(1, tenter, texit);
+    std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
+    stack.emplace(root_.get(), tenter, texit);
 
-    TriangleId node_index;
+    Node* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();
     while (!stack.empty()) {
-        std::tie(node_index, tenter, texit) = stack.top();
+        std::tie(node, tenter, texit) = stack.top();
         stack.pop();
 
-        while (node_index && nodes_[node_index].is_inner()) {
-            const auto& node = nodes_[node_index];
-            auto ax = static_cast<int>(node.split_axis());
-            auto pos = node.split_pos();
+        while (node && node->is_inner()) {
+            auto ax = static_cast<int>(node->split_axis());
+            auto pos = node->split_pos();
 
             // t at split
             auto t = (pos - ray.pos[ax]) * ray.invdir[ax];
 
             // classify near/far with respect to t:
             // left is near if ray.pos < t, else otherwise
-            TriangleId near_index = node.left();
-            TriangleId far_index = node.right();
+            Node* near = node->left();
+            Node* far = node->right();
             if (ray.pos[ax] >= pos) {
-                std::swap(near_index, far_index);
+                std::swap(near, far);
             }
 
             // Should we use a fat plane here? We would say, no!
             // t, texit and tenter are computed in exactly the same way.
             // Cf. the implementation of ray_box_intersection.
             if (t < 0 || texit < t) {
-                node_index = near_index;
+                node = near;
             } else if (t < tenter) {
-                node_index = far_index;
+                node = far;
             } else {
-                stack.emplace(far_index, t, texit);
-                node_index = near_index;
+                stack.emplace(far, t, texit);
+                node = near;
                 texit = t;
             }
         }
 
-        if (node_index) {
-            const auto& node = nodes_[node_index];
-            assert(node.is_leaf());
+        if (node) {
+            assert(node->is_leaf());
 
             float next_r, next_s, next_t;
             auto next = intersect(
-                node.triangle_ids(), node.num_tris(), ray,
+                node->triangle_ids(), node->num_tris(), ray,
                 next_r, next_s, next_t);
             if (next && next_r < r) {
                 res = next;
@@ -438,36 +376,26 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
 
 
 const KDTree::OptionalId KDTree::intersect(
-    TriangleId triangle_id_index, uint32_t num_tris,
+    const KDTree::TriangleId* ids, uint32_t num_tris,
     const Ray& ray, float& min_r, float& min_s, float& min_t) const
 {
     min_r = std::numeric_limits<float>::max();
     OptionalId res;
     float r, s, t;
-    while (num_tris--) {
-        const auto& tri = tris_[tris_ids_[triangle_id_index]];
+    for (uint32_t i = 0; i != num_tris; ++i) {
+        const auto& tri = tris_[ids[i]];
         bool intersects = tri.intersect(ray, r, s, t);
         if (intersects && r < min_r) {
             min_r = r;
             min_s = s;
             min_t = t;
-            res = OptionalId{tris_ids_[triangle_id_index]};
+            res = OptionalId{ids[i]};
         }
-
-        triangle_id_index++;
     }
 
     return res;
 }
 
-size_t KDTree::node_height(const TriangleId index) const {
-    const auto& node = nodes_[index];
-    if (node.is_leaf()) {
-        return 0;
-    }
-    return 1 + std::max(node.left() ? node_height(node.left()) : 0,
-                        node.right() ? node_height(node.right()) : 0);
-}
 
 namespace std {
 
