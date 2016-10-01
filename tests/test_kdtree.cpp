@@ -5,6 +5,7 @@
 #include <catch.hpp>
 
 #include <iostream>
+#include <unordered_set>
 
 
 TEST_CASE("Trivial smoke test", "[kdtree]")
@@ -181,4 +182,19 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]")
         Ray ray_through_zero({-1, -1, -1}, {1, 1, 1});
         REQUIRE(tree.intersect(ray_through_zero, r, s, t));
     }
+}
+
+TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]")
+{
+    std::unordered_set<KDTree::OptionalId> set;
+    set.emplace();
+    set.emplace();
+    set.emplace(42);
+    set.emplace(1);
+    set.emplace(42);
+
+    REQUIRE(set.size() == 3);
+    REQUIRE(set.count(KDTree::OptionalId()) == 1);
+    REQUIRE(set.count(KDTree::OptionalId(1)) == 1);
+    REQUIRE(set.count(KDTree::OptionalId(42)) == 1);
 }
