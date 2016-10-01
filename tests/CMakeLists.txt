@@ -1,0 +1,19 @@
+add_library(catch_main OBJECT catch_main.cpp)
+add_dependencies(catch_main catch)
+
+set(TESTS
+    test_clipping
+    test_config
+    test_intersection
+    test_kdtree
+    test_lambertian
+    test_sampling
+    test_types
+)
+
+foreach (TEST_NAME ${TESTS})
+    add_executable(${TEST_NAME} ${TEST_NAME}.cpp
+    	$<TARGET_OBJECTS:catch_main> $<TARGET_OBJECTS:common>
+    )
+    add_test(${TEST_NAME} ${TEST_NAME})
+endforeach ()

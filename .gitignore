@@ -49,4 +49,4 @@ radiosity
 ./*.tiff
 dna.txt
 
-vendor
+build

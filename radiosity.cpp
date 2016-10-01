@@ -12,7 +12,7 @@
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
-#include <docopt.h>
+#include <docopt/docopt.h>
 #include <ThreadPool.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
