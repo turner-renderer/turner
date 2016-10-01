@@ -1,7 +1,7 @@
 CXXFLAGS=-std=c++1y -Wall -Wextra -Wno-missing-braces -O3 -g -Ivendor/assimp/include
 LDFLAGS=-Lvendor/assimp/lib
 LDLIBS=-lassimp -lzlibstatic
-BINS=test_assimp raycaster raytracer pathtracer radiosity
+BINS=raycaster raytracer pathtracer radiosity
 LIB_OBJS=$(patsubst %.cpp,%.o,$(wildcard lib/*.cpp))
 
 ifdef COVERAGE
@@ -15,8 +15,8 @@ $(BINS): CC=$(CXX)
 raycaster raytracer pathtracer radiosity: LDFLAGS += -Lvendor/docopt
 raycaster raytracer pathtracer radiosity: LDLIBS += -ldocopt_s -lpthread
 
-test_assimp: test_assimp.o
 raycaster: main.o raycaster.o $(LIB_OBJS)
+raycaster: raycaster.o $(LIB_OBJS)
 raytracer: main.o raytracer.o $(LIB_OBJS)
 pathtracer: main.o pathtracer.o $(LIB_OBJS)
 radiosity: radiosity.o $(LIB_OBJS)
@@ -29,7 +29,7 @@ bootstrap: vendor/.last-build
 *.o **/*.o: | bootstrap
 
 clean:
-	rm -rf *.o lib/*.o test_assimp *.dSYM *.gcov *.gcno *.gcda genfiles $(BINS)
+	rm -rf *.o lib/*.o *.dSYM *.gcov *.gcno *.gcda genfiles $(BINS)
 
 distclean: clean
 	rm -rf vendor
