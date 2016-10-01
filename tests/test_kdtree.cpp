@@ -198,24 +198,38 @@ TEST_CASE("Degenerated triangles test", "[KDTree]") {
 
 TEST_CASE("Intersect coplanar triangles", "[KDTree]")
 {
-    Triangles tris;
-    for (float x = 0.f; x < 10.f; x += 1.f) {
-        tris.push_back(random_regular_triangle_on_unit_sphere(Axis::X, x));
+    for (auto ax : AXES) {
+        Triangles tris;
+        for (float pos = 0.f; pos < 10.f; pos += 1.f) {
+            tris.push_back(random_regular_triangle_on_unit_sphere(ax, pos));
+        }
+
+        KDTree tree(tris);
+
+        Vec origin, dest;
+        KDTree::OptionalId triangle_id;
+        float r, s, t;
+
+        // ray from negative direction to 0
+        origin[ax] = -100;
+        dest[ax] = 1;
+        triangle_id = tree.intersect(Ray(origin, dest), r, s, t);
+        REQUIRE(static_cast<bool>(triangle_id));
+        REQUIRE(static_cast<size_t>(triangle_id) == 0L);
+        REQUIRE(static_cast<int>(r) == 100);
+        REQUIRE(is_eps_zero(s - 1.f/3));
+        REQUIRE(is_eps_zero(t - 1.f/3));
+
+        // ray from positive direction to 0
+        origin[ax] = 100;
+        dest[ax] = -1;
+        triangle_id = tree.intersect(Ray(origin, dest), r, s, t);
+        REQUIRE(static_cast<bool>(triangle_id));
+        REQUIRE(static_cast<size_t>(triangle_id) == 9L);
+        REQUIRE(static_cast<int>(r) == 91);
+        REQUIRE(is_eps_zero(s - 1.f/3));
+        REQUIRE(is_eps_zero(t - 1.f/3));
     }
-
-    KDTree tree(tris);
-    float r, s, t;
-    KDTree::OptionalId triangle_id;
-
-    triangle_id = tree.intersect(Ray({-100, 0, 0}, {1, 0, 0}), r, s, t);
-    REQUIRE(static_cast<bool>(triangle_id));
-    REQUIRE(static_cast<size_t>(triangle_id) == 0L);
-    REQUIRE(static_cast<int>(r) == 100);
-
-    triangle_id = tree.intersect(Ray({100, 0, 0}, {-1, 0, 0}), r, s, t);
-    REQUIRE(static_cast<bool>(triangle_id));
-    REQUIRE(static_cast<size_t>(triangle_id) == 9L);
-    REQUIRE(static_cast<int>(r) == 91);
 }
 
 TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]")
