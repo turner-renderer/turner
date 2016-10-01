@@ -88,5 +88,10 @@ required for rendering.
 - [x] Barycentric Interpolation
 - [x] Monte Carlo Integration for Hemisphere Sampling
 - [x] Polar Coordinates to Cartesian Coordinates
-- [x] KD-Tree
+- [x] KD-Tree (cf. [WH06](#WH06) for building, [HH11](#HH11) for lookup/intersection)
 
+## References
+
+<a name="WH06"></a>[WH06] Ingo Wald and Vlastimil Havran. On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N). SCI Technical Report 2006-009.
+
+<a name="HH11"></a>[HH11] M. Hapala and Vlastimil Havran. Review: Kd-tree Traversal Algorithms for Ray Tracing. In _Computer Graphics Forum, Volume 30, Issue 1, pages 199–213, March 2011_.
