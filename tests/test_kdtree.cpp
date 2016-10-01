@@ -184,6 +184,40 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]")
     }
 }
 
+TEST_CASE("Degenerated triangles test", "[KDTree]") {
+    Triangles tris;
+    // min 4 triangles to trigger kdtree's bbox splitting
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+
+    KDTree tree(tris);
+    REQUIRE(4 <= tree.size());
+}
+
+TEST_CASE("Intersect coplanar triangles", "[KDTree]")
+{
+    Triangles tris;
+    for (float x = 0.f; x < 10.f; x += 1.f) {
+        tris.push_back(random_regular_triangle_on_unit_sphere(Axis::X, x));
+    }
+
+    KDTree tree(tris);
+    float r, s, t;
+    KDTree::OptionalId triangle_id;
+
+    triangle_id = tree.intersect(Ray({-100, 0, 0}, {1, 0, 0}), r, s, t);
+    REQUIRE(static_cast<bool>(triangle_id));
+    REQUIRE(static_cast<size_t>(triangle_id) == 0L);
+    REQUIRE(static_cast<int>(r) == 100);
+
+    triangle_id = tree.intersect(Ray({100, 0, 0}, {-1, 0, 0}), r, s, t);
+    REQUIRE(static_cast<bool>(triangle_id));
+    REQUIRE(static_cast<size_t>(triangle_id) == 9L);
+    REQUIRE(static_cast<int>(r) == 91);
+}
+
 TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]")
 {
     std::unordered_set<KDTree::OptionalId> set;
