@@ -8,6 +8,9 @@ Prototype implementations of unbiased renderers.
 ## Build
 
 ```
+mkdir build
+cd build
+cmake ..
 make            # build renderers
 make test       # optional: run tests
 ```
