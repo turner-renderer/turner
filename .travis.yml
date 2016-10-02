@@ -25,8 +25,7 @@ script:
   - mkdir -p build && cd build
   - cmake .. -DCMAKE_CXX_COMPILER=$COMPILER -DCOVERAGE=1
   - make
-  - cat vendor/eigen/src/eigen-stamp/eigen-download-*.log
   - make test
 
 after_success:
-  - coveralls --exclude vendor --exclude tests --gcov-options '\-lp'
+  - coveralls -r .. -b . --exclude build/vendor --exclude tests --gcov-options '\-lp'
