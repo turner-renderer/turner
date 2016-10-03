@@ -1,3 +1,8 @@
+cmake_minimum_required(VERSION 3.2)
+
+add_subdirectory(${EXT_PROJECTS_DIR}/catch ${CMAKE_CURRENT_BINARY_DIR}/catch)
+include_directories(${catch_INCLUDE_DIR})
+
 add_library(catch_main OBJECT catch_main.cpp)
 add_dependencies(catch_main catch)
 
