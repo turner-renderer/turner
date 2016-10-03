@@ -5,6 +5,7 @@
 #include <catch.hpp>
 
 #include <iostream>
+#include <unordered_set>
 
 
 TEST_CASE("Trivial smoke test", "[kdtree]")
@@ -155,4 +156,93 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
     KDTree tree(Triangles{a1, a2, a3, a4, b1, b2, b3, b4, c1, c2, c3, c4});
     REQUIRE(tree.height() == 0);
     REQUIRE(tree.size() == 12);
+}
+
+TEST_CASE("All triangles are in the same plane", "[kdtree]")
+{
+    static std::default_random_engine gen(0);
+    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
+
+    for (Axis ax : AXES) {
+        Triangles tris;
+        for (size_t i = 0; i < 1000; ++i) {
+            tris.push_back(random_triangle_on_unit_sphere(ax, 0));
+        }
+        KDTree tree(std::move(tris));
+
+        float r, s, t;
+        // intersection with parallel ray
+        auto ray_pos = Vec{1, 1, 1};
+        auto ray_dir = random_vec_on_unit_sphere(ax, 0);
+
+        Ray parallel_ray(ray_pos, ray_dir);
+        REQUIRE(!tree.intersect(parallel_ray, r, s, t));
+
+        // intersection with ray through zero
+        Ray ray_through_zero({-1, -1, -1}, {1, 1, 1});
+        REQUIRE(tree.intersect(ray_through_zero, r, s, t));
+    }
+}
+
+TEST_CASE("Degenerated triangles test", "[KDTree]") {
+    Triangles tris;
+    // min 4 triangles to trigger kdtree's bbox splitting
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
+
+    KDTree tree(tris);
+    REQUIRE(4 <= tree.size());
+}
+
+TEST_CASE("Intersect coplanar triangles", "[KDTree]")
+{
+    for (auto ax : AXES) {
+        Triangles tris;
+        for (float pos = 0.f; pos < 10.f; pos += 1.f) {
+            tris.push_back(random_regular_triangle_on_unit_sphere(ax, pos));
+        }
+
+        KDTree tree(tris);
+
+        Vec origin, dest;
+        KDTree::OptionalId triangle_id;
+        float r, s, t;
+
+        // ray from negative direction to 0
+        origin[ax] = -100;
+        dest[ax] = 1;
+        triangle_id = tree.intersect(Ray(origin, dest), r, s, t);
+        REQUIRE(static_cast<bool>(triangle_id));
+        REQUIRE(static_cast<size_t>(triangle_id) == 0L);
+        REQUIRE(static_cast<int>(r) == 100);
+        REQUIRE(is_eps_zero(s - 1.f/3));
+        REQUIRE(is_eps_zero(t - 1.f/3));
+
+        // ray from positive direction to 0
+        origin[ax] = 100;
+        dest[ax] = -1;
+        triangle_id = tree.intersect(Ray(origin, dest), r, s, t);
+        REQUIRE(static_cast<bool>(triangle_id));
+        REQUIRE(static_cast<size_t>(triangle_id) == 9L);
+        REQUIRE(static_cast<int>(r) == 91);
+        REQUIRE(is_eps_zero(s - 1.f/3));
+        REQUIRE(is_eps_zero(t - 1.f/3));
+    }
+}
+
+TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]")
+{
+    std::unordered_set<KDTree::OptionalId> set;
+    set.emplace();
+    set.emplace();
+    set.emplace(42);
+    set.emplace(1);
+    set.emplace(42);
+
+    REQUIRE(set.size() == 3);
+    REQUIRE(set.count(KDTree::OptionalId()) == 1);
+    REQUIRE(set.count(KDTree::OptionalId(1)) == 1);
+    REQUIRE(set.count(KDTree::OptionalId(42)) == 1);
 }

@@ -108,16 +108,16 @@ KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
         return new Node(tris);
     }
 
+    // box too small -> no need to split further -> terminate
+    if (box.surface_area() == 0) {
+        return new Node(tris);
+    }
+
     float min_cost;
     Axis plane_ax; float plane_pos;  // plane
     TriangleIds ltris, rtris;
     std::tie(min_cost, plane_ax, plane_pos, ltris, rtris) =
         find_plane_and_classify(tris, box);
-
-    // clipped everything away
-    if (min_cost == 0) {
-        return nullptr;
-    }
 
     // automatic termination
     // remove lambda factor from cost again, otherwise we may stuck in an
@@ -141,11 +141,9 @@ std::tuple<
     KDTree::TriangleIds /*left*/, KDTree::TriangleIds /*right*/>
 KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 {
-    float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax; float min_plane_pos;
-    Dir min_side;
-    // we also store those for asserts below
-    float min_ltris, min_rtris, min_ptris;
+    // The box should have some surface, otherwise the surface area heuristics
+    // does not make any sense.
+    assert(box.surface_area() != 0);
 
     // auxiliary event structure
     static constexpr int STARTING = 2;
@@ -168,7 +166,6 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
     // generate events
     size_t num_tris = 0;
     for (const auto& id : tris) {
-
         auto clipped_box = clip_triangle_at_aabb(tris_[id], box);
         if (clipped_box.is_trivial()) {
             continue;
@@ -177,8 +174,6 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 
         for (auto ax : AXES) {
             auto& events = event_lists[static_cast<int>(ax)];
-            events.reserve(num_tris);
-
             if (clipped_box.is_planar(ax)) {
                 events.emplace_back(
                     Event{id, clipped_box.min[ax], clipped_box.min[ax],
@@ -194,7 +189,19 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
         }
     }
 
-    // sweep
+    // all clipped?
+    if (num_tris == 0) {
+        return std::make_tuple(std::numeric_limits<float>::max(), Axis::X, 0,
+                               TriangleIds(), TriangleIds());
+    }
+
+    // sweep for min_cost
+    float min_cost = std::numeric_limits<float>::max();
+    Axis min_plane_ax; float min_plane_pos;
+    Dir min_side;
+    // we also store those for asserts below
+    float min_ltris, min_rtris, min_ptris;
+
     for (auto ax : AXES) {
         auto& events = event_lists[static_cast<int>(ax)];
         std::sort(events.begin(), events.end(),
@@ -253,18 +260,11 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
             num_ltris += point_starting + point_planar;
             num_ptris = 0;
         }
-    }
+    } // -> min_plane, min_side
 
-    // min_cost is still infty --> terminate
-    if (min_cost == std::numeric_limits<float>::max()) {
-        return std::make_tuple(
-            0, Axis::X, 0, TriangleIds(), TriangleIds());
-    }
-
-    // -> min_plane, min_side
+    assert(min_cost < std::numeric_limits<float>::max());
 
     // classify
-
     TriangleIds ltris, rtris;
     ltris.reserve(min_ltris);
     rtris.reserve(min_rtris);
@@ -317,7 +317,7 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
     }
 
     std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
-    stack.push(std::make_tuple(root_.get(), tenter, texit));
+    stack.emplace(root_.get(), tenter, texit);
 
     Node* node;
     OptionalId res;
@@ -344,12 +344,12 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
             // Should we use a fat plane here? We would say, no!
             // t, texit and tenter are computed in exactly the same way.
             // Cf. the implementation of ray_box_intersection.
-            if (t > texit || t < 0) {
+            if (t < 0 || texit < t) {
                 node = near;
             } else if (t < tenter) {
                 node = far;
             } else {
-                stack.push(std::make_tuple(far, t, texit));
+                stack.emplace(far, t, texit);
                 node = near;
                 texit = t;
             }
@@ -395,14 +395,3 @@ const KDTree::OptionalId KDTree::intersect(
 
     return res;
 }
-
-
-namespace std {
-
-size_t std::hash<KDTree::OptionalId>::operator()(
-    const KDTree::OptionalId& id) const
-{
-    return std::hash<KDTree::TriangleId>()(id.id_);
-}
-
-} // namespace std

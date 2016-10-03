@@ -28,7 +28,13 @@ TEST_CASE("Test surface area of box", "[box]") {
     REQUIRE(box.surface_area() == 2400);
 
     box = Box{{0, 0, 0}, {1, 1, 0}};
-    REQUIRE(box.surface_area() == 4);
+    REQUIRE(box.surface_area() == 1);
+
+    box = Box{{0, 0, 0}, {0, 1, 1}};
+    REQUIRE(box.surface_area() == 1);
+
+    box = Box{{0, 0, 0}, {1, 0, 1}};
+    REQUIRE(box.surface_area() == 1);
 }
 
 TEST_CASE("Test Box union", "[box]")
