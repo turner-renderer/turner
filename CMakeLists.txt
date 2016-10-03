@@ -14,14 +14,12 @@ endif(COVERAGE)
 
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/vendor)
 add_subdirectory(${EXT_PROJECTS_DIR}/assimp)
-add_subdirectory(${EXT_PROJECTS_DIR}/catch)
 add_subdirectory(${EXT_PROJECTS_DIR}/docopt)
 add_subdirectory(${EXT_PROJECTS_DIR}/eigen)
 add_subdirectory(${EXT_PROJECTS_DIR}/threadpool)
 
 include_directories(
 	${assimp_INCLUDE_DIR}
-	${catch_INCLUDE_DIR}
 	${docopt_INCLUDE_DIR}
 	${eigen_INCLUDE_DIR}
 	${threadpool_INCLUDE_DIR}
