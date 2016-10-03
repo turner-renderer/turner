@@ -1,12 +1,11 @@
 #pragma once
 
-#include <stdint.h>
-#include <iostream>
-#include <type_traits>
 #include <assert.h>
 #include <iomanip>
+#include <stdint.h>
+#include <type_traits>
 
-constexpr uint64_t bitmask(int bits) {
+inline constexpr uint64_t bitmask(int bits) {
     if (bits == 0) {
         return 0;
     }
@@ -41,6 +40,7 @@ public:
     constexpr explicit xorshift64star(uint64_t seed) : gen_(seed) {
         assert(seed != 0);
     }
+
     T operator()() {
         return std::ldexp(static_cast<T>(gen_() & MANTISSA_MASK), -DIGITS);
     }
@@ -51,6 +51,7 @@ public:
     static_assert(std::is_floating_point<T>::value,
         "T expected to be a floating point type");
     static_assert(DIGITS <= 64, "T is too big");
+
 private:
     xorshift64star<uint64_t> gen_;
 };

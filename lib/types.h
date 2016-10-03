@@ -1,22 +1,29 @@
 #pragma once
 
-#include <assimp/types.h>
 #include <assimp/camera.h>
-#include <assert.h>
-#include <sstream>
-#include <vector>
+#include <assimp/types.h>
+
 #include <array>
+#include <assert.h>
+#include <vector>
 
 
 static constexpr float EPS = 0.00001f;
 static constexpr float FLT_MAX = std::numeric_limits<float>::max();
 
-bool is_eps_zero(float a);
+inline bool is_eps_zero(float a) {
+    return std::abs(a) < EPS;
+}
 
 /**
  * If abs(a) < EPS return 0, else a.
  */
-float eps_zero(float a);
+inline float eps_zero(float a) {
+    if (is_eps_zero(a)) {
+        return 0;
+    }
+    return a;
+}
 
 template<typename Number>
 Number clamp(Number input, Number min = 0, Number max = 255) {
@@ -69,7 +76,13 @@ public:
     }
 };
 
-Vec operator/(int a, const Vec& v);
+inline Vec operator/(int a, const Vec& v) {
+    return {
+        static_cast<float>(a)/v.x,
+        static_cast<float>(a)/v.y,
+        static_cast<float>(a)/v.z
+    };
+}
 
 struct Vec2 {
 
@@ -87,8 +100,13 @@ struct Vec2 {
 
 using Color = aiColor4D;
 
-float fmin(float x, float y, float z);
-float fmax(float x, float y, float z);
+inline float fmin(float x, float y, float z) {
+    return std::fmin(x, std::min(y, z));
+}
+
+inline float fmax(float x, float y, float z) {
+    return std::fmax(x, std::max(y, z));
+}
 
 // AABB
 struct Box {
@@ -139,7 +157,22 @@ struct Box {
         return {{this->min, lmax}, {rmin, this->max}};
     }
 };
-Box operator+(const Box& a, const Box& b);
+
+inline Box operator+(const Box& a, const Box& b) {
+    Vec new_min =
+        { std::min(a.min.x, b.min.x)
+        , std::min(a.min.y, b.min.y)
+        , std::min(a.min.z, b.min.z)
+        };
+
+    Vec new_max =
+        { std::max(a.max.x, b.max.x)
+        , std::max(a.max.y, b.max.y)
+        , std::max(a.max.z, b.max.z)
+        };
+
+    return {new_min, new_max};
+}
 
 // Light Source
 struct Light {
@@ -149,8 +182,13 @@ struct Light {
 
 // Ray with precomputed inverse direction
 struct Ray : public aiRay {
-    Ray(const Vec& pos, const Vec& dir);
-    Ray(const aiRay& ray);
+    // Ray with precomputed inverse direction
+    Ray(const Vec& pos, const Vec& dir)
+    : aiRay(pos, dir)
+    , invdir(1/dir)
+    {}
+
+    Ray(const aiRay& ray) : Ray(ray.pos, ray.dir) {}
 
     // pos, dir are in aiRay
     Vec invdir;
@@ -188,7 +226,13 @@ public:
     // The positioning of the camera is done in its parent's node
     // transformation matrix.
     //
-    aiVector3D raster2cam(const aiVector2D& p, const float w, const float h) const;
+    aiVector3D raster2cam(const aiVector2D& p, const float w, const float h) const
+    {
+        return trafo_ * aiVector3D(
+            -delta_x_ * (1 - 2 * p.x / w),
+            delta_y_ * (1 - 2 * p.y / h),
+            -1);
+    }
 
 private:
     aiMatrix3x3 trafo_;

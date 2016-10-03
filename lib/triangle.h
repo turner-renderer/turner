@@ -1,9 +1,9 @@
 #pragma once
 
 #include "types.h"
-#include <vector>
-#include <array>
 
+#include <array>
+#include <vector>
 
 //
 // Be aware of modifying data in the triangle after its construction. The
@@ -41,14 +41,9 @@ public:
         : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
     {}
 
-    // Intersect Triangle Ray
-    bool intersect(const Ray& ray, float& r, float& s, float& t) const;
     friend bool intersect_ray_triangle(
         const Ray& ray, const Triangle& tri,
         float& r, float& s, float& t);
-
-    // Triangle AABB intersection test
-    bool intersect(const Box& box) const;
 
     //
     // Interpolate normal using barycentric coordinates.
@@ -119,7 +114,6 @@ private:
     float uv, vv, uu, denom;
 
 private:
-
     // Helper functions for triangle aabb intersection
     bool axis_intersection(const Axis ax, const Vec& box_halfsize) const;
 };

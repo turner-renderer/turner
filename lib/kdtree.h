@@ -21,10 +21,11 @@
 #pragma once
 
 #include "triangle.h"
-#include <cstdint>
-#include <vector>
-#include <memory>
 
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <vector>
 
 namespace impl {
 
@@ -238,7 +239,7 @@ namespace std {
 template <>
 struct std::hash<KDTree::OptionalId> {
     size_t operator()(const KDTree::OptionalId& id) const {
-        return std::hash<KDTree::TriangleId>()(id.id_);
+        return std::hash<impl::TriangleId>()(id.id_);
     }
 };
 
