@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 set_directory_properties(PROPERTIES CLEAN_NO_CUSTOM 1)
 include(ExternalProject)
+find_package(Hg REQUIRED)
 
 ExternalProject_Add(
     eigen
