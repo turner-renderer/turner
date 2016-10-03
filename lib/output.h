@@ -42,7 +42,7 @@ inline std::ostream& operator<<(std::ostream& os, const aiString& str) {
     return os << str.C_Str();
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Triangle tri) {
+inline std::ostream& operator<<(std::ostream& os, const Triangle& tri) {
     return os << "Triangle("
         << "vertices=[" << tri.vertices[0] << " "
                         << tri.vertices[1] << " "
