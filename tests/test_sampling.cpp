@@ -42,8 +42,8 @@ TEST_CASE("Test Triangle sampling", "[sampling]")
         float length = sample.Length();
 
         // Verify that point is on triangle.
-        bool intersect =
-            triangle.intersect(Ray{Vec{0, 0, 0}, sample.Normalize()}, r, s, t);
+        bool intersect = intersect_ray_triangle(
+            Ray{Vec{0, 0, 0}, sample.Normalize()}, triangle, r, s, t);
         REQUIRE(intersect);
         REQUIRE(length == Approx(r));
     }

@@ -1,8 +1,9 @@
 #include "kdtree.h"
+
 #include "clipping.h"
+#include "intersection.h"
 
 #include <stack>
-
 
 namespace {
 
@@ -12,7 +13,7 @@ static constexpr int COST_INTERSECTION = 20;
 
 
 // Cost function bias
-inline float lambda(size_t num_ltris, size_t num_rtris) {
+float lambda(size_t num_ltris, size_t num_rtris) {
     if (num_ltris == 0 || num_rtris == 0) {
         return 0.8f;
     }
@@ -30,7 +31,7 @@ inline float lambda(size_t num_ltris, size_t num_rtris) {
 // Return:
 //   cost to split the box
 //
-inline float cost(
+float cost(
     float larea_ratio, float rarea_ratio, size_t num_ltris, size_t num_rtris)
 {
     return lambda(num_ltris, num_rtris) *
@@ -54,7 +55,7 @@ enum class Dir { LEFT, RIGHT };
 //   cost to split the box + wether the planar triangles should be appended to
 //   the lhs or rhs of the box
 //
-inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
+std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Axis ax, float pos, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_ptris)
 {
@@ -78,7 +79,7 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
     }
 }
 
-}
+}  // namespace anonymous
 
 
 KDTree::KDTree(Triangles tris)
@@ -384,7 +385,7 @@ const KDTree::OptionalId KDTree::intersect(
     float r, s, t;
     for (uint32_t i = 0; i != num_tris; ++i) {
         const auto& tri = tris_[ids[i]];
-        bool intersects = tri.intersect(ray, r, s, t);
+        bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
         if (intersects && r < min_r) {
             min_r = r;
             min_s = s;

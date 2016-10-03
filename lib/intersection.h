@@ -1,8 +1,7 @@
 #pragma once
 
-#include "types.h"
 #include "triangle.h"
-
+#include "types.h"
 
 //
 // Test segment and plane intersection
