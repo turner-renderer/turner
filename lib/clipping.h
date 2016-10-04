@@ -6,6 +6,8 @@
 
 #include "output.h"
 
+#define UNUSED(x) (void)(x)
+
 /**
  * Cohen-Sutherland line clipping on AABB in 3d
  */
@@ -153,7 +155,9 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 // intersect (a, b) at plane
                 float t;
                 bool intersects = intersect_segment_plane(a, b, n, d, t);
+                UNUSED(intersects);
                 assert(intersects);
+
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
@@ -167,6 +171,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 float t;
                 bool intersects = intersect_segment_plane(a, b, n, d, t);
                 assert(intersects);
+                UNUSED(intersects);
+
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
