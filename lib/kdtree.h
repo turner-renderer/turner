@@ -85,6 +85,7 @@ public:
         }
 
         assert(false);
+        return Axis::X;
     }
 
     float split_pos() const {
