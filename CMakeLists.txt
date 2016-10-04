@@ -41,9 +41,11 @@ add_dependencies(main assimp zlibstatic docopt threadpool)
 find_package(Threads REQUIRED)
 
 add_executable(raycaster
-	raycaster.cpp $<TARGET_OBJECTS:common>
+	raycaster.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:common>
 )
-target_link_libraries(raycaster ${assimp_LIBRARIES})
+target_link_libraries(raycaster
+	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
+)
 
 add_executable(raytracer
 	raytracer.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:common>
