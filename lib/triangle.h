@@ -6,8 +6,10 @@
 #include <vector>
 
 //
-// Be aware of modifying data in the triangle after its construction. The
-// precomputed values won't be updated.
+// Do NOT modify data in the triangle after its construction! The precomputed
+// values won't be updated.
+//
+// TODO: To refactor!
 //
 class Triangle {
 public:
@@ -45,19 +47,20 @@ public:
         const Ray& ray, const Triangle& tri,
         float& r, float& s, float& t);
 
-    //
-    // Interpolate normal using barycentric coordinates.
-    //
-    // Requirement: r + s + t == 1
-    //
+    /**
+     * Interpolate normal using barycentric coordinates.
+     *
+     * Requirement: r + s + t == 1
+     */
     Vec interpolate_normal(float r, float s, float t) const {
         auto normal = r * normals[0] + s * normals[1] + t * normals[2];
         normal.Normalize();
         return normal;
     }
 
-
-    // bounding box of triangle
+    /**
+     * Compute the (axes aligned) bounding box of the triangle.
+     */
     Box bbox() const {
         Vec min =
             { fmin(vertices[0].x, vertices[1].x, vertices[2].x)

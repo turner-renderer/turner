@@ -8,20 +8,19 @@
 #include <tuple>
 
 namespace sampling {
-namespace {
+namespace detail {
+__thread static xorshift64star<float> uniform{4};
+} // namespace detail
 
 static constexpr float M_2PI = 2.f * M_PI;
-
-__thread static xorshift64star<float> uniform{4};
-} // namespace anonymous
 
 /**
  * Sample a point on a hemisphere.
  */
 inline std::pair<Vec, float> hemisphere() {
     // draw coordinates
-    float u1 = uniform();
-    float u2 = uniform();
+    float u1 = detail::uniform();
+    float u2 = detail::uniform();
 
     // u1 is cos(theta)
     auto z = u1;
@@ -39,8 +38,8 @@ inline std::pair<Vec, float> hemisphere() {
  */
 inline Vec triangle(const Triangle& triangle) {
     while (true) {
-        float r1 = uniform();
-        float r2 = uniform();
+        float r1 = detail::uniform();
+        float r2 = detail::uniform();
 
         if ((r1 + r2) <= 1.f) {
             return triangle.vertices[0] + r1 * triangle.u + r2 * triangle.v;

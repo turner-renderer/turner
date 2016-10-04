@@ -1,10 +1,11 @@
 #pragma once
 
 #include <chrono>
-#include <ostream>
 #include <string>
 
-
+/**
+ * Measure execution time of a block by using RAII.
+ */
 class Runtime {
 public:
     Runtime() {}

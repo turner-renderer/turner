@@ -2,15 +2,14 @@
 
 #include "lib/kdtree.h"
 #include "lib/types.h"
+
 #include <vector>
 #include <sstream>
 
 using Tree = KDTree;
 
 class Configuration {
-
 public:
-
     Configuration(
             long max_depth,
             float shadow_intensity,

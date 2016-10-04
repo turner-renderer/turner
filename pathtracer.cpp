@@ -4,13 +4,13 @@
 #include "lib/stats.h"
 #include "lib/output.h"
 
-//
-// Return color of the object hit by (origin, dir) ray.
-//
-// The color is calculated using the Monte-Carlo approximation of the light
-// equation, thefore it is not guaranteed that the calculated color values are
-// less than 1. E.g. an approximation of value 1 may be greater than 1.
-//
+/**
+ * Return color of the object hit by (origin, dir) ray.
+ *
+ * The color is calculated using the Monte-Carlo approximation of the light
+ * equation, thefore it is not guaranteed that the calculated color values are
+ * less than 1. E.g. an approximation of value 1 may be greater than 1.
+ */
 Color trace(const Vec& origin, const Vec& dir,
         const Tree& triangles, const std::vector<Light>& lights,
         int depth, const Configuration& conf)
