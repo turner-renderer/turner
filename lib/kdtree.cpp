@@ -20,17 +20,17 @@ float lambda(size_t num_ltris, size_t num_rtris) {
     return 1;
 }
 
-//
-// Cost function of splitting box b at a given plane p
-//
-// Args:
-//   {l,r}area_ratio - ratio of the surface area of the left resp. right
-//     box over the box
-//   num_{l,r}tris - number of triangles in the left resp. right box
-//
-// Return:
-//   cost to split the box
-//
+/**
+ * Cost function of splitting box b at a given plane p
+ *
+ * Args:
+ *   {l,r}area_ratio - ratio of the surface area of the left resp. right
+ *     box over the box
+ *   num_{l,r}tris - number of triangles in the left resp. right box
+ *
+ * Return:
+ *   cost to split the box
+ */
 float cost(
     float larea_ratio, float rarea_ratio, size_t num_ltris, size_t num_rtris)
 {
@@ -41,20 +41,20 @@ float cost(
 
 enum class Dir { LEFT, RIGHT };
 
-//
-// SAH function
-//
-// Args:
-//   ax, pos: splitting plane
-//   box: AABB to split
-//   num_{l,r}tris: number of triangles in the left resp. right box produces
-//     by splitting `box` at `p`
-//   num_ptris: number of triangles lying in the plane `p`
-//
-// Return:
-//   cost to split the box + wether the planar triangles should be appended to
-//   the lhs or rhs of the box
-//
+/**
+ * SAH function
+ *
+ * Args:
+ *   ax, pos: splitting plane
+ *   box: AABB to split
+ *   num_{l,r}tris: number of triangles in the left resp. right box produces
+ *     by splitting `box` at `p`
+ *   num_ptris: number of triangles lying in the plane `p`
+ *
+ * Return:
+ *   cost to split the box + wether the planar triangles should be appended to
+ *   the lhs or rhs of the box
+ */
 std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Axis ax, float pos, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_ptris)
@@ -78,7 +78,6 @@ std::pair<float /*cost*/, Dir> surface_area_heuristics(
         return {right_planar_cost, Dir::RIGHT};
     }
 }
-
 }  // namespace anonymous
 
 

@@ -13,15 +13,25 @@ inline constexpr uint64_t bitmask(int bits) {
 }
 
 
+/**
+ * Random number generator.
+ */
 template<typename T>
 class xorshift64star;
 
+/**
+ * Specialization for random numbers in range of uint64_t.
+ */
 template<>
 class xorshift64star<uint64_t> {
 public:
     constexpr explicit xorshift64star(uint64_t seed) : seed_(seed) {
         assert(seed != 0);
     }
+
+    /**
+     * Generate a random number between 0 and max(uint64_t).
+     */
     uint64_t operator()() {
         seed_ ^= seed_ >> 12; // a
         seed_ ^= seed_ << 25; // b
@@ -33,7 +43,10 @@ private:
     uint64_t seed_;
 };
 
-
+/**
+ * Random numbers generator in [0, 1) with number of type T, where T is a
+ * floating point type.
+ */
 template<typename T>
 class xorshift64star {
 public:
