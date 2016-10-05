@@ -197,10 +197,12 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 
     // sweep for min_cost
     float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax; float min_plane_pos;
-    Dir min_side;
+    Axis min_plane_ax; 
+    float min_plane_pos = 0;
+    Dir min_side = Dir::LEFT;
     // we also store those for asserts below
-    float min_ltris, min_rtris, min_ptris;
+    size_t min_ltris, min_rtris, min_ptris;
+    UNUSED(min_ptris);
 
     for (auto ax : AXES) {
         auto& events = event_lists[static_cast<int>(ax)];
@@ -210,7 +212,7 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
                     (e1.point == e2.point && e1.type < e2.type);
             });
 
-        int num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
+        size_t num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
 
         for (size_t i = 0; i < events.size(); ) {
             auto& event = events[i];
