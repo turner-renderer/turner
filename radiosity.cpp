@@ -403,7 +403,7 @@ int main(int argc, char const *argv[])
             };
         for (int y = 0; y < height; ++y) {
             mesh_tasks.emplace_back(pool.enqueue([
-                &image, &offsets, &cam, &tree, width, height, y, &conf]()
+                &image, offsets, &cam, &tree, width, height, y, &conf]()
             {
                 for (int x = 0; x < width; ++x) {
                     float dist_to_triangle, s, t;

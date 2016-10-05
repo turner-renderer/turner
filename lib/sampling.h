@@ -9,7 +9,7 @@
 
 namespace sampling {
 namespace detail {
-__thread static xorshift64star<float> uniform{4};
+static __thread xorshift64star<float> uniform{4};
 } // namespace detail
 
 static constexpr float M_2PI = 2.f * M_PI;

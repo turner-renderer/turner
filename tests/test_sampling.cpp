@@ -1,8 +1,9 @@
 #include "helper.h"
 #include "../lib/output.h"
 #include "../lib/sampling.h"
-#include <catch.hpp>
+#include "../lib/intersection.h"
 
+#include <catch.hpp>
 
 TEST_CASE("Test Hemisphere sampling", "[sampling]")
 {

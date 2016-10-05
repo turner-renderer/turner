@@ -238,7 +238,7 @@ private:
 namespace std {
 
 template <>
-struct std::hash<KDTree::OptionalId> {
+struct hash<KDTree::OptionalId> {
     size_t operator()(const KDTree::OptionalId& id) const {
         return std::hash<detail::TriangleId>()(id.id_);
     }

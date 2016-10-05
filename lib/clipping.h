@@ -92,7 +92,7 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
             z = box.max.z;
-        } else if (outcode_out & detail::BACK) {
+        } else { // outcode_out & detail::BACK
             t = (box.min.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
