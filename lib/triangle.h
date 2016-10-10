@@ -1,13 +1,15 @@
 #pragma once
 
 #include "types.h"
-#include <vector>
-#include <array>
 
+#include <array>
+#include <vector>
 
 //
-// Be aware of modifying data in the triangle after its construction. The
-// precomputed values won't be updated.
+// Do NOT modify data in the triangle after its construction! The precomputed
+// values won't be updated.
+//
+// TODO: To refactor!
 //
 class Triangle {
 public:
@@ -37,32 +39,28 @@ public:
     {}
 
     // minimal constructor
-    Triangle(std::array<Vec, 3> vs)
+    explicit Triangle(std::array<Vec, 3> vs)
         : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
     {}
 
-    // Intersect Triangle Ray
-    bool intersect(const Ray& ray, float& r, float& s, float& t) const;
     friend bool intersect_ray_triangle(
         const Ray& ray, const Triangle& tri,
         float& r, float& s, float& t);
 
-    // Triangle AABB intersection test
-    bool intersect(const Box& box) const;
-
-    //
-    // Interpolate normal using barycentric coordinates.
-    //
-    // Requirement: r + s + t == 1
-    //
+    /**
+     * Interpolate normal using barycentric coordinates.
+     *
+     * Requirement: r + s + t == 1
+     */
     Vec interpolate_normal(float r, float s, float t) const {
         auto normal = r * normals[0] + s * normals[1] + t * normals[2];
         normal.Normalize();
         return normal;
     }
 
-
-    // bounding box of triangle
+    /**
+     * Compute the (axes aligned) bounding box of the triangle.
+     */
     Box bbox() const {
         Vec min =
             { fmin(vertices[0].x, vertices[1].x, vertices[2].x)
@@ -119,7 +117,6 @@ private:
     float uv, vv, uu, denom;
 
 private:
-
     // Helper functions for triangle aabb intersection
     bool axis_intersection(const Axis ax, const Vec& box_halfsize) const;
 };

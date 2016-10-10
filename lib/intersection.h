@@ -1,20 +1,19 @@
 #pragma once
 
-#include "types.h"
 #include "triangle.h"
+#include "types.h"
 
-
-//
-// Test segment and plane intersection
-//
-// Args:
-//   a, b: start and end points of the segment
-//   n, d: define the plane by the equation `n * x = d`
-//   t: out param defining the intersection point by `a + (b - a) * t`
-//
-// Return:
-//   true, if the segment intersects the plane, otherwise false
-//
+/**
+ * Test segment and plane intersection
+ *
+ * Args:
+ *   a, b: start and end points of the segment
+ *   n, d: define the plane by the equation `n * x = d`
+ *   t: out param defining the intersection point by `a + (b - a) * t`
+ *
+ * Return:
+ *   true, if the segment intersects the plane, otherwise false
+ */
 inline bool intersect_segment_plane(
     const Vec& a, const Vec& b, const Vec& n, float d, float& t)
 {
@@ -23,22 +22,22 @@ inline bool intersect_segment_plane(
     return 0.f <= t && t <= 1.f;
 }
 
-//
-// Return min infinity if there is no intersection, otherwise return r s.t. the
-// intersection point is `ray.pos + ray.dir * r`.
-//
-// If n is normalized, then r is exactly the Euclidean distance from the ray to
-// the plane. Note: r may be negative.
-//
-// Args:
-//   ray: ray to intersect
-//   v0, n: Plane through v0 with normal n
-//
-// Return:
-//   true, if the ray intersects the plane, otherwise false
-//
-// Cf. http://geomalgorithms.com/a06-_intersect-2.html
-//
+/*
+ * Return min infinity if there is no intersection, otherwise return r s.t. the
+ * intersection point is `ray.pos + ray.dir * r`.
+ *
+ * If n is normalized, then r is exactly the Euclidean distance from the ray to
+ * the plane. Note: r may be negative.
+ *
+ * Args:
+ *   ray: ray to intersect
+ *   v0, n: Plane through v0 with normal n
+ *
+ * Return:
+ *   true, if the ray intersects the plane, otherwise false
+ *
+ * Cf. http://geomalgorithms.com/a06-_intersect-2.html
+ */
 inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
     auto denom = n * ray.dir;
     if (denom == 0.f) {
@@ -49,19 +48,18 @@ inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
     return nom / denom;
 }
 
-
-//
-// Intersect a ray and a triangle
-//
-// Args:
-//   ray: ray to intersect
-//   tri: triangle to intersect
-//   r: out param defining the intersection point by `ray.pos + ray.dir * r`
-//   s, t: baricentric coordinates on `tri` of the intersection point
-//
-// Return:
-//   true, if the ray intersects the triangle, otherwise false
-//
+/**
+ * Intersect a ray and a triangle
+ *
+ * Args:
+ *   ray: ray to intersect
+ *   tri: triangle to intersect
+ *   r: out param defining the intersection point by `ray.pos + ray.dir * r`
+ *   s, t: baricentric coordinates on `tri` of the intersection point
+ *
+ * Return:
+ *   true, if the ray intersects the triangle, otherwise false
+ */
 inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
     float& r, float& s, float& t)
 {
@@ -91,21 +89,20 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
     return true;
 }
 
-
-//
-// Test ray AABB (axis-aligned bounding box) intersection
-//
-// Args:
-//   ray: ray to intersect
-//   box: aabb to intersect
-//   tmin, tmax: out params defining the enter resp. exit intersection of the
-//     halbray with the box by the equation `ray.pos + ray.dir * t`.
-//
-// Return:
-//   true, if the ray intersects the box, otherwise false
-//
-// Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
-//
+/**
+ * Test ray AABB (axis-aligned bounding box) intersection
+ *
+ * Args:
+ *   ray: ray to intersect
+ *   box: aabb to intersect
+ *   tmin, tmax: out params defining the enter resp. exit intersection of the
+ *     halbray with the box by the equation `ray.pos + ray.dir * t`.
+ *
+ * Return:
+ *   true, if the ray intersects the box, otherwise false
+ *
+ * Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
+ */
 inline bool intersect_ray_box(
     const Ray& ray, const Box& box, float& tmin, float& tmax)
 {
@@ -136,16 +133,16 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
 }
 
 
-//
-// Test plane ABBB intersection
-//
-// Args:
-//   n, d: define plane by n * x = d
-//   box: box to test with
-//
-// Return:
-//   true, if intersection exists, otherwise false
-//
+/**
+ * Test plane ABBB intersection
+ *
+ * Args:
+ *   n, d: define plane by n * x = d
+ *   box: box to test with
+ *
+ * Return:
+ *   true, if intersection exists, otherwise false
+ */
 inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
     auto center = (box.max + box.min) * 0.5f;
     auto extents = box.max - center;
@@ -161,13 +158,13 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
 }
 
 
-//
-// Test triangle AABB intersection
-//
-// Implementation from
-// "Fast 3D Triangle-Box Overlap Testing"
-// by Tomas Akenine-Möller
-//
+/**
+ * Test triangle AABB intersection
+ *
+ * Implementation from
+ * "Fast 3D Triangle-Box Overlap Testing"
+ * by Tomas Akenine-Möller
+ */
 inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // center and extents of the box
     auto center = (box.min + box.max) * 0.5f;
@@ -294,6 +291,5 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // Case 2
     //
 
-    // return plane_box_intersect(tri.normal, v0, Vec({e0, e1, e2}));
     return intersect_plane_box(tri.normal, tri.normal * v0, box);
 }

@@ -10,7 +10,6 @@
 #include <ostream>
 #include <iomanip>
 
-
 inline std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
@@ -42,7 +41,7 @@ inline std::ostream& operator<<(std::ostream& os, const aiString& str) {
     return os << str.C_Str();
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Triangle tri) {
+inline std::ostream& operator<<(std::ostream& os, const Triangle& tri) {
     return os << "Triangle("
         << "vertices=[" << tri.vertices[0] << " "
                         << tri.vertices[1] << " "
@@ -94,11 +93,11 @@ inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
         << "mUp=" << cam.mUp << ")";
 }
 
-//
-// Output image in PBM format.
-//
-// Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
-//
+/**
+ * Output image in PBM format.
+ *
+ * Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
+ */
 inline std::ostream& operator<<(std::ostream& os, const Image& img) {
     os << "P3" << std::endl;
     os << img.width << " " << img.height << std::endl;

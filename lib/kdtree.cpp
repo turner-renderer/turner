@@ -1,8 +1,9 @@
 #include "kdtree.h"
+
 #include "clipping.h"
+#include "intersection.h"
 
 #include <stack>
-
 
 namespace {
 
@@ -12,25 +13,25 @@ static constexpr int COST_INTERSECTION = 20;
 
 
 // Cost function bias
-inline float lambda(size_t num_ltris, size_t num_rtris) {
+float lambda(size_t num_ltris, size_t num_rtris) {
     if (num_ltris == 0 || num_rtris == 0) {
         return 0.8f;
     }
     return 1;
 }
 
-//
-// Cost function of splitting box b at a given plane p
-//
-// Args:
-//   {l,r}area_ratio - ratio of the surface area of the left resp. right
-//     box over the box
-//   num_{l,r}tris - number of triangles in the left resp. right box
-//
-// Return:
-//   cost to split the box
-//
-inline float cost(
+/**
+ * Cost function of splitting box b at a given plane p
+ *
+ * Args:
+ *   {l,r}area_ratio - ratio of the surface area of the left resp. right
+ *     box over the box
+ *   num_{l,r}tris - number of triangles in the left resp. right box
+ *
+ * Return:
+ *   cost to split the box
+ */
+float cost(
     float larea_ratio, float rarea_ratio, size_t num_ltris, size_t num_rtris)
 {
     return lambda(num_ltris, num_rtris) *
@@ -40,21 +41,21 @@ inline float cost(
 
 enum class Dir { LEFT, RIGHT };
 
-//
-// SAH function
-//
-// Args:
-//   ax, pos: splitting plane
-//   box: AABB to split
-//   num_{l,r}tris: number of triangles in the left resp. right box produces
-//     by splitting `box` at `p`
-//   num_ptris: number of triangles lying in the plane `p`
-//
-// Return:
-//   cost to split the box + wether the planar triangles should be appended to
-//   the lhs or rhs of the box
-//
-inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
+/**
+ * SAH function
+ *
+ * Args:
+ *   ax, pos: splitting plane
+ *   box: AABB to split
+ *   num_{l,r}tris: number of triangles in the left resp. right box produces
+ *     by splitting `box` at `p`
+ *   num_ptris: number of triangles lying in the plane `p`
+ *
+ * Return:
+ *   cost to split the box + wether the planar triangles should be appended to
+ *   the lhs or rhs of the box
+ */
+std::pair<float /*cost*/, Dir> surface_area_heuristics(
     Axis ax, float pos, const Box& box,
     size_t num_ltris, size_t num_rtris, size_t num_ptris)
 {
@@ -77,8 +78,7 @@ inline std::pair<float /*cost*/, Dir> surface_area_heuristics(
         return {right_planar_cost, Dir::RIGHT};
     }
 }
-
-}
+}  // namespace anonymous
 
 
 KDTree::KDTree(Triangles tris)
@@ -197,10 +197,12 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 
     // sweep for min_cost
     float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax; float min_plane_pos;
-    Dir min_side;
+    Axis min_plane_ax; 
+    float min_plane_pos = 0;
+    Dir min_side = Dir::LEFT;
     // we also store those for asserts below
-    float min_ltris, min_rtris, min_ptris;
+    size_t min_ltris, min_rtris, min_ptris;
+    UNUSED(min_ptris);
 
     for (auto ax : AXES) {
         auto& events = event_lists[static_cast<int>(ax)];
@@ -210,7 +212,7 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
                     (e1.point == e2.point && e1.type < e2.type);
             });
 
-        int num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
+        size_t num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
 
         for (size_t i = 0; i < events.size(); ) {
             auto& event = events[i];
@@ -384,7 +386,7 @@ const KDTree::OptionalId KDTree::intersect(
     float r, s, t;
     for (uint32_t i = 0; i != num_tris; ++i) {
         const auto& tri = tris_[ids[i]];
-        bool intersects = tri.intersect(ray, r, s, t);
+        bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
         if (intersects && r < min_r) {
             min_r = r;
             min_s = s;

@@ -57,19 +57,19 @@ TEST_CASE("Triangle simple aabb intersection", "[intersection]") {
     Box box{{-10, -10, -10}, {10, 10, 10}};
 
     auto tri = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 1, 0});
-    REQUIRE(tri.intersect(box));
+    REQUIRE(intersect_triangle_box(tri, box));
 
     tri = test_triangle({-20, -20, 0}, {-15, -20, 0}, {-15, -15, 0});
-    REQUIRE(!tri.intersect(box));
+    REQUIRE(!intersect_triangle_box(tri, box));
 
     tri = test_triangle({-10, -10, 10}, {10, -10, 10}, {10, 10, 10});
-    REQUIRE(tri.intersect(box));
+    REQUIRE(intersect_triangle_box(tri, box));
 }
 
 
 TEST_CASE("Random triangle aabb intersection", "[intersection]") {
     Box box{{-10, -10, -10}, {10, 10, 10}};
     for (int i = 0; i < 1000; ++i) {
-        REQUIRE(random_triangle().intersect(box));
+        REQUIRE(intersect_triangle_box(random_triangle(), box));
     }
 }
