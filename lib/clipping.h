@@ -1,13 +1,17 @@
+#pragma once
+
 #include "types.h"
 #include "triangle.h"
 #include "intersection.h"
 
 #include "output.h"
 
-//
-// Cohen-Sutherland line clipping on AABB in 3d
-//
+#define UNUSED(x) (void)(x)
 
+/**
+ * Cohen-Sutherland line clipping on AABB in 3d
+ */
+namespace detail {
 using OutCode = int;
 
 static constexpr int INSIDE = 0;   // 000000
@@ -41,18 +45,19 @@ inline OutCode compute_outcode(const Vec& v, const Box& box) {
 
     return code;
 }
+} // namespace detail
 
-//
-// Cohen–Sutherland clipping algorithm clips a line from `p0` to `p1` against
-// AABB `box` in 3d.
-//
-// Return:
-//   false, if the line is outside of the box, otherwise return true. In
-//   that case p0 and p1 are updated, and describe the clipped line.
-//
+/**
+ * Cohen–Sutherland clipping algorithm clips a line from `p0` to `p1` against
+ * AABB `box` in 3d.
+ *
+ * Return:
+ *   false, if the line is outside of the box, otherwise return true. In
+ *   that case p0 and p1 are updated, and describe the clipped line.
+ */
 inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
-    auto outcode_p0 = compute_outcode(p0, box);
-    auto outcode_p1 = compute_outcode(p1, box);
+    auto outcode_p0 = detail::compute_outcode(p0, box);
+    auto outcode_p1 = detail::compute_outcode(p1, box);
 
     while (outcode_p0 || outcode_p1) {
         if (outcode_p0 & outcode_p1) {
@@ -62,32 +67,32 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
         auto outcode_out = outcode_p0 ? outcode_p0 : outcode_p1;
 
         float x, y, z, t;
-        if (outcode_out & TOP) {
+        if (outcode_out & detail::TOP) {
             t = (box.max.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
             y = box.max.y;
             z = p0.z + (p1.z - p0.z) * t;
-        } else if (outcode_out & BOTTOM) {
+        } else if (outcode_out & detail::BOTTOM) {
             t = (box.min.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
             y = box.min.y;
             z = p0.z + (p1.z - p0.z) * t;
-        } else if (outcode_out & RIGHT) {
+        } else if (outcode_out & detail::RIGHT) {
             t = (box.max.x - p0.x) / (p1.x - p0.x);
             x = box.max.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
-        } else if (outcode_out & LEFT) {
+        } else if (outcode_out & detail::LEFT) {
             t = (box.min.x - p0.x) / (p1.x - p0.x);
             x = box.min.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
-        } else if (outcode_out & FRONT) {
+        } else if (outcode_out & detail::FRONT) {
             t = (box.max.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
             z = box.max.z;
-        } else if (outcode_out & BACK) {
+        } else { // outcode_out & detail::BACK
             t = (box.min.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
@@ -98,26 +103,25 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
             p0.x = x;
             p0.y = y;
             p0.z = z;
-            outcode_p0 = compute_outcode(p0, box);
+            outcode_p0 = detail::compute_outcode(p0, box);
         } else {
             p1.x = x;
             p1.y = y;
             p1.z = z;
-            outcode_p1 = compute_outcode(p1, box);
+            outcode_p1 = detail::compute_outcode(p1, box);
         }
     }
 
     return true;
 }
 
-
 enum class PointPlanePos {
     ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE
 };
 
-//
-// Classify point to the thick plane given by equation `n * x = d`.
-//
+/**
+ * Classify point to the thick plane given by equation `n * x = d`.
+ */
 inline PointPlanePos classify_point_to_plane(
     const Vec& pt, const Vec& n, float d)
 {
@@ -130,9 +134,9 @@ inline PointPlanePos classify_point_to_plane(
     return PointPlanePos::ON_PLANE;
 }
 
-//
-// Sutherland-Hodgman polygon clipping at a (thick) plane.
-//
+/**
+ * Sutherland-Hodgman polygon clipping at a (thick) plane.
+ */
 inline std::vector<Vec>
 clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
     assert(poly.size() > 1);
@@ -151,7 +155,9 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 // intersect (a, b) at plane
                 float t;
                 bool intersects = intersect_segment_plane(a, b, n, d, t);
+                UNUSED(intersects);
                 assert(intersects);
+
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
@@ -165,6 +171,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 float t;
                 bool intersects = intersect_segment_plane(a, b, n, d, t);
                 assert(intersects);
+                UNUSED(intersects);
+
                 Vec pt(a + t * (b - a));
                 assert(
                     classify_point_to_plane(pt, n, d)
@@ -185,14 +193,14 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
 }
 
 
-//
-// Clip triangle `tri` at AABB `box`.
-//
-// Requirement: triangle and box intersect.
-//
-// Return:
-//   the bounding box of the clipped polygon.
-//
+/**
+ * Clip triangle `tri` at AABB `box`.
+ *
+ * Requirement: triangle and box intersect.
+ *
+ * Return:
+ *   the bounding box of the clipped polygon.
+ */
 inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     std::vector<Vec> points(tri.vertices.begin(), tri.vertices.end());
 

@@ -89,7 +89,7 @@ TEST_CASE("Random triangle clipping at aabb", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
     for (int i = 0; i < 10000; ++i) {
         auto tri = random_triangle();
-        if (!tri.intersect(box)) {
+        if (!intersect_triangle_box(tri, box)) {
             continue;
         }
 

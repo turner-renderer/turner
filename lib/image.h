@@ -1,12 +1,12 @@
 #pragma once
 
 #include <assimp/types.h>
+
+#include <assert.h>
 #include <vector>
 
 class Image {
-
 public:
-
     const size_t width;
     const size_t height;
 
@@ -17,12 +17,14 @@ public:
     {}
 
     aiColor4D& operator()(size_t x, size_t y) {
-        //TODO: Assert x < width and y < height
+        assert(x < width && "x out of image bounds");
+        assert(y < height && "y out of image bounds");
         return _image_data[y * width + x];
     }
 
     const aiColor4D& operator()(size_t x, size_t y) const {
-        //TODO: Assert x < width and y < height
+        assert(x < width && "x out of image bounds");
+        assert(y < height && "y out of image bounds");
         return _image_data[y * width + x];
     }
 

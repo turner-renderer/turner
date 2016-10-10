@@ -14,8 +14,8 @@
 #include <iostream>
 
 Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles, const std::vector<Light>& lights,
-        int depth, const Configuration& conf)
+        const Tree& triangles, const std::vector<Light>& /* lights */,
+        int /* depth */, const Configuration& conf)
 {
     // intersection
     float dist_to_triangle, s, t;

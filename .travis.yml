@@ -2,7 +2,7 @@ language: cpp
 
 cache:
   directories:
-    - vendor
+    - build/vendor
 
 compiler: clang
 addons:
@@ -22,9 +22,10 @@ before_install:
   - pip install --user cpp-coveralls
 
 script:
-  - CXX=$COMPILER make bootstrap
-  - CXX=$COMPILER COVERAGE=yes make
-  - CXX=$COMPILER COVERAGE=yes make test -k
+  - mkdir -p build && cd build
+  - cmake .. -DCMAKE_CXX_COMPILER=$COMPILER -DCOVERAGE=1
+  - make
+  - make test
 
 after_success:
-  - coveralls --exclude vendor --exclude tests --gcov-options '\-lp'
+  - coveralls -r .. -b . --exclude build/vendor --exclude tests --gcov-options '\-lp'

@@ -112,14 +112,13 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     // test
 
     std::cerr << "Computing ray fast kd tree intersections" << std::endl;
-
-    float r, s, t;
     size_t hits_fast = 0;
     size_t runtime_ms = 0;
 
     {
         Runtime runtime(runtime_ms);
         for (const auto& ray : rays) {
+            float r, s, t;
             if (tree.intersect(ray, r, s, t)) {
                 hits_fast += 1;
             }
@@ -160,9 +159,6 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
 
 TEST_CASE("All triangles are in the same plane", "[kdtree]")
 {
-    static std::default_random_engine gen(0);
-    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
-
     for (Axis ax : AXES) {
         Triangles tris;
         for (size_t i = 0; i < 1000; ++i) {

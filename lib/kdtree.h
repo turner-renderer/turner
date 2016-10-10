@@ -1,32 +1,33 @@
-//
-// Kd-tree structure for storing a set of triangles and providing a fast
-// intersection lookup.
-//
-// Implementation of the construction of fast kd-tree follows the article:
-//
-// "On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N)"
-// by Ingo Wald and Vlastimil Havran
-// [WH06]
-//
-// Cf. Algorithm 4, i.e. we build up the kd-tree in O(N log^2 N), however the
-// resulting kd-tree is the same as if it were built with Algorithm 5. TODO:
-// Replace by Algorithm 5.
-//
-// Implementation of the intersection lookup follows the article:
-// "Review: Kd-tree Traversal Algorithms for Ray Tracing"
-// by M. Hapala V. Havran
-// [HH11]
-//
+/**
+ * Kd-tree structure for storing a set of triangles and providing a fast
+ * intersection lookup.
+ *
+ * Implementation of the construction of fast kd-tree follows the article:
+ *
+ * "On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N)"
+ * by Ingo Wald and Vlastimil Havran
+ * [WH06]
+ *
+ * Cf. Algorithm 4, i.e. we build up the kd-tree in O(N log^2 N), however the
+ * resulting kd-tree is the same as if it were built with Algorithm 5. TODO:
+ * Replace by Algorithm 5.
+ *
+ * Implementation of the intersection lookup follows the article:
+ * "Review: Kd-tree Traversal Algorithms for Ray Tracing"
+ * by M. Hapala V. Havran
+ * [HH11]
+ */
 
 #pragma once
 
 #include "triangle.h"
+
 #include <cstdint>
-#include <vector>
+#include <functional>
 #include <memory>
+#include <vector>
 
-
-namespace impl {
+namespace detail {
 
 using TriangleId = uint32_t;
 using TriangleIds = std::vector<TriangleId>;
@@ -84,6 +85,7 @@ public:
         }
 
         assert(false);
+        return Axis::X;
     }
 
     float split_pos() const {
@@ -155,16 +157,16 @@ private:
                                   // == 24 bytes
 };
 
-} // namespace impl
+} // namespace detail
 
 
 class KDTree {
 
-    using TriangleIds = impl::TriangleIds;
-    using Node = impl::Node;
+    using TriangleIds = detail::TriangleIds;
+    using Node = detail::Node;
 
 public:
-    using TriangleId = impl::TriangleId;
+    using TriangleId = detail::TriangleId;
 
     class OptionalId {
     public:
@@ -236,9 +238,9 @@ private:
 namespace std {
 
 template <>
-struct std::hash<KDTree::OptionalId> {
+struct hash<KDTree::OptionalId> {
     size_t operator()(const KDTree::OptionalId& id) const {
-        return std::hash<KDTree::TriangleId>()(id.id_);
+        return std::hash<detail::TriangleId>()(id.id_);
     }
 };
 
