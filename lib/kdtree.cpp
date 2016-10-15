@@ -131,9 +131,16 @@ KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
     Box lbox, rbox;
     std::tie(lbox, rbox) = box.split(plane_ax, plane_pos);
 
-    return new Node(plane_ax, plane_pos,
-        build(std::move(ltris), lbox),
-        build(std::move(rtris), rbox));
+    Node* left = build(std::move(ltris), lbox);
+    Node* right = build(std::move(rtris), rbox);
+    assert(left || right);
+
+    if (!left) {
+        return right;
+    } else if (!right) {
+        return left;
+    }
+    return new Node(plane_ax, plane_pos, left, right);
 }
 
 std::tuple<
@@ -197,7 +204,7 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
 
     // sweep for min_cost
     float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax; 
+    Axis min_plane_ax;
     float min_plane_pos = 0;
     Dir min_side = Dir::LEFT;
     // we also store those for asserts below
@@ -310,11 +317,36 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
         std::move(ltris), std::move(rtris));
 }
 
+namespace {
 
+/**
+ * Replace all zero coordinates of ray.dir by EPS.
+ * @param  ray with direction to fix.
+ * @return     new direction.
+ */
+Vec fix_direction(const Ray& ray) {
+    Vec dir = ray.dir;
+    for (auto ax : AXES) {
+        if (dir[ax] == 0) {
+            dir[ax] = EPS;
+        }
+    }
+    return dir;
+}
+
+} // namespace anonymous
+
+/**
+ *
+ */
 const KDTree::OptionalId
-KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
+KDTree::intersect(const Ray& ray, float& r, float& a, float& b) const {
+    // A trick to make the traversal robust.
+    // Cf. [HH11], p. 5, comment about dir classification and robustness.
+    const Ray fixed_ray(ray.pos, fix_direction(ray));
+
     float tenter, texit;
-    if (!intersect_ray_box(ray, box_, tenter, texit)) {
+    if (!intersect_ray_box(fixed_ray, box_, tenter, texit)) {
         return OptionalId{};
     }
 
@@ -328,25 +360,22 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
         std::tie(node, tenter, texit) = stack.top();
         stack.pop();
 
-        while (node && node->is_inner()) {
-            auto ax = static_cast<int>(node->split_axis());
-            auto pos = node->split_pos();
+        while (node->is_inner()) {
+            int ax = static_cast<int>(node->split_axis());
+            float split_pos = node->split_pos();
 
             // t at split
-            auto t = (pos - ray.pos[ax]) * ray.invdir[ax];
+            float t = (split_pos - fixed_ray.pos[ax]) * fixed_ray.invdir[ax];
 
             // classify near/far with respect to t:
-            // left is near if ray.pos < t, else otherwise
+            // left is near if ray.dir[ax] <= 0, else otherwise
             Node* near = node->left();
             Node* far = node->right();
-            if (ray.pos[ax] >= pos) {
+            if (fixed_ray.dir[ax] <= 0) {
                 std::swap(near, far);
             }
 
-            // Should we use a fat plane here? We would say, no!
-            // t, texit and tenter are computed in exactly the same way.
-            // Cf. the implementation of ray_box_intersection.
-            if (t < 0 || texit < t) {
+            if (texit < t) {
                 node = near;
             } else if (t < tenter) {
                 node = far;
@@ -357,19 +386,16 @@ KDTree::intersect(const Ray& ray, float& r, float& s, float& t) const {
             }
         }
 
-        if (node) {
-            assert(node->is_leaf());
-
-            float next_r, next_s, next_t;
-            auto next = intersect(
-                node->triangle_ids(), node->num_tris(), ray,
-                next_r, next_s, next_t);
-            if (next && next_r < r) {
-                res = next;
-                r = next_r;
-                s = next_s;
-                t = next_t;
-            }
+        assert(node->is_leaf());
+        float next_r, next_a, next_b;
+        auto next = intersect(
+            node->triangle_ids(), node->num_tris(), ray,
+            next_r, next_a, next_b);
+        if (next && next_r < r) {
+            res = next;
+            r = next_r;
+            a = next_a;
+            b = next_b;
         }
     }
 
