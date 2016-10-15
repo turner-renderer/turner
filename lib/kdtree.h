@@ -203,15 +203,15 @@ public:
 
     static constexpr size_t node_size() { return sizeof(Node); }
 
-    //
-    // Cf. [HH11], Algorithm 2
-    //
-    // Args:
-    //   r - distance from ray to triangle (if intersection exists)
-    //   s, t - barycentric coordinates of intersection point
-    //
+    /**
+     * Cf. [HH11], Algorithm 2
+     *
+     * Args:
+     *   r - distance from ray to triangle (if intersection exists)
+     *   a, b - barycentric coordinates of intersection point
+     */
     const OptionalId
-    intersect(const Ray& ray, float& r, float& s, float& t) const;
+    intersect(const Ray& ray, float& r, float& a, float& b) const;
 
 private:
     // Helper method for recursive construction
