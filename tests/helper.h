@@ -4,13 +4,14 @@
 #include <math.h>
 #include <random>
 
-template <typename T>
-bool is_within_tolerance(T value, T expected, T tolerance) {
-    return expected - tolerance <= value && value <= expected + tolerance;
-}
-
 // Construct a triangle with trivial normals and colors.
 Triangle test_triangle(Vec a, Vec b, Vec c) { return Triangle({a, b, c}); }
+
+// Construct a triangle with trivial colors.
+Triangle test_triangle(Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc) {
+    return Triangle({a, b, c}, {na, nb, nc}, Color(), Color(), Color(), Color(),
+                    0);
+}
 
 Vec random_vec() {
     static std::default_random_engine gen(0);
