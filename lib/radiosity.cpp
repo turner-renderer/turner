@@ -1,3 +1,20 @@
+/**
+ * Work in progress:
+ *
+ * 1. tree.intersect can be replaced by a more performant visibility test
+ * algorithm, which e.g. searches for the _first_ triangle between from and to
+ * and not for the closest one, and which also tests first intersection with
+ * triangles from a given candidate list (if we have found a triangle between
+ * from and to, then most probably the next sample ray will also hit it).
+ *
+ * 2. Sampling can be done for one from triangle over a hemisphere. Every
+ * triangle t hit by a sample ray, contributes to the form factor F_(from,t). In
+ * that way, we don't have to make a visibility test, and we compute
+ * simultaneously the row/column F_(from,_).
+ *
+ * 3. Use Poisson disk sampling.
+ */
+
 #include "radiosity.h"
 #include "sampling.h"
 
@@ -26,16 +43,13 @@ float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
     const auto& from = tree[from_id];
     const auto& to = tree[to_id];
 
-    float sum = 0;
+    float result = 0;
     for (size_t i = 0; i != num_samples; ++i) {
         auto p1 = sampling::triangle(from);
         auto p2 = sampling::triangle(to);
 
         auto v = p2 - p1;
-        float r, unused;
-        auto intersect_id =
-            tree.intersect(Ray{p1 + v/2.f, v}, r, unused, unused);
-        if (!(intersect_id == to_id)) {
+        if (tree.intersect(Ray{p1 + EPS * v, v}) != to_id) {
             continue;
         }
 
@@ -44,18 +58,49 @@ float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
         v.Normalize();
         float cos_theta1 = v * from.normal;
         float cos_theta2 = -v * to.normal;
-        // float delta_F = cos_theta1 * cos_theta2 / (
-        // M_PI * square_length + to.area() / num_samples);
-        // if (delta_F > 0) {
-        // sum += delta_F;
-        // }
 
         float G = cos_theta1 * cos_theta2 / square_length;
         if (G > 0) {
-            sum += G;
+            result += G;
         }
     }
 
-    // return sum * from.area() / num_samples;
-    return M_1_PI * sum * to.area() / num_samples;
+    return M_1_PI * result * to.area() / num_samples;
+}
+
+/**
+ * [CW93], Algorithm 4.21 without obvious mistakes.
+ */
+float form_factor_expiremental(const KDTree& tree,
+                               const KDTree::TriangleId from_id,
+                               const KDTree::TriangleId to_id,
+                               const size_t num_samples) {
+    assert(from_id != to_id);
+
+    const auto& from = tree[from_id];
+    const auto& to = tree[to_id];
+
+    float result = 0;
+    for (size_t i = 0; i != num_samples; ++i) {
+        auto p1 = sampling::triangle(from);
+        auto p2 = sampling::triangle(to);
+
+        auto v = p2 - p1;
+        if (tree.intersect(Ray{p1 + EPS * v, v}) != to_id) {
+            continue;
+        }
+
+        auto square_length = v.SquareLength();
+
+        v.Normalize();
+        float cos_theta1 = v * from.normal;
+        float cos_theta2 = -v * to.normal;
+        float delta_F = cos_theta1 * cos_theta2 /
+                        (M_PI * square_length + to.area() / num_samples);
+        if (delta_F > 0) {
+            result += delta_F;
+        }
+    }
+
+    return result * from.area() / num_samples;
 }
