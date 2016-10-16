@@ -8,6 +8,7 @@
 #include "lib/triangle.h"
 #include "lib/stats.h"
 #include "lib/xorshift.h"
+#include "lib/radiosity.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -85,60 +86,6 @@ Color trace(
     // (!) Workaround, let's give it more light. Since we are not iterating the
     // calculation of the form factors (one bounce), our color is too dark.
     return radiosity[triangle_id] * 10.f;
-}
-
-/**
- * The form factor between faces `from` (i) and `to` (j) is defined as
- *
- * F_ij = 1/A_i ∫_x ∫_y G'(x, y) dA_y dA_x
- *      ≈ 1/A_j A_j/L ∑_{l = 1...L} (A_i/K ∑_{k = 1...K} G'(x^l, y^k))
- *      = A_j/N ∑_{n = 1...N} G'(x^n, y^n)
- *
- * Here, x and y are points on face i and j, A_i is the area of i, and A_i, and
- * A_j are infinitesimal areas around x and y. Further,
- *
- * G'(x, y) = V(x, y) * cos+(θ_i) * cos+(θ_j) / (π * ||x-y||^2), where
- *
- * V(x, y) - visibility indicator between x and y (1 if visible, 0 else)
- * θ_i - angle between normal of x and vector to y (ω)
- * θ_j - angle between normal of y and vector to x (-ω)
- *
- * The above integrals are approximated by Monte-Carlo.
- */
-float form_factor(
-    const Tree& tree,
-    const Tree::TriangleId from_id,
-    const Tree::TriangleId to_id,
-    const size_t num_samples = 128)
-{
-    assert(from_id != to_id);
-
-    const auto& from = tree[from_id];
-    const auto& to = tree[to_id];
-
-    float sum = 0;
-    for (size_t i = 0; i != num_samples; ++i) {
-        auto p1 = sampling::triangle(from);
-        auto p2 = sampling::triangle(to);
-
-        auto v = p2 - p1;
-        float unused;
-        auto id = tree.intersect(Ray{p1, v}, unused, unused, unused);
-        auto visibility = id && (id == from_id || id == to_id);
-        if (!visibility) {
-            continue;
-        }
-
-        auto square_length = v.SquareLength();
-
-        v.Normalize();
-        auto cos_theta1 = std::fmax(0, v * from.normal);
-        auto cos_theta2 = std::fmax(0, (-v) * to.normal);
-        auto G = cos_theta1 * cos_theta2 / square_length;
-        sum += G;
-    }
-
-    return 200 * M_1_PI * sum * to.area() / num_samples;
 }
 
 auto compute_radiosity(const Tree& tree) {
@@ -321,6 +268,7 @@ int main(int argc, char const *argv[])
         triangles.push_back(std::get<4>(sub_tris));
         triangles.push_back(std::get<5>(sub_tris));
     }
+
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
     assert(tree.num_triangles() == Stats::instance().num_triangles);

@@ -95,6 +95,8 @@ required for rendering.
 
 ## References
 
-<a name="WH06"></a>[WH06] Ingo Wald and Vlastimil Havran. On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N). SCI Technical Report 2006-009.
+<a name="CW93"></a>[CW93] Michael F. Cohen and John R. Wallace. _Radiosity and Realistic Image Synthesis_, Academic Press Inc., 1993.
 
 <a name="HH11"></a>[HH11] M. Hapala and Vlastimil Havran. Review: Kd-tree Traversal Algorithms for Ray Tracing. In _Computer Graphics Forum, Volume 30, Issue 1, pages 199–213, March 2011_.
+
+<a name="WH06"></a>[WH06] Ingo Wald and Vlastimil Havran. On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N). SCI Technical Report 2006-009.

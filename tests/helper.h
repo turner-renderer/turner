@@ -1,14 +1,16 @@
-#include "../lib/types.h"
 #include "../lib/triangle.h"
+#include "../lib/types.h"
 
 #include <math.h>
 #include <random>
 
+template <typename T>
+bool is_within_tolerance(T value, T expected, T tolerance) {
+    return expected - tolerance <= value && value <= expected + tolerance;
+}
 
 // Construct a triangle with trivial normals and colors.
-Triangle test_triangle(Vec a, Vec b, Vec c) {
-    return Triangle({a, b, c});
-}
+Triangle test_triangle(Vec a, Vec b, Vec c) { return Triangle({a, b, c}); }
 
 Vec random_vec() {
     static std::default_random_engine gen(0);
@@ -19,7 +21,7 @@ Vec random_vec() {
 // Construct a random vector lying on the unit sphere in the plane ax = pos.
 Vec random_vec_on_unit_sphere(Axis ax, float pos) {
     static std::default_random_engine gen(0);
-    static std::uniform_real_distribution<float> rnd(0, 2*M_PI);
+    static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
 
     auto phi = rnd(gen);
     auto x = cos(phi);
@@ -49,7 +51,7 @@ Triangle random_triangle_on_unit_sphere(Axis ax, float pos) {
 // in the plane ax = pos. In particular, the 0-point lies in the triangle.
 Triangle random_regular_triangle_on_unit_sphere(Axis ax, float pos) {
     static std::default_random_engine gen(0);
-    static std::uniform_real_distribution<float> rnd(0, 2*M_PI);
+    static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
 
     auto phi = rnd(gen);
     Vec vertices[3];
@@ -73,8 +75,7 @@ bool operator==(const Box& b1, const Box& b2) {
 
 // We need this operator only for tests.
 bool operator==(const Triangle& tria, const Triangle& trib) {
-    return
-        tria.vertices[0] == trib.vertices[0] &&
-        tria.vertices[1] == trib.vertices[1] &&
-        tria.vertices[2] == trib.vertices[2];
+    return tria.vertices[0] == trib.vertices[0] &&
+           tria.vertices[1] == trib.vertices[1] &&
+           tria.vertices[2] == trib.vertices[2];
 }

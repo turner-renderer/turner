@@ -179,8 +179,8 @@ public:
         bool operator==(const OptionalId& other) const {
             return id_ == other.id_;
         }
-        bool operator==(const TriangleId& id) const {
-            return static_cast<bool>(id_) && id_ == id;
+        bool operator==(const TriangleId& other) const {
+            return this->operator bool() && id_ == other;
         }
 
         friend struct std::hash<OptionalId>;
