@@ -61,8 +61,8 @@ subdivide6(const Triangle& tri) {
 
     return {
         copy_tri(a, mc, m, na, nmc, nm),
-        copy_tri(mc, b, m, nmc, nb, nmc),
-        copy_tri(b, m, ma, nb, nm, nma),
+        copy_tri(mc, b, m, nmc, nb, nm),
+        copy_tri(b, ma, m, nb, nma, nm),
         copy_tri(ma, c, m, nma, nc, nm),
         copy_tri(c, mb, m, nc, nmb, nm),
         copy_tri(mb, a, m, nmb, na, nm)
@@ -138,7 +138,7 @@ float form_factor(
         sum += G;
     }
 
-    return M_1_PI * sum * to.area() / num_samples;
+    return 200 * M_1_PI * sum * to.area() / num_samples;
 }
 
 auto compute_radiosity(const Tree& tree) {
