@@ -9,6 +9,7 @@
 #include "lib/stats.h"
 #include "lib/xorshift.h"
 #include "lib/radiosity.h"
+#include "lib/effects.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -74,6 +75,8 @@ Color trace(
     const Vec& origin, const Vec& dir, const Tree& tree,
     const std::vector<Color>& radiosity, const Configuration& conf)
 {
+    Stats::instance().num_rays += 1;
+
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
@@ -82,10 +85,7 @@ Color trace(
         return conf.bg_color;
     }
 
-    Stats::instance().num_rays += 1;
-    // (!) Workaround, let's give it more light. Since we are not iterating the
-    // calculation of the form factors (one bounce), our color is too dark.
-    return radiosity[triangle_id] * 10.f;
+    return radiosity[triangle_id];
 }
 
 auto compute_radiosity(const Tree& tree) {
@@ -137,8 +137,8 @@ auto compute_radiosity(const Tree& tree) {
     // combine results in a vector
     std::vector<Color> B;
     for (size_t i = 0; i != num_triangles; ++i) {
-        B.emplace_back(eps_zero(B_r(i)), eps_zero(B_g(i)), eps_zero(B_b(i)),
-                       1.f);
+        B.emplace_back(B_r(i) > 0 ? B_r(i) : 0, B_g(i) > 0 ? B_g(i) : 0,
+                       B_b(i) > 0 ? B_b(i) : 0, 1.f);
     }
     return B;
 }
@@ -208,8 +208,7 @@ Options:
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
-  --max-visibility=<float           Any object farther away is dark. [default: 2.0]
-                                    Used only in raycaster.
+  --exposure=<float>                Exposure of the image. [default: 1.0]
 )";
 
 int main(int argc, char const *argv[])
@@ -224,7 +223,8 @@ int main(int argc, char const *argv[])
         , args["--background"].asString()
         , std::stof(args["--inverse-gamma"].asString())
         , args["--no-gamma-correction"].asBool()
-        , std::stof(args["--max-visibility"].asString())
+        , 1
+        , std::stof(args["--exposure"].asString())
         };
 
     // import scene
@@ -303,15 +303,15 @@ int main(int argc, char const *argv[])
                             aiVector2D(x, y), width, height);
 
                         Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(
-                            cam.mPosition, cam_dir, tree, radiosity, conf);
+                        image(x, y) += trace(cam.mPosition, cam_dir,
+                                                    tree, radiosity, conf);
                     }
+
+                    image(x, y) = exposure(image(x, y), conf.exposure);
 
                     // gamma correction
                     if (conf.gamma_correction_enabled) {
-                        image(x, y).r = powf(image(x, y).r, conf.inverse_gamma);
-                        image(x, y).g = powf(image(x, y).g, conf.inverse_gamma);
-                        image(x, y).b = powf(image(x, y).b, conf.inverse_gamma);
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
                 }
             }));

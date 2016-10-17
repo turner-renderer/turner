@@ -6,6 +6,7 @@
 #include "lib/triangle.h"
 #include "lib/stats.h"
 #include "lib/xorshift.h"
+#include "lib/effects.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -92,6 +93,7 @@ Options:
   --no-gamma-correction             Disables gamma correction.
   --max-visibility=<float>          Any object farther away is dark. [default: 2.0]
                                     Used only in raycaster.
+  --exposure=<float>                Exposure [default: 1].
 )";
 
 int main(int argc, char const *argv[])
@@ -109,6 +111,7 @@ int main(int argc, char const *argv[])
                              , std::stof(args["--inverse-gamma"].asString())
                              , args["--no-gamma-correction"].asBool()
                              , std::stof(args["--max-visibility"].asString())
+                             , std::stof(args["--exposure"].asString())
                              };
 
     // import scene
@@ -209,11 +212,11 @@ int main(int argc, char const *argv[])
                     image(x, y) /=
                         static_cast<float>(conf.num_pixel_samples);
 
+                    image(x, y) = exposure(image(x, y), conf.exposure);
+
                     // gamma correction
                     if (conf.gamma_correction_enabled) {
-                        image(x, y).r = powf(image(x, y).r, conf.inverse_gamma);
-                        image(x, y).g = powf(image(x, y).g, conf.inverse_gamma);
-                        image(x, y).b = powf(image(x, y).b, conf.inverse_gamma);
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
                 }
             }));

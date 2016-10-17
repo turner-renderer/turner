@@ -30,6 +30,9 @@ SCENARIO("Create config from options", "[config]") {
     GIVEN("A maximum visibility") {
         float max_visibility = 3.f;
 
+    GIVEN("An exposure value") {
+        float exposure = 1.f;
+
     WHEN("the configuration is created") {
         Configuration config { max_depth
                              , shadow_intensity
@@ -40,16 +43,18 @@ SCENARIO("Create config from options", "[config]") {
                              , inv_gamma
                              , no_gamma
                              , max_visibility
+                             , exposure
                              };
 
     THEN("the configuration holds all variables") {
         REQUIRE(config.max_depth == 2);
-        REQUIRE(config.shadow_intensity - 1.0f < 0.00001f);
+        REQUIRE(config.shadow_intensity == 1.f);
         REQUIRE(config.num_pixel_samples == 128);
         REQUIRE(config.num_monte_carlo_samples == 2);
         REQUIRE(config.num_threads == 4);
         REQUIRE(config.gamma_correction_enabled == true);
-        REQUIRE(config.bg_color == Color(0.0f, 0.3f, 1.0f, 1.0f));
-        REQUIRE(config.max_visibility - 3.0f < 0.00001f);
-    }}}}}}}}}}}
+        REQUIRE(config.bg_color == Color(0.f, 0.3f, 1.f, 1.f));
+        REQUIRE(config.max_visibility == 3.f);
+        REQUIRE(config.exposure == 1.f);
+    }}}}}}}}}}}}
 }
