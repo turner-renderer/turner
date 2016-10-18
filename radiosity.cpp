@@ -101,13 +101,13 @@ auto compute_radiosity(const Tree& tree) {
     Eigen::VectorXf E_b(num_triangles);
 
     for (size_t i = 0; i < num_triangles; ++i) {
-
         // construct form factor matrix (F_ij)
-        for (size_t j = 0; j < num_triangles; ++j) {
+        for (size_t j = i; j < num_triangles; ++j) {
             if (i == j) {
-                F(i, i) = 0.f;
+                F(i, i) = 0;
             } else {
                 F(i, j) = form_factor(tree, i, j);
+                F(j, i) = tree[i].area() / tree[j].area() * F(i, j);
             }
         }
 
