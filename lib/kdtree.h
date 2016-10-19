@@ -179,8 +179,14 @@ public:
         bool operator==(const OptionalId& other) const {
             return id_ == other.id_;
         }
-        bool operator==(const TriangleId& id) const {
-            return static_cast<bool>(id_) && id_ == id;
+        bool operator==(const TriangleId& other) const {
+            return this->operator bool() && id_ == other;
+        }
+        bool operator!=(const OptionalId& other) const {
+            return !(*this == other);
+        }
+        bool operator!=(const TriangleId& other) const {
+            return !(*this == other);
         }
 
         friend struct std::hash<OptionalId>;
@@ -212,6 +218,11 @@ public:
      */
     const OptionalId
     intersect(const Ray& ray, float& r, float& a, float& b) const;
+
+    const OptionalId intersect(const Ray& ray) const {
+        float unused;
+        return intersect(ray, unused, unused, unused);
+    }
 
 private:
     // Helper method for recursive construction

@@ -14,6 +14,8 @@ set(TESTS
     test_lambertian
     test_sampling
     test_types
+    test_radiosity
+    test_effects
 )
 
 foreach (TEST_NAME ${TESTS})
