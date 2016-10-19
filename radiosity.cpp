@@ -8,6 +8,8 @@
 #include "lib/triangle.h"
 #include "lib/stats.h"
 #include "lib/xorshift.h"
+#include "lib/radiosity.h"
+#include "lib/effects.h"
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure
@@ -73,6 +75,8 @@ Color trace(
     const Vec& origin, const Vec& dir, const Tree& tree,
     const std::vector<Color>& radiosity, const Configuration& conf)
 {
+    Stats::instance().num_rays += 1;
+
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
@@ -81,64 +85,7 @@ Color trace(
         return conf.bg_color;
     }
 
-    Stats::instance().num_rays += 1;
-    // (!) Workaround, let's give it more light. Since we are not iterating the
-    // calculation of the form factors (one bounce), our color is too dark.
-    return radiosity[triangle_id] * 10.f;
-}
-
-/**
- * The form factor between faces `from` (i) and `to` (j) is defined as
- *
- * F_ij = 1/A_i ∫_x ∫_y G'(x, y) dA_y dA_x
- *      ≈ 1/A_j A_j/L ∑_{l = 1...L} (A_i/K ∑_{k = 1...K} G'(x^l, y^k))
- *      = A_j/N ∑_{n = 1...N} G'(x^n, y^n)
- *
- * Here, x and y are points on face i and j, A_i is the area of i, and A_i, and
- * A_j are infinitesimal areas around x and y. Further,
- *
- * G'(x, y) = V(x, y) * cos+(θ_i) * cos+(θ_j) / (π * ||x-y||^2), where
- *
- * V(x, y) - visibility indicator between x and y (1 if visible, 0 else)
- * θ_i - angle between normal of x and vector to y (ω)
- * θ_j - angle between normal of y and vector to x (-ω)
- *
- * The above integrals are approximated by Monte-Carlo.
- */
-float form_factor(
-    const Tree& tree,
-    const Tree::TriangleId from_id,
-    const Tree::TriangleId to_id,
-    const size_t num_samples = 128)
-{
-    assert(from_id != to_id);
-
-    const auto& from = tree[from_id];
-    const auto& to = tree[to_id];
-
-    float sum = 0;
-    for (size_t i = 0; i != num_samples; ++i) {
-        auto p1 = sampling::triangle(from);
-        auto p2 = sampling::triangle(to);
-
-        auto v = p2 - p1;
-        float unused;
-        auto id = tree.intersect(Ray{p1, v}, unused, unused, unused);
-        auto visibility = id && (id == from_id || id == to_id);
-        if (!visibility) {
-            continue;
-        }
-
-        auto square_length = v.SquareLength();
-
-        v.Normalize();
-        auto cos_theta1 = std::fmax(0, v * from.normal);
-        auto cos_theta2 = std::fmax(0, (-v) * to.normal);
-        auto G = cos_theta1 * cos_theta2 / square_length;
-        sum += G;
-    }
-
-    return 200 * M_1_PI * sum * to.area() / num_samples;
+    return radiosity[triangle_id];
 }
 
 auto compute_radiosity(const Tree& tree) {
@@ -154,13 +101,13 @@ auto compute_radiosity(const Tree& tree) {
     Eigen::VectorXf E_b(num_triangles);
 
     for (size_t i = 0; i < num_triangles; ++i) {
-
         // construct form factor matrix (F_ij)
-        for (size_t j = 0; j < num_triangles; ++j) {
+        for (size_t j = i; j < num_triangles; ++j) {
             if (i == j) {
-                F(i, i) = 0.f;
+                F(i, i) = 0;
             } else {
                 F(i, j) = form_factor(tree, i, j);
+                F(j, i) = tree[i].area() / tree[j].area() * F(i, j);
             }
         }
 
@@ -190,8 +137,8 @@ auto compute_radiosity(const Tree& tree) {
     // combine results in a vector
     std::vector<Color> B;
     for (size_t i = 0; i != num_triangles; ++i) {
-        B.emplace_back(eps_zero(B_r(i)), eps_zero(B_g(i)), eps_zero(B_b(i)),
-                       1.f);
+        B.emplace_back(B_r(i) > 0 ? B_r(i) : 0, B_g(i) > 0 ? B_g(i) : 0,
+                       B_b(i) > 0 ? B_b(i) : 0, 1.f);
     }
     return B;
 }
@@ -261,8 +208,7 @@ Options:
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
-  --max-visibility=<float           Any object farther away is dark. [default: 2.0]
-                                    Used only in raycaster.
+  --exposure=<float>                Exposure of the image. [default: 1.0]
 )";
 
 int main(int argc, char const *argv[])
@@ -277,7 +223,8 @@ int main(int argc, char const *argv[])
         , args["--background"].asString()
         , std::stof(args["--inverse-gamma"].asString())
         , args["--no-gamma-correction"].asBool()
-        , std::stof(args["--max-visibility"].asString())
+        , 1
+        , std::stof(args["--exposure"].asString())
         };
 
     // import scene
@@ -321,6 +268,7 @@ int main(int argc, char const *argv[])
         triangles.push_back(std::get<4>(sub_tris));
         triangles.push_back(std::get<5>(sub_tris));
     }
+
     Stats::instance().num_triangles = triangles.size();
     Tree tree(std::move(triangles));
     assert(tree.num_triangles() == Stats::instance().num_triangles);
@@ -355,15 +303,15 @@ int main(int argc, char const *argv[])
                             aiVector2D(x, y), width, height);
 
                         Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(
-                            cam.mPosition, cam_dir, tree, radiosity, conf);
+                        image(x, y) += trace(cam.mPosition, cam_dir,
+                                                    tree, radiosity, conf);
                     }
+
+                    image(x, y) = exposure(image(x, y), conf.exposure);
 
                     // gamma correction
                     if (conf.gamma_correction_enabled) {
-                        image(x, y).r = powf(image(x, y).r, conf.inverse_gamma);
-                        image(x, y).g = powf(image(x, y).g, conf.inverse_gamma);
-                        image(x, y).b = powf(image(x, y).b, conf.inverse_gamma);
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
                 }
             }));

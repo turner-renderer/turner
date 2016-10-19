@@ -49,4 +49,7 @@ radiosity
 ./*.tiff
 dna.txt
 
+# CMake build folders
 build
+debug
+release
