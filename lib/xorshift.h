@@ -1,6 +1,7 @@
 #pragma once
 
-#include <assert.h>
+#include <cassert>
+#include <cmath>
 #include <iomanip>
 #include <stdint.h>
 #include <type_traits>
