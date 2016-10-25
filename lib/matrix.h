@@ -1,13 +1,13 @@
 #pragma once
 
 #include <cassert>
+#include <cstddef>
 #include <initializer_list>
 #include <vector>
 
 namespace math {
 
 template <typename Number> class Matrix {
-
 public:
     Matrix(size_t rows, size_t cols)
         : rows_(rows), cols_(cols), data_(rows * cols) {}
