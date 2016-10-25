@@ -1,8 +1,10 @@
 #include "trace.h"
 #include "lib/output.h"
+#include "lib/gauss_seidel.h"
 #include "lib/sampling.h"
 #include "lib/image.h"
 #include "lib/lambertian.h"
+#include "lib/matrix.h"
 #include "lib/range.h"
 #include "lib/runtime.h"
 #include "lib/triangle.h"
@@ -16,8 +18,6 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <docopt/docopt.h>
 #include <ThreadPool.h>
-#include <Eigen/Core>
-#include <Eigen/Dense>
 
 #include <math.h>
 #include <vector>
@@ -88,17 +88,19 @@ Color trace(
     return radiosity[triangle_id];
 }
 
-auto compute_radiosity(const Tree& tree) {
+std::vector<Color> compute_radiosity(const Tree& tree) {
+    using MatrixF = math::Matrix<float>;
+    using VectorF = math::Vector<float>;
     size_t num_triangles = tree.num_triangles();
 
     // compute matrices
-    Eigen::MatrixXf F(num_triangles, num_triangles);
-    Eigen::VectorXf rho_r(num_triangles);
-    Eigen::VectorXf rho_g(num_triangles);
-    Eigen::VectorXf rho_b(num_triangles);
-    Eigen::VectorXf E_r(num_triangles);
-    Eigen::VectorXf E_g(num_triangles);
-    Eigen::VectorXf E_b(num_triangles);
+    MatrixF F(num_triangles, num_triangles);
+    VectorF rho_r(num_triangles);
+    VectorF rho_g(num_triangles);
+    VectorF rho_b(num_triangles);
+    VectorF E_r(num_triangles);
+    VectorF E_g(num_triangles);
+    VectorF E_b(num_triangles);
 
     for (size_t i = 0; i < num_triangles; ++i) {
         // construct form factor matrix (F_ij)
@@ -118,21 +120,35 @@ auto compute_radiosity(const Tree& tree) {
         rho_g(i) = triangle.diffuse.g;
         rho_b(i) = triangle.diffuse.b;
 
-        // construct vector of emittors
+        // construct vector of emitters
         E_r(i) = triangle.emissive.r;
         E_g(i) = triangle.emissive.g;
         E_b(i) = triangle.emissive.b;
     }
 
-    // solve radiosity equation
-    auto I = Eigen::MatrixXf::Identity(num_triangles, num_triangles);
+    // solve radiosity equation with Gauß-Seidel Iteration
+    MatrixF K_r(num_triangles, num_triangles);
+    MatrixF K_g(num_triangles, num_triangles);
+    MatrixF K_b(num_triangles, num_triangles);
+    // I - rho.asDiagonal * F
+    for (size_t r = 0; r < num_triangles; ++r) {
+        for (size_t c = 0; c < num_triangles; ++c) {
+            if (r != c) {
+                K_r(r, c) = - rho_r(r) * F(r, c);
+                K_g(r, c) = - rho_g(r) * F(r, c);
+                K_b(r, c) = - rho_b(r) * F(r, c);
+            } else {
+                K_r(r, c) = 1.0f - rho_r(r) * F(r, c);
+                K_g(r, c) = 1.0f - rho_g(r) * F(r, c);
+                K_b(r, c) = 1.0f - rho_b(r) * F(r, c);
+            }
+        }
+    }
 
-    Eigen::VectorXf B_r = (I - rho_r.asDiagonal() * F)
-        .colPivHouseholderQr().solve(E_r);
-    Eigen::VectorXf B_g = (I - rho_g.asDiagonal() * F)
-        .colPivHouseholderQr().solve(E_g);
-    Eigen::VectorXf B_b = (I - rho_b.asDiagonal() * F)
-        .colPivHouseholderQr().solve(E_b);
+    // We intialize B with emitter values.
+    auto B_r = gauss_seidel(K_r, E_r, E_r, 10);
+    auto B_g = gauss_seidel(K_g, E_g, E_g, 10);
+    auto B_b = gauss_seidel(K_b, E_b, E_g, 10);
 
     // combine results in a vector
     std::vector<Color> B;
