@@ -30,21 +30,35 @@
 
 template <typename T> using optional = std::experimental::optional<T>;
 
-struct Quadnode {
-public:
-    bool operator==(const Quadnode&) const { return true; }
-    auto begin() { return children_.begin(); };
-    auto end() { return children_.end(); };
+struct Linknode;
 
-private:
-    std::array<std::unique_ptr<Quadnode>, 4> children_;
+struct Quadnode {
+    bool operator==(const Quadnode&) const { return true; }
+    bool is_leaf() const {
+        // due to full subdivision: any child is none -> all children are none
+        return children[0] == nullptr;
+    }
+
+    float rad_gather; // gathering radiosity
+    float rad_shoot;  // shooting radiosity
+    float emission;
+    float area;
+    float rho; // reflectivity
+    std::array<std::unique_ptr<Quadnode>, 4> children;
+    std::unique_ptr<Linknode>& first_gathering_link;
 };
 
-struct Linknode {};
+struct Linknode {
+    Quadnode* q;                    // gathering node
+    Quadnode* p;                    // shooting node
+    float F_qp;                     // form factor from q to p
+    std::unique_ptr<Linknode> next; // next gathering link of node q
+};
 
 bool oracle(const Quadnode&, const Quadnode&, float) { return false; }
 
-optional<Quadnode*> subdivide(Quadnode&, Quadnode&) { return {}; }
+enum class SubdivideRes { LEFT, RIGHT, NONE };
+SubdivideRes subdivide(Quadnode&, Quadnode&) { return SubdivideRes::NONE; }
 
 void link(Quadnode&, Quadnode&){};
 
@@ -53,19 +67,64 @@ void refine(Quadnode& p, Quadnode& q, float eps) {
         link(p, q);
     } else {
         auto to_subdivide = subdivide(p, q);
-        if (!to_subdivide) {
-            link(p, q);
-        } else if (**to_subdivide == p) {
-            for (auto& child : p) {
+        if (to_subdivide == SubdivideRes::LEFT) {
+            for (auto& child : p.children) {
                 refine(p, *child, eps);
             }
-        } else if (**to_subdivide == q) {
-            for (auto& child : q) {
+        } else if (to_subdivide == SubdivideRes::RIGHT) {
+            for (auto& child : q.children) {
                 refine(*child, q, eps);
             }
+        } else {
+            link(p, q);
         }
     }
 }
+
+void gather_radiosity(Quadnode& p) {
+    p.rad_gather = 0;
+    Linknode* link = p.first_gathering_link.get();
+    while (link) {
+        p.rad_gather += p.rho * link->F_qp * link->q->rad_shoot;
+        link = link->next.get();
+    }
+
+    if (p.is_leaf()) {
+        return;
+    }
+
+    for (auto& child : p.children) {
+        gather_radiosity(*child);
+    }
+}
+
+float push_pull_radiosity(Quadnode& p, float rad_down) {
+    if (p.is_leaf()) {
+        p.rad_shoot = p.emission + p.rad_gather + rad_down;
+    } else {
+        float rad_up = 0;
+        for (auto& child : p.children) {
+            float rad = push_pull_radiosity(*child, p.rad_gather + rad_down);
+            rad_up += rad * child->area / p.area;
+        }
+        p.rad_shoot = rad_up;
+    }
+    return p.rad_shoot;
+}
+
+void solve_system(std::vector<Quadnode> surfaces) {
+    while (true) // TODO: need convergence criteria
+    {
+        for (auto& p : surfaces) {
+            gather_radiosity(p);
+        }
+        for (auto& p : surfaces) {
+            push_pull_radiosity(p, 0);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
 
 std::array<Triangle, 6> subdivide6(const Triangle& tri) {
     const auto& a = tri.vertices[0];
