@@ -1,33 +1,32 @@
-#include "trace.h"
-#include "lib/output.h"
+#include "lib/radiosity.h"
+#include "lib/effects.h"
 #include "lib/gauss_seidel.h"
-#include "lib/sampling.h"
 #include "lib/image.h"
 #include "lib/lambertian.h"
 #include "lib/matrix.h"
+#include "lib/output.h"
 #include "lib/range.h"
 #include "lib/runtime.h"
-#include "lib/triangle.h"
+#include "lib/sampling.h"
 #include "lib/stats.h"
+#include "lib/triangle.h"
 #include "lib/xorshift.h"
-#include "lib/radiosity.h"
-#include "lib/effects.h"
+#include "trace.h"
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-#include <docopt/docopt.h>
 #include <ThreadPool.h>
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/scene.h>       // Output data structure
+#include <docopt/docopt.h>
 
-#include <math.h>
-#include <vector>
-#include <map>
-#include <iostream>
-#include <unordered_set>
 #include <chrono>
+#include <iostream>
+#include <map>
+#include <math.h>
+#include <unordered_set>
+#include <vector>
 
-std::array<Triangle, 6>
-subdivide6(const Triangle& tri) {
+std::array<Triangle, 6> subdivide6(const Triangle& tri) {
     const auto& a = tri.vertices[0];
     const auto& b = tri.vertices[1];
     const auto& c = tri.vertices[2];
@@ -41,40 +40,25 @@ subdivide6(const Triangle& tri) {
     auto mb = (a + c) / 2.f;
     auto mc = (a + b) / 2.f;
 
-    auto nm = tri.interpolate_normal(1.f/3, 1.f/3, 1.f/3);
+    auto nm = tri.interpolate_normal(1.f / 3, 1.f / 3, 1.f / 3);
     auto nma = tri.interpolate_normal(0.f, 0.5f, 0.5f);
     auto nmb = tri.interpolate_normal(0.5f, 0.f, 0.5f);
     auto nmc = tri.interpolate_normal(0.5f, 0.5f, 0.f);
 
-    auto copy_tri = [&tri](
-        const Vec& a, const Vec& b, const Vec& c,
-        const Vec& na, const Vec& nb, const Vec& nc)
-    {
-        return Triangle{
-            {a, b, c},
-            {na, nb, nc},
-            tri.ambient,
-            tri.diffuse,
-            tri.emissive,
-            tri.reflective,
-            tri.reflectivity
-        };
+    auto copy_tri = [&tri](const Vec& a, const Vec& b, const Vec& c,
+                           const Vec& na, const Vec& nb, const Vec& nc) {
+        return Triangle{{a, b, c},       {na, nb, nc}, tri.ambient,
+                        tri.diffuse,     tri.emissive, tri.reflective,
+                        tri.reflectivity};
     };
 
-    return {
-        copy_tri(a, mc, m, na, nmc, nm),
-        copy_tri(mc, b, m, nmc, nb, nm),
-        copy_tri(b, ma, m, nb, nma, nm),
-        copy_tri(ma, c, m, nma, nc, nm),
-        copy_tri(c, mb, m, nc, nmb, nm),
-        copy_tri(mb, a, m, nmb, na, nm)
-    };
+    return {copy_tri(a, mc, m, na, nmc, nm), copy_tri(mc, b, m, nmc, nb, nm),
+            copy_tri(b, ma, m, nb, nma, nm), copy_tri(ma, c, m, nma, nc, nm),
+            copy_tri(c, mb, m, nc, nmb, nm), copy_tri(mb, a, m, nmb, na, nm)};
 }
 
-Color trace(
-    const Vec& origin, const Vec& dir, const Tree& tree,
-    const std::vector<Color>& radiosity, const Configuration& conf)
-{
+Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
+            const std::vector<Color>& radiosity, const Configuration& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
@@ -134,9 +118,9 @@ std::vector<Color> compute_radiosity(const Tree& tree) {
     for (size_t r = 0; r < num_triangles; ++r) {
         for (size_t c = 0; c < num_triangles; ++c) {
             if (r != c) {
-                K_r(r, c) = - rho_r(r) * F(r, c);
-                K_g(r, c) = - rho_g(r) * F(r, c);
-                K_b(r, c) = - rho_b(r) * F(r, c);
+                K_r(r, c) = -rho_r(r) * F(r, c);
+                K_g(r, c) = -rho_g(r) * F(r, c);
+                K_b(r, c) = -rho_b(r) * F(r, c);
             } else {
                 K_r(r, c) = 1.0f - rho_r(r) * F(r, c);
                 K_g(r, c) = 1.0f - rho_g(r) * F(r, c);
@@ -161,15 +145,14 @@ std::vector<Color> compute_radiosity(const Tree& tree) {
 
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
-    for (auto node : make_range(
-            scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
-    {
+    for (auto node : make_range(scene->mRootNode->mChildren,
+                                scene->mRootNode->mNumChildren)) {
         if (node->mNumMeshes == 0) {
             continue;
         }
 
         const auto& T = node->mTransformation;
-        const aiMatrix3x3 Tp(T);  // trafo without translation
+        const aiMatrix3x3 Tp(T); // trafo without translation
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
@@ -186,25 +169,20 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(Triangle{
-                    // vertices
-                    {{
-                        T * mesh.mVertices[face.mIndices[0]],
-                        T * mesh.mVertices[face.mIndices[1]],
-                        T * mesh.mVertices[face.mIndices[2]]
-                    }},
-                    // normals
-                    {{
-                        Tp * mesh.mNormals[face.mIndices[0]],
-                        Tp * mesh.mNormals[face.mIndices[1]],
-                        Tp * mesh.mNormals[face.mIndices[2]]
-                    }},
-                    ambient,
-                    diffuse,
-                    emissive,
-                    reflective,
-                    reflectivity
-                });
+                triangles.push_back(
+                    Triangle{// vertices
+                             {{T * mesh.mVertices[face.mIndices[0]],
+                               T * mesh.mVertices[face.mIndices[1]],
+                               T * mesh.mVertices[face.mIndices[2]]}},
+                             // normals
+                             {{Tp * mesh.mNormals[face.mIndices[0]],
+                               Tp * mesh.mNormals[face.mIndices[1]],
+                               Tp * mesh.mNormals[face.mIndices[2]]}},
+                             ambient,
+                             diffuse,
+                             emissive,
+                             reflective,
+                             reflectivity});
             }
         }
     }
@@ -212,7 +190,7 @@ Triangles triangles_from_scene(const aiScene* scene) {
 }
 
 static const char USAGE[] =
-R"(Usage: raytracer <filename> [options]
+    R"(Usage: raytracer <filename> [options]
 
 Options:
   -w --width=<px>                   Width of the image [default: 640].
@@ -227,31 +205,26 @@ Options:
   --exposure=<float>                Exposure of the image. [default: 1.0]
 )";
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const* argv[]) {
     // parameters
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    const Configuration conf
-        { 1, 0, 1, 0  // unused configuration arguments
-        , args["--threads"].asLong()
-        , args["--background"].asString()
-        , std::stof(args["--inverse-gamma"].asString())
-        , args["--no-gamma-correction"].asBool()
-        , 1
-        , std::stof(args["--exposure"].asString())
-        };
+    const Configuration conf{1, 0, 1, 0 // unused configuration arguments
+                             ,
+                             args["--threads"].asLong(),
+                             args["--background"].asString(),
+                             std::stof(args["--inverse-gamma"].asString()),
+                             args["--no-gamma-correction"].asBool(), 1,
+                             std::stof(args["--exposure"].asString())};
 
     // import scene
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(
-        args["<filename>"].asString().c_str(),
-        aiProcess_CalcTangentSpace       |
-        aiProcess_Triangulate            |
-        aiProcess_JoinIdenticalVertices  |
-        aiProcess_GenNormals             |
-        aiProcess_SortByPType);
+    const aiScene* scene =
+        importer.ReadFile(args["<filename>"].asString().c_str(),
+                          aiProcess_CalcTangentSpace | aiProcess_Triangulate |
+                              aiProcess_JoinIdenticalVertices |
+                              aiProcess_GenNormals | aiProcess_SortByPType);
 
     if (!scene) {
         std::cout << importer.GetErrorString() << std::endl;
@@ -259,7 +232,7 @@ int main(int argc, char const *argv[])
     }
 
     // setup camera
-    assert(scene->mNumCameras == 1);  // we can deal only with a single camera
+    assert(scene->mNumCameras == 1); // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
     if (args["--aspect"]) {
         sceneCam.mAspect = std::stof(args["--aspect"].asString());
@@ -310,17 +283,16 @@ int main(int argc, char const *argv[])
         std::vector<std::future<void>> tasks;
 
         for (int y = 0; y < height; ++y) {
-            tasks.emplace_back(pool.enqueue([
-                &image, &cam, &tree, &radiosity, width, height, y, &conf]()
-            {
+            tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &radiosity,
+                                             width, height, y, &conf]() {
                 for (int x = 0; x < width; ++x) {
                     for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                        auto cam_dir = cam.raster2cam(
-                            aiVector2D(x, y), width, height);
+                        auto cam_dir =
+                            cam.raster2cam(aiVector2D(x, y), width, height);
 
                         Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(cam.mPosition, cam_dir,
-                                                    tree, radiosity, conf);
+                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
+                                             radiosity, conf);
                     }
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
@@ -335,17 +307,16 @@ int main(int argc, char const *argv[])
 
         long completed = 0;
 
-        for (auto& task: tasks) {
+        for (auto& task : tasks) {
             task.get();
             completed += 1;
             float progress = static_cast<float>(completed) / tasks.size();
             int bar_width = progress * 20;
-            std::cerr
-                << "\rRendering          "
-                << "[" << std::string(bar_width, '-')
-                << std::string(20 - bar_width, ' ') << "] "
-                << std::setfill(' ') << std::setw(6)
-                << std::fixed << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr << "\rRendering          "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
             std::cerr.flush();
         }
         std::cerr << std::endl;
@@ -355,20 +326,14 @@ int main(int argc, char const *argv[])
         std::cerr << "Drawing mesh lines ";
         std::vector<std::future<void>> mesh_tasks;
         constexpr float offset = 1.f;
-        constexpr std::array<Vec2, 8> offsets =
-            { Vec2{0.f, 0.f}
-            , Vec2{offset, 0.f}
-            , Vec2{offset, offset}
-            , Vec2{0.f, offset}
-            , Vec2{0.f, offset / 2}
-            , Vec2{offset / 2, offset}
-            , Vec2{offset, offset / 2}
-            , Vec2{offset / 2, 0.f}
-            };
+        constexpr std::array<Vec2, 8> offsets = {
+            Vec2{0.f, 0.f},           Vec2{offset, 0.f},
+            Vec2{offset, offset},     Vec2{0.f, offset},
+            Vec2{0.f, offset / 2},    Vec2{offset / 2, offset},
+            Vec2{offset, offset / 2}, Vec2{offset / 2, 0.f}};
         for (int y = 0; y < height; ++y) {
-            mesh_tasks.emplace_back(pool.enqueue([
-                &image, offsets, &cam, &tree, width, height, y, &conf]()
-            {
+            mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam, &tree,
+                                                  width, height, y, &conf]() {
                 for (int x = 0; x < width; ++x) {
                     float dist_to_triangle, s, t;
                     std::unordered_set<Tree::OptionalId> triangle_ids;
@@ -376,17 +341,18 @@ int main(int argc, char const *argv[])
                     // Shoot center ray.
                     auto cam_dir = cam.raster2cam(
                         aiVector2D(x + 0.5f, y + 0.5f), width, height);
-                    auto center_id = tree.intersect(
-                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
+                    auto center_id = tree.intersect(Ray(cam.mPosition, cam_dir),
+                                                    dist_to_triangle, s, t);
                     triangle_ids.insert(center_id);
 
                     // Sample disc rays around center.
                     // TODO: Sample disc with Poisson or similar.
                     for (auto offset : offsets) {
                         cam_dir = cam.raster2cam(
-                            aiVector2D(x + offset[0], y + offset[1]), width, height);
-                        auto id = tree.intersect(
-                            Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
+                            aiVector2D(x + offset[0], y + offset[1]), width,
+                            height);
+                        auto id = tree.intersect(Ray(cam.mPosition, cam_dir),
+                                                 dist_to_triangle, s, t);
                         triangle_ids.insert(id);
                     }
 
@@ -399,19 +365,17 @@ int main(int argc, char const *argv[])
             }));
         }
 
-
         completed = 0;
-        for (auto& task: mesh_tasks) {
+        for (auto& task : mesh_tasks) {
             task.get();
             completed += 1;
             float progress = static_cast<float>(completed) / mesh_tasks.size();
             int bar_width = progress * 20;
-            std::cerr
-                << "\rDrawing mesh lines "
-                << "[" << std::string(bar_width, '-')
-                << std::string(20 - bar_width, ' ') << "] "
-                << std::setfill(' ') << std::setw(6)
-                << std::fixed << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr << "\rDrawing mesh lines "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
             std::cerr.flush();
         }
         std::cerr << std::endl;
