@@ -18,7 +18,6 @@ endif(COVERAGE)
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/vendor)
 add_subdirectory(${EXT_PROJECTS_DIR}/assimp)
 add_subdirectory(${EXT_PROJECTS_DIR}/docopt)
-add_subdirectory(${EXT_PROJECTS_DIR}/optional)
 add_subdirectory(${EXT_PROJECTS_DIR}/threadpool)
 
 include_directories(
@@ -64,9 +63,7 @@ target_link_libraries(pathtracer
 )
 
 add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:common>)
-add_dependencies(radiosity docopt threadpool optional)
-message("optional" ${optional_INCLUDE_DIR})
-include_directories(${optional_INCLUDE_DIR})
+add_dependencies(radiosity docopt threadpool)
 target_link_libraries(radiosity
 	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
 )

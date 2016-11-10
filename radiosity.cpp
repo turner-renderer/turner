@@ -18,7 +18,6 @@
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
 #include <docopt/docopt.h>
-#include <optional.hpp>
 
 #include <array>
 #include <chrono>
@@ -27,8 +26,6 @@
 #include <math.h>
 #include <unordered_set>
 #include <vector>
-
-template <typename T> using optional = std::experimental::optional<T>;
 
 struct Linknode;
 
