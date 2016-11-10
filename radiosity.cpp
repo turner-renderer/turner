@@ -18,13 +18,54 @@
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
 #include <docopt/docopt.h>
+#include <optional.hpp>
 
+#include <array>
 #include <chrono>
 #include <iostream>
 #include <map>
 #include <math.h>
 #include <unordered_set>
 #include <vector>
+
+template <typename T> using optional = std::experimental::optional<T>;
+
+struct Quadnode {
+public:
+    bool operator==(const Quadnode&) const { return true; }
+    auto begin() { return children_.begin(); };
+    auto end() { return children_.end(); };
+
+private:
+    std::array<std::unique_ptr<Quadnode>, 4> children_;
+};
+
+struct Linknode {};
+
+bool oracle(const Quadnode&, const Quadnode&, float) { return false; }
+
+optional<Quadnode*> subdivide(Quadnode&, Quadnode&) { return {}; }
+
+void link(Quadnode&, Quadnode&){};
+
+void refine(Quadnode& p, Quadnode& q, float eps) {
+    if (oracle(p, q, eps)) {
+        link(p, q);
+    } else {
+        auto to_subdivide = subdivide(p, q);
+        if (!to_subdivide) {
+            link(p, q);
+        } else if (**to_subdivide == p) {
+            for (auto& child : p) {
+                refine(p, *child, eps);
+            }
+        } else if (**to_subdivide == q) {
+            for (auto& child : q) {
+                refine(*child, q, eps);
+            }
+        }
+    }
+}
 
 std::array<Triangle, 6> subdivide6(const Triangle& tri) {
     const auto& a = tri.vertices[0];
