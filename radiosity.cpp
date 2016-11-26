@@ -304,14 +304,6 @@ Options:
 )";
 
 int main(int argc, char const* argv[]) {
-    Vec a({0, 0, 0});
-    Vec b({1, 0, 0});
-    Vec c({0, 1, 0});
-    Triangle tri({a, b, c});
-    std::cerr << solid_angle({1, 1, 1}, tri) << std::endl;
-
-    return 0;
-
     // parameters
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
