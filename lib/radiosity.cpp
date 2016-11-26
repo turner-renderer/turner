@@ -69,6 +69,40 @@ float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
 }
 
 /**
+ * As above function.
+ *
+ * Instead of using triangles from the given kd-tree, computes the form factors
+ * for the directly given triangles. The triangle `to` has to be a subtriangle
+ * of the triangle in the kd-tree defined by `to_id`.
+ */
+float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
+                  const KDTree::TriangleId to_id, const size_t num_samples) {
+    float result = 0;
+    for (size_t i = 0; i != num_samples; ++i) {
+        auto p1 = sampling::triangle(from);
+        auto p2 = sampling::triangle(to);
+
+        auto v = p2 - p1;
+        if (tree.intersect(Ray{p1 + EPS * v, v}) != to_id) {
+            continue;
+        }
+
+        auto square_length = v.SquareLength();
+
+        v.Normalize();
+        float cos_theta1 = v * from.normal;
+        float cos_theta2 = -v * to.normal;
+
+        float G = cos_theta1 * cos_theta2 / square_length;
+        if (G > 0) {
+            result += G;
+        }
+    }
+
+    return M_1_PI * result * to.area() / num_samples;
+}
+
+/**
  * [CW93], Algorithm 4.21 without obvious mistakes.
  */
 float form_factor_expiremental(const KDTree& tree,
