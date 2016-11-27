@@ -25,6 +25,7 @@
 #include <iostream>
 #include <map>
 #include <math.h>
+#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -60,10 +61,23 @@ std::array<Triangle, 4> subdivide4(const Triangle& tri) {
 // -----------------------------------------------------------------------------
 
 // https://graphics.stanford.edu/papers/rad/
-class HiearchicalRadiosity {
+class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
+    using OptionalId = KDTree::OptionalId;
 
-    struct Linknode;
+    struct Quadnode;
+
+    /**
+     * Link: q <- p, i.e.
+     *   - p shouts light to q
+     *   - the link shoudl be stored in q
+     *   - the link contains the form factor for F_qp
+     */
+    struct Linknode {
+        const Quadnode* q; // gathering node
+        const Quadnode* p; // shooting node
+        float F_qp;        // form factor from q to p
+    };
 
     struct Quadnode {
         bool operator==(const Quadnode&) const { return true; }
@@ -73,46 +87,110 @@ class HiearchicalRadiosity {
             return children[0] == nullptr;
         }
 
-        float rad_gather; // gathering radiosity
-        float rad_shoot;  // shooting radiosity
-        float emission;
+        TriangleId root_tri_id; // original parent triangle from scene
+        OptionalId tri_id;      // underlying triangle (if this quadnode
+                                // represents a root node, then this is an
+                                // invalid id)
         float area;
-        float rho; // reflectivity
 
-        TriangleId tri_id; // underlying triangle (if this quadnode
-                           // represents a root node, then this is an invalid
-                           // id)
-        TriangleId root_tri_id; // parent triangle from scene
+        Color rad_gather; // gathering radiosity
+        Color rad_shoot;  // shooting radiosity
+        // TODO: Remove, since the data is already in the triangle
+        Color emission; // light emission
+        Color rho;      // reflectivity (diffuse color)
 
+        Quadnode* parent = nullptr;
         std::array<std::unique_ptr<Quadnode>, 4> children;
-        std::unique_ptr<Linknode> gather_links_head;
-    };
-
-    struct Linknode {
-        Quadnode* q;                    // gathering node
-        Quadnode* p;                    // shooting node
-        float F_qp;                     // form factor from q to p
-        std::unique_ptr<Linknode> next; // next gathering link of node q
-
-        Linknode(Quadnode& q, Quadnode& p, float F_qp)
-            : q(&q), p(&p), F_qp(F_qp), next(nullptr) {}
+        std::vector<Linknode> gathering_links; // links to this node
     };
 
 public:
-    explicit HiearchicalRadiosity(const KDTree& tree) : tree_(&tree){};
+    explicit HierarchicalRadiosity(const KDTree& tree) : tree_(&tree){};
 
-    void solve_system() {
-        constexpr size_t MAX_ITERATIONS = 100;
-        size_t iteration = MAX_ITERATIONS;
-        while (iteration--) // TODO: need a better convergence criteria
-        {
-            for (auto& p : nodes_) {
-                gather_radiosity(p);
-            }
-            for (auto& p : nodes_) {
-                push_pull_radiosity(p, 0);
+    auto compute() {
+        // Create quad nodes
+        for (size_t i = 0; i < tree_->num_triangles(); ++i) {
+            nodes_.emplace_back();
+
+            nodes_.back().root_tri_id = i;
+            const auto& tri = (*tree_)[i];
+            nodes_.back().area = tri.area();
+            nodes_.back().rad_gather = Color(); // black
+            nodes_.back().rad_shoot = tri.emissive;
+            nodes_.back().emission = tri.emissive;
+            nodes_.back().rho = tri.diffuse;
+        }
+
+        // Refine
+        for (auto& p : nodes_) {
+            for (auto& q : nodes_) {
+                if (p.root_tri_id == q.root_tri_id) {
+                    continue;
+                }
+                refine(p, q, 0.0005f);
             }
         }
+
+        // Solve system
+        solve_system();
+
+        // Return leaves
+        std::pair<std::vector<Triangle>, std::vector<Color /*rad*/>> out;
+        std::stack<const Quadnode*> stack;
+
+        auto get_id = [](const Quadnode* p) {
+            std::stringstream os;
+            if (p->tri_id) {
+                os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
+                   << ")";
+            } else {
+                os << p->root_tri_id;
+            }
+            return os.str();
+        };
+
+        // dfs for each node
+        for (const auto& root : nodes_) {
+            stack.push(&root);
+            Color c = root.rad_gather;
+
+            std::cerr << "Root " << root.root_tri_id << std::endl;
+
+            while (!stack.empty()) {
+                auto p = stack.top();
+                stack.pop();
+
+                std::cerr << "Quadnode " << get_id(p) << std::endl;
+                std::cerr << "  Triangle: A = " << get_triangle(*p).area()
+                          << std::endl;
+                std::cerr << "  " << p->gathering_links.size() << " Links "
+                          << std::endl;
+                for (const auto& l : p->gathering_links) {
+                    std::cerr << "    <- " << get_id(l.p)
+                              << " with F = " << l.F_qp << std::endl;
+                }
+                std::cerr << std::endl;
+
+                if (!p->gathering_links.empty()) {
+                    c = p->rad_gather;
+                }
+
+                if (p->is_leaf()) {
+                    // const Quadnode* q = p;
+                    // while (!q->gather_links_head) {
+                    //     q = p->parent;
+                    // }
+                    out.first.emplace_back(get_triangle(*p));
+                    out.second.emplace_back(c);
+                    out.second.back().a = 1;
+                } else {
+                    for (const auto& child : p->children) {
+                        stack.push(child.get());
+                    }
+                }
+            }
+        }
+        return out;
     }
 
 private:
@@ -127,17 +205,25 @@ private:
         const Triangle& tri_p = get_triangle(p);
         const Triangle& tri_q = get_triangle(q);
 
-        const Vec n_midpoint = tri_p.interpolate_normal(0.5, 0.5, 0.5);
         const Vec p_midpoint = tri_p.midpoint();
         const Vec q_midpoint = tri_q.midpoint();
 
         const float cos_theta =
-            n_midpoint * (q_midpoint - p_midpoint).Normalize();
+            tri_p.normal * (p_midpoint - q_midpoint).Normalize();
+        if (cos_theta < 0) {
+            return 0;
+        }
+
         const float omega_q = solid_angle(p_midpoint, tri_q);
-        return cos_theta * omega_q / M_PI;
+        const float factor = cos_theta * omega_q / M_PI;
+        return factor;
     }
 
     bool subdivide(Quadnode& p) {
+        if (!p.is_leaf()) {
+            return true;
+        }
+
         float p_area_4 = p.area / 4;
         if (p_area_4 < A_eps_) {
             return false;
@@ -145,16 +231,22 @@ private:
 
         if (p.is_leaf()) {
             const auto& child_tris = subdivide4(get_triangle(p));
-            for (const auto& tri : child_tris) {
-                Quadnode qnode;
-                qnode.rad_gather = 0;
-                qnode.rad_shoot = p.rad_shoot;
-                qnode.emission = p.emission;
-                qnode.area = p_area_4;
-                qnode.rho = p.rho;
-                qnode.tri_id = subdivided_tris_.size();
-                qnode.root_tri_id = p.root_tri_id;
+            for (size_t i = 0; i < 4; ++i) {
+                const auto& tri = child_tris[i];
+                auto& qnode = p.children[i];
 
+                // create a new quanode
+                qnode = std::make_unique<Quadnode>();
+                qnode->parent = &p;
+                qnode->rad_gather = Color();
+                qnode->rad_shoot = p.rad_shoot;
+                qnode->emission = p.emission;
+                qnode->area = p_area_4;
+                qnode->rho = p.rho;
+                qnode->tri_id = OptionalId(subdivided_tris_.size());
+                qnode->root_tri_id = p.root_tri_id;
+
+                // add a new subdivided traingle
                 subdivided_tris_.emplace_back(tri);
             }
         }
@@ -162,21 +254,18 @@ private:
         return true;
     }
 
+    // p - shooting
+    // q - gathering
     void link(Quadnode& p, Quadnode& q) {
         const Triangle& tri_p = get_triangle(p);
         const Triangle& tri_q = get_triangle(q);
-        float F_qp = form_factor(*tree_, tri_p, tri_q, q.root_tri_id);
+        float F_qp = form_factor(*tree_, tri_q, tri_p, p.root_tri_id);
 
-        auto new_link = std::make_unique<Linknode>(q, p, F_qp);
-        if (!q.gather_links_head) {
-            q.gather_links_head = std::move(new_link);
-        } else {
-            Linknode* tail = q.gather_links_head.get();
-            while (tail->next) {
-                tail = tail->next.get();
-            }
-            tail->next = std::move(new_link);
-        }
+        q.gathering_links.emplace_back();
+        auto& link = q.gathering_links.back();
+        link.p = &p;
+        link.q = &q;
+        link.F_qp = F_qp;
     };
 
     void refine(Quadnode& p, Quadnode& q, float F_eps) {
@@ -185,13 +274,13 @@ private:
             return;
         }
 
-        float F_pq = estimate_form_factor(p, q);
         float F_qp = estimate_form_factor(q, p);
-        if (F_pq < F_eps && F_qp < F_eps) {
+        if (F_qp < F_eps) {
             link(p, q);
             return;
         }
 
+        float F_pq = estimate_form_factor(p, q);
         if (F_qp < F_pq) {
             if (subdivide(q)) {
                 for (auto& child : q.children) {
@@ -202,7 +291,7 @@ private:
         } else {
             if (subdivide(p)) {
                 for (auto& child : p.children) {
-                    refine(q, *child, F_eps);
+                    refine(*child, q, F_eps);
                 }
                 return;
             }
@@ -211,34 +300,47 @@ private:
         link(p, q);
     }
 
-    void gather_radiosity(Quadnode& p) {
-        p.rad_gather = 0;
-        Linknode* link = p.gather_links_head.get();
-        while (link) {
-            p.rad_gather += p.rho * link->F_qp * link->q->rad_shoot;
-            link = link->next.get();
+    void solve_system() {
+        constexpr size_t MAX_ITERATIONS = 100;
+        size_t iteration = MAX_ITERATIONS;
+        while (iteration--) // TODO: need a better convergence criteria
+        {
+            for (auto& p : nodes_) {
+                gather_radiosity(p);
+            }
+            for (auto& p : nodes_) {
+                push_pull_radiosity(p);
+            }
+        }
+    }
+
+    void gather_radiosity(Quadnode& q) {
+        q.rad_gather = Color();
+        for (const auto& l : q.gathering_links) {
+            q.rad_gather += q.rho * l.F_qp * l.p->rad_shoot;
         }
 
-        if (p.is_leaf()) {
+        if (q.is_leaf()) {
             return;
         }
 
-        for (auto& child : p.children) {
+        for (auto& child : q.children) {
             gather_radiosity(*child);
         }
     }
 
-    float push_pull_radiosity(Quadnode& p, float rad_down) {
+    Color push_pull_radiosity(Quadnode& p, const Color& rad_down = Color()) {
         if (p.is_leaf()) {
             p.rad_shoot = p.emission + p.rad_gather + rad_down;
         } else {
-            float rad_up = 0;
+            Color rad_up;
             for (auto& child : p.children) {
-                float rad =
+                Color rad =
                     push_pull_radiosity(*child, p.rad_gather + rad_down);
-                rad_up += rad * child->area / p.area;
+                // rad_up += (child->area / p.area) * rad;
+                rad_up += rad;
             }
-            p.rad_shoot = rad_up;
+            p.rad_shoot = rad_up / 4.f;
         }
         return p.rad_shoot;
     }
@@ -248,7 +350,7 @@ private:
     Triangles subdivided_tris_;
     const KDTree* tree_;
 
-    float A_eps_ = 1.f / 256;
+    static constexpr float A_eps_ = 0.00006f;
 };
 
 // -----------------------------------------------------------------------------
@@ -416,90 +518,8 @@ Triangles triangles_from_scene(const aiScene* scene) {
     return triangles;
 }
 
-static const char USAGE[] =
-    R"(Usage: raytracer <filename> [options]
-
-Options:
-  -w --width=<px>                   Width of the image [default: 640].
-  -a --aspect=<num>                 Aspect ratio of the image. If the model has
-                                    specified the aspect ratio, it will be
-                                    used. Otherwise default value is 1.
-  --background=<3x float>           Background color [default: 0 0 0].
-  -t --threads=<int>                Number of threads [default: 1].
-  --inverse-gamma=<float>           Inverse of gamma for gamma correction
-                                    [default: 0.454545].
-  --no-gamma-correction             Disables gamma correction.
-  --exposure=<float>                Exposure of the image. [default: 1.0]
-)";
-
-int main(int argc, char const* argv[]) {
-    // parameters
-    std::map<std::string, docopt::value> args =
-        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
-
-    const Configuration conf{1, 0, 1, 0 // unused configuration arguments
-                             ,
-                             args["--threads"].asLong(),
-                             args["--background"].asString(),
-                             std::stof(args["--inverse-gamma"].asString()),
-                             args["--no-gamma-correction"].asBool(), 1,
-                             std::stof(args["--exposure"].asString())};
-
-    // import scene
-    Assimp::Importer importer;
-    const aiScene* scene =
-        importer.ReadFile(args["<filename>"].asString().c_str(),
-                          aiProcess_CalcTangentSpace | aiProcess_Triangulate |
-                              aiProcess_JoinIdenticalVertices |
-                              aiProcess_GenNormals | aiProcess_SortByPType);
-
-    if (!scene) {
-        std::cout << importer.GetErrorString() << std::endl;
-        return 1;
-    }
-
-    // setup camera
-    assert(scene->mNumCameras == 1); // we can deal only with a single camera
-    auto& sceneCam = *scene->mCameras[0];
-    if (args["--aspect"]) {
-        sceneCam.mAspect = std::stof(args["--aspect"].asString());
-        assert(sceneCam.mAspect > 0);
-    } else if (sceneCam.mAspect == 0) {
-        sceneCam.mAspect = 1.f;
-    }
-    auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
-    assert(camNode != nullptr);
-    const Camera cam(camNode->mTransformation, sceneCam);
-
-    // load triangles from the scene into a kd-tree
-    auto raw_triangles = triangles_from_scene(scene);
-    Triangles triangles;
-    triangles.reserve(6 * raw_triangles.size());
-    for (const auto& tri : raw_triangles) {
-        auto sub_tris = subdivide6(tri);
-        triangles.push_back(std::get<0>(sub_tris));
-        triangles.push_back(std::get<1>(sub_tris));
-        triangles.push_back(std::get<2>(sub_tris));
-        triangles.push_back(std::get<3>(sub_tris));
-        triangles.push_back(std::get<4>(sub_tris));
-        triangles.push_back(std::get<5>(sub_tris));
-    }
-
-    Stats::instance().num_triangles = triangles.size();
-    Tree tree(std::move(triangles));
-    assert(tree.num_triangles() == Stats::instance().num_triangles);
-
-    // compute radiosity
-    auto radiosity = compute_radiosity(tree);
-
-    //
-    // Raycaster
-    //
-
-    int width = args["--width"].asLong();
-    assert(width > 0);
-    int height = width / cam.mAspect;
-
+void raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
+             const std::vector<Color>& radiosity, int width, int height) {
     Image image(width, height);
     {
         Runtime rt(Stats::instance().runtime_ms);
@@ -528,6 +548,7 @@ int main(int argc, char const* argv[]) {
                     if (conf.gamma_correction_enabled) {
                         image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
+                    image(x, y) = Color(1, 1, 1, 1);
                 }
             }));
         }
@@ -613,5 +634,119 @@ int main(int argc, char const* argv[]) {
 
     // output image
     std::cout << image << std::endl;
+}
+
+static const char USAGE[] =
+    R"(Usage: radiosity <filename> [options]
+
+Options:
+  -w --width=<px>                   Width of the image [default: 640].
+  -a --aspect=<num>                 Aspect ratio of the image. If the model has
+                                    specified the aspect ratio, it will be
+                                    used. Otherwise default value is 1.
+  --background=<3x float>           Background color [default: 0 0 0].
+  -t --threads=<int>                Number of threads [default: 1].
+  --inverse-gamma=<float>           Inverse of gamma for gamma correction
+                                    [default: 0.454545].
+  --no-gamma-correction             Disables gamma correction.
+  --exposure=<float>                Exposure of the image. [default: 1.0]
+)";
+
+int main(int argc, char const* argv[]) {
+    // parameters
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
+
+    const Configuration conf{1, 0, 1, 0 // unused configuration arguments
+                             ,
+                             args["--threads"].asLong(),
+                             args["--background"].asString(),
+                             std::stof(args["--inverse-gamma"].asString()),
+                             args["--no-gamma-correction"].asBool(), 1,
+                             std::stof(args["--exposure"].asString())};
+
+    // import scene
+    Assimp::Importer importer;
+    const aiScene* scene =
+        importer.ReadFile(args["<filename>"].asString().c_str(),
+                          aiProcess_CalcTangentSpace | aiProcess_Triangulate |
+                              aiProcess_JoinIdenticalVertices |
+                              aiProcess_GenNormals | aiProcess_SortByPType);
+
+    if (!scene) {
+        std::cout << importer.GetErrorString() << std::endl;
+        return 1;
+    }
+
+    // setup camera
+    assert(scene->mNumCameras == 1); // we can deal only with a single camera
+    auto& sceneCam = *scene->mCameras[0];
+    if (args["--aspect"]) {
+        sceneCam.mAspect = std::stof(args["--aspect"].asString());
+        assert(sceneCam.mAspect > 0);
+    } else if (sceneCam.mAspect == 0) {
+        sceneCam.mAspect = 1.f;
+    }
+    auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
+    assert(camNode != nullptr);
+    const Camera cam(camNode->mTransformation, sceneCam);
+
+    // load triangles from the scene into a kd-tree
+    // auto raw_triangles = triangles_from_scene(scene);
+    // triangles.reserve(6 * raw_triangles.size());
+    // for (const auto& tri : raw_triangles) {
+    //     auto sub_tris = subdivide6(tri);
+    //     triangles.push_back(std::get<0>(sub_tris));
+    //     triangles.push_back(std::get<1>(sub_tris));
+    //     triangles.push_back(std::get<2>(sub_tris));
+    //     triangles.push_back(std::get<3>(sub_tris));
+    //     triangles.push_back(std::get<4>(sub_tris));
+    //     triangles.push_back(std::get<5>(sub_tris));
+    // }
+    // triangles.reserve(4 * raw_triangles.size());
+    // for (const auto& tri : raw_triangles) {
+    //     auto sub_tris = subdivide4(tri);
+    //     triangles.push_back(std::get<0>(sub_tris));
+    //     triangles.push_back(std::get<1>(sub_tris));
+    //     triangles.push_back(std::get<2>(sub_tris));
+    //     triangles.push_back(std::get<3>(sub_tris));
+    // }
+    // std::swap(raw_triangles, triangles);
+    // triangles.clear();
+    // triangles.reserve(4 * raw_triangles.size());
+    // for (const auto& tri : raw_triangles) {
+    //     auto sub_tris = subdivide4(tri);
+    //     triangles.push_back(std::get<0>(sub_tris));
+    //     triangles.push_back(std::get<1>(sub_tris));
+    //     triangles.push_back(std::get<2>(sub_tris));
+    //     triangles.push_back(std::get<3>(sub_tris));
+    // }
+
+    // Stats::instance().num_triangles = triangles.size();
+    // Tree tree(std::move(triangles));
+    // assert(tree.num_triangles() == Stats::instance().num_triangles);
+
+    // compute radiosity
+    // auto radiosity = compute_radiosity(tree);
+
+    auto triangles = triangles_from_scene(scene);
+    Stats::instance().num_triangles = triangles.size();
+    Tree tree(std::move(triangles));
+
+    HierarchicalRadiosity model(tree);
+    auto triangles_with_rad = model.compute();
+    KDTree refined_tree(std::move(triangles_with_rad.first));
+    const auto& radiosity = triangles_with_rad.second;
+
+    for (const auto& rad : radiosity) {
+        std::cerr << rad << std::endl;
+    }
+
+    int width = args["--width"].asLong();
+    assert(width > 0);
+    int height = width / cam.mAspect;
+
+    raycast(refined_tree, conf, cam, radiosity, width, height);
+
     return 0;
 }
