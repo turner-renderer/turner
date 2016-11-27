@@ -28,6 +28,38 @@
 #include <unordered_set>
 #include <vector>
 
+std::array<Triangle, 4> subdivide4(const Triangle& tri) {
+    const auto& a = tri.vertices[0];
+    const auto& b = tri.vertices[1];
+    const auto& c = tri.vertices[2];
+
+    const auto& na = tri.normals[0];
+    const auto& nb = tri.normals[1];
+    const auto& nc = tri.normals[2];
+
+    auto ma = (b + c) / 2.f;
+    auto mb = (a + c) / 2.f;
+    auto mc = (a + b) / 2.f;
+
+    auto nma = tri.interpolate_normal(0.f, 0.5f, 0.5f);
+    auto nmb = tri.interpolate_normal(0.5f, 0.f, 0.5f);
+    auto nmc = tri.interpolate_normal(0.5f, 0.5f, 0.f);
+
+    auto copy_tri = [&tri](const Vec& a, const Vec& b, const Vec& c,
+                           const Vec& na, const Vec& nb, const Vec& nc) {
+        return Triangle{{a, b, c},       {na, nb, nc}, tri.ambient,
+                        tri.diffuse,     tri.emissive, tri.reflective,
+                        tri.reflectivity};
+    };
+
+    return {
+        copy_tri(a, mc, mb, na, nmc, nmb), copy_tri(mc, b, ma, nmc, nb, nma),
+        copy_tri(ma, c, mb, nma, nc, nmb), copy_tri(mb, mc, ma, nmb, nmc, nma)};
+};
+
+// -----------------------------------------------------------------------------
+
+// https://graphics.stanford.edu/papers/rad/
 class HiearchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
 
@@ -47,11 +79,13 @@ class HiearchicalRadiosity {
         float area;
         float rho; // reflectivity
 
-        TriangleId tri_id;      // underlying triangle
+        TriangleId tri_id; // underlying triangle (if this quadnode
+                           // represents a root node, then this is an invalid
+                           // id)
         TriangleId root_tri_id; // parent triangle from scene
 
         std::array<std::unique_ptr<Quadnode>, 4> children;
-        std::unique_ptr<Linknode>& first_gathering_link;
+        std::unique_ptr<Linknode> gather_links_head;
     };
 
     struct Linknode {
@@ -68,7 +102,9 @@ public:
     explicit HiearchicalRadiosity(const KDTree& tree) : tree_(&tree){};
 
     void solve_system() {
-        while (true) // TODO: need convergence criteria
+        constexpr size_t MAX_ITERATIONS = 100;
+        size_t iteration = MAX_ITERATIONS;
+        while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
                 gather_radiosity(p);
@@ -77,8 +113,6 @@ public:
                 push_pull_radiosity(p, 0);
             }
         }
-
-        // TODO: collect leaves and return a new KDTree
     }
 
 private:
@@ -103,56 +137,83 @@ private:
         return cos_theta * omega_q / M_PI;
     }
 
-    bool oracle(const Quadnode& p, const Quadnode& q, float F_eps) const {
-        constexpr float area_eps = EPS * EPS;
-        return !((p.area < area_eps && q.area < area_eps) ||
-                 estimate_form_factor(p, q) < F_eps);
-    }
+    bool subdivide(Quadnode& p) {
+        float p_area_4 = p.area / 4;
+        if (p_area_4 < A_eps_) {
+            return false;
+        }
 
-    enum class SubdivideResult { LEFT, RIGHT, NONE };
-    SubdivideResult subdivide(Quadnode&, Quadnode&) {
-        return SubdivideResult::NONE; // TODO
+        if (p.is_leaf()) {
+            const auto& child_tris = subdivide4(get_triangle(p));
+            for (const auto& tri : child_tris) {
+                Quadnode qnode;
+                qnode.rad_gather = 0;
+                qnode.rad_shoot = p.rad_shoot;
+                qnode.emission = p.emission;
+                qnode.area = p_area_4;
+                qnode.rho = p.rho;
+                qnode.tri_id = subdivided_tris_.size();
+                qnode.root_tri_id = p.root_tri_id;
+
+                subdivided_tris_.emplace_back(tri);
+            }
+        }
+
+        return true;
     }
 
     void link(Quadnode& p, Quadnode& q) {
         const Triangle& tri_p = get_triangle(p);
         const Triangle& tri_q = get_triangle(q);
         float F_qp = form_factor(*tree_, tri_p, tri_q, q.root_tri_id);
-        auto link = std::make_unique<Linknode>(q, p, F_qp);
 
-        if (!q.first_gathering_link) {
-            q.first_gathering_link = std::move(link);
+        auto new_link = std::make_unique<Linknode>(q, p, F_qp);
+        if (!q.gather_links_head) {
+            q.gather_links_head = std::move(new_link);
         } else {
-            Linknode* tail = q.first_gathering_link.get();
+            Linknode* tail = q.gather_links_head.get();
             while (tail->next) {
                 tail = tail->next.get();
             }
-            tail->next = std::move(link);
+            tail->next = std::move(new_link);
         }
     };
 
-    void refine(Quadnode& p, Quadnode& q, float eps) {
-        if (oracle(p, q, eps)) {
+    void refine(Quadnode& p, Quadnode& q, float F_eps) {
+        if (p.area < A_eps_ && p.area < A_eps_) {
             link(p, q);
-        } else {
-            auto to_subdivide = subdivide(p, q);
-            if (to_subdivide == SubdivideResult::LEFT) {
-                for (auto& child : p.children) {
-                    refine(p, *child, eps);
-                }
-            } else if (to_subdivide == SubdivideResult::RIGHT) {
+            return;
+        }
+
+        float F_pq = estimate_form_factor(p, q);
+        float F_qp = estimate_form_factor(q, p);
+        if (F_pq < F_eps && F_qp < F_eps) {
+            link(p, q);
+            return;
+        }
+
+        if (F_qp < F_pq) {
+            if (subdivide(q)) {
                 for (auto& child : q.children) {
-                    refine(*child, q, eps);
+                    refine(p, *child, F_eps);
                 }
-            } else {
-                link(p, q);
+                return;
+            }
+        } else {
+            if (subdivide(p)) {
+                for (auto& child : p.children) {
+                    refine(q, *child, F_eps);
+                }
+                return;
             }
         }
+
+        link(p, q);
     }
 
     void gather_radiosity(Quadnode& p) {
         p.rad_gather = 0;
-        Linknode* link = p.first_gathering_link.get();
+        Linknode* link = p.gather_links_head.get();
         while (link) {
             p.rad_gather += p.rho * link->F_qp * link->q->rad_shoot;
             link = link->next.get();
@@ -186,6 +247,8 @@ private:
     std::vector<Quadnode> nodes_;
     Triangles subdivided_tris_;
     const KDTree* tree_;
+
+    float A_eps_ = 1.f / 256;
 };
 
 // -----------------------------------------------------------------------------
