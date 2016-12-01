@@ -209,7 +209,7 @@ private:
         const Vec q_midpoint = tri_q.midpoint();
 
         const float cos_theta =
-            tri_p.normal * (p_midpoint - q_midpoint).Normalize();
+            tri_p.normal * (q_midpoint - p_midpoint).Normalize();
         if (cos_theta < 0) {
             return 0;
         }
