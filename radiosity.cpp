@@ -107,6 +107,17 @@ class HierarchicalRadiosity {
 public:
     explicit HierarchicalRadiosity(const KDTree& tree) : tree_(&tree){};
 
+    std::string get_id(const Quadnode* p) {
+        std::stringstream os;
+        if (p->tri_id) {
+            os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
+               << ")";
+        } else {
+            os << p->root_tri_id;
+        }
+        return os.str();
+    }
+
     auto compute() {
         // Create quad nodes
         for (size_t i = 0; i < tree_->num_triangles(); ++i) {
@@ -127,7 +138,7 @@ public:
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
                 }
-                refine(p, q, 0.0005f);
+                refine(p, q, 0.01f);
             }
         }
 
@@ -137,17 +148,6 @@ public:
         // Return leaves
         std::pair<std::vector<Triangle>, std::vector<Color /*rad*/>> out;
         std::stack<const Quadnode*> stack;
-
-        auto get_id = [](const Quadnode* p) {
-            std::stringstream os;
-            if (p->tri_id) {
-                os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
-                   << ")";
-            } else {
-                os << p->root_tri_id;
-            }
-            return os.str();
-        };
 
         // dfs for each node
         for (const auto& root : nodes_) {
@@ -181,7 +181,7 @@ public:
                     //     q = p->parent;
                     // }
                     out.first.emplace_back(get_triangle(*p));
-                    out.second.emplace_back(c);
+                    out.second.emplace_back(p->rad_shoot);
                     out.second.back().a = 1;
                 } else {
                     for (const auto& child : p->children) {
@@ -350,7 +350,7 @@ private:
     Triangles subdivided_tris_;
     const KDTree* tree_;
 
-    static constexpr float A_eps_ = 0.00006f;
+    static constexpr float A_eps_ = 0.0001f;
 };
 
 // -----------------------------------------------------------------------------
@@ -548,7 +548,7 @@ void raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
                     if (conf.gamma_correction_enabled) {
                         image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
-                    image(x, y) = Color(1, 1, 1, 1);
+                    // image(x, y) = Color(1, 1, 1, 1);
                 }
             }));
         }
@@ -738,9 +738,9 @@ int main(int argc, char const* argv[]) {
     KDTree refined_tree(std::move(triangles_with_rad.first));
     const auto& radiosity = triangles_with_rad.second;
 
-    for (const auto& rad : radiosity) {
-        std::cerr << rad << std::endl;
-    }
+    // for (const auto& rad : radiosity) {
+    //     std::cerr << rad << std::endl;
+    // }
 
     int width = args["--width"].asLong();
     assert(width > 0);

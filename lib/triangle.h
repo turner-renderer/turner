@@ -13,39 +13,31 @@
 //
 class Triangle {
 public:
-    Triangle(
-        std::array<Vec, 3> vs,
-        std::array<Vec, 3> ns,
-        const aiColor4D& ambient,
-        const aiColor4D& diffuse,
-        const aiColor4D& emissive,
-        const aiColor4D& reflective,
-        const float reflectivity
-    )
+    Triangle(std::array<Vec, 3> vs, std::array<Vec, 3> ns,
+             const aiColor4D& ambient, const aiColor4D& diffuse,
+             const aiColor4D& emissive, const aiColor4D& reflective,
+             const float reflectivity)
         : vertices(vs)
         , normals(ns)
         , ambient(ambient)
         , diffuse(diffuse)
         , emissive(emissive)
-        , reflective(reflective)        // reflective color
-        , reflectivity(reflectivity)    // reflectivity factor
+        , reflective(reflective)     // reflective color
+        , reflectivity(reflectivity) // reflectivity factor
         , u(vertices[1] - vertices[0])
         , v(vertices[2] - vertices[0])
-        , normal(u^v)
-        , uv(u*v)
-        , vv(v*v)
-        , uu(u*u)
-        , denom(uv * uv - uu * vv)
-    {}
+        , normal((u ^ v).Normalize())
+        , uv(u * v)
+        , vv(v * v)
+        , uu(u * u)
+        , denom(uv * uv - uu * vv) {}
 
     // minimal constructor
     explicit Triangle(std::array<Vec, 3> vs)
-        : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0)
-    {}
+        : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0) {}
 
-    friend bool intersect_ray_triangle(
-        const Ray& ray, const Triangle& tri,
-        float& r, float& s, float& t);
+    friend bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
+                                       float& r, float& s, float& t);
 
     /**
      * Interpolate normal using barycentric coordinates.
@@ -62,17 +54,13 @@ public:
      * Compute the (axes aligned) bounding box of the triangle.
      */
     Box bbox() const {
-        Vec min =
-            { fmin(vertices[0].x, vertices[1].x, vertices[2].x)
-            , fmin(vertices[0].y, vertices[1].y, vertices[2].y)
-            , fmin(vertices[0].z, vertices[1].z, vertices[2].z)
-            };
+        Vec min = {fmin(vertices[0].x, vertices[1].x, vertices[2].x),
+                   fmin(vertices[0].y, vertices[1].y, vertices[2].y),
+                   fmin(vertices[0].z, vertices[1].z, vertices[2].z)};
 
-        Vec max =
-            { fmax(vertices[0].x, vertices[1].x, vertices[2].x)
-            , fmax(vertices[0].y, vertices[1].y, vertices[2].y)
-            , fmax(vertices[0].z, vertices[1].z, vertices[2].z)
-            };
+        Vec max = {fmax(vertices[0].x, vertices[1].x, vertices[2].x),
+                   fmax(vertices[0].y, vertices[1].y, vertices[2].y),
+                   fmax(vertices[0].z, vertices[1].z, vertices[2].z)};
 
         return {min, max};
     }
@@ -81,9 +69,7 @@ public:
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
     }
 
-    float area() const {
-        return (u^v).Length() / 2.f;
-    }
+    float area() const { return (u ^ v).Length() / 2.f; }
 
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {
@@ -113,6 +99,7 @@ public:
     // of the vertices are interpolated between all faces containing this
     // vertex.
     Vec normal;
+
 private:
     float uv, vv, uu, denom;
 

@@ -16,17 +16,10 @@
  * θ_i - angle between normal of x and vector to y (ω)
  * θ_j - angle between normal of y and vector to x (-ω)
  */
-float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
+float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
                   const KDTree::TriangleId to_id,
                   const size_t num_samples = 128);
 
-/**
- * As above function.
- *
- * Instead of using triangles from the given kd-tree, computes the form factors
- * for the directly given triangles. The triangle `to` has to be a subtriangle
- * of the triangle in the kd-tree defined by `to_id`.
- */
-float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
+float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
                   const KDTree::TriangleId to_id,
                   const size_t num_samples = 128);
