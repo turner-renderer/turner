@@ -4,7 +4,7 @@
 
 namespace {
 constexpr float NUM_SAMPLES = 32;
-constexpr float TOLERANCE = 0.01f;
+constexpr float TOLERANCE = 0.1f;
 }
 
 TEST_CASE("Form factor of two parallel unit squares one unit apart",
@@ -56,19 +56,16 @@ TEST_CASE("Form factor of two parallel unit squares one unit apart",
     REQUIRE(F_23_01 == Approx(F_EXPECTED).epsilon(TOLERANCE));
 }
 
-TEST_CASE("Form factor of two parallel unit squares with 90 degree angle",
+TEST_CASE("Form factor of two orthogonal unit squares with 90 degree angle",
           "[form_factor]") {
-    // two triangulated parallel unit squares one unit distance apart,
-    auto bottom_left =
-        test_triangle({0.f, 0.f, 0.f}, {1.f, 0.f, 0.f}, {0.f, 0.f, 1.f},
-                      {0, 1, 0}, {0, 1, 0}, {0, 1, 0}); // 0
-    auto bottom_right =
-        test_triangle({0.f, 0.f, 1.f}, {1.f, 0.f, 0.f}, {1.f, 1.f, 0},
-                      {0, 1, 0}, {0, 1, 0}, {0, 1, 0}); // 1
-    auto back_left = test_triangle({0.f, 0.f, 1}, {1.f, 0.f, 1}, {0.0, 1.f, 1},
-                                   {0, 0, -1}, {0, 0, -1}, {0, 0, -1}); // 2
-    auto back_right = test_triangle({0.f, 1.f, 1}, {1.f, 0.f, 1}, {1.f, 1.f, 1},
-                                    {0, 0, -1}, {0, 0, -1}, {0, 0, -1}); // 3
+    auto bottom_left = test_triangle({0, 0, 0}, {1, 0, 1}, {1, 0, 0}, {0, 1, 0},
+                                     {0, 1, 0}, {0, 1, 0}); // 0
+    auto bottom_right = test_triangle({0, 0, 0}, {0, 0, 1}, {1, 0, 1},
+                                      {0, 1, 0}, {0, 1, 0}, {0, 1, 0}); // 1
+    auto back_left = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 0, 1},
+                                   {0, 0, 1}, {0, 0, 1}); // 2
+    auto back_right = test_triangle({0, 0, 0}, {1, 1, 0}, {0, 1, 0}, {0, 0, 1},
+                                    {0, 0, 1}, {0, 0, 1}); // 3
     KDTree tree({bottom_left, bottom_right, back_left, back_right});
 
     // compute the form factor F_(bottom,top) = F_01_23 using the form factor
@@ -85,7 +82,7 @@ TEST_CASE("Form factor of two parallel unit squares with 90 degree angle",
     float F_01_23 = F_01_2 + F_01_3;
 
     // TODO: Calculate expected value analytically
-    constexpr float F_EXPECTED = 0.01188f;
+    constexpr float F_EXPECTED = 0.2;
     REQUIRE(F_01_23 == Approx(F_EXPECTED).epsilon(TOLERANCE));
 
     // symmetry test
