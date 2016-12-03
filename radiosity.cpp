@@ -621,6 +621,9 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     return image;
 }
 
+/**
+ * TODO: Remove or move somewhere else, since unused.
+ */
 Image render_feature_lines(const KDTree& tree, const Configuration& conf,
                            const Camera& cam, Image&& image) {
     // Render feature lines after
@@ -641,7 +644,7 @@ Image render_feature_lines(const KDTree& tree, const Configuration& conf,
                                               &conf]() {
             for (size_t x = 0; x < image.width(); ++x) {
                 float dist_to_triangle, s, t;
-                std::unordered_set<Tree::OptionalId> triangle_ids;
+                std::unordered_set<KDTree::OptionalId> triangle_ids;
 
                 // Shoot center ray.
                 auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
@@ -686,6 +689,30 @@ Image render_feature_lines(const KDTree& tree, const Configuration& conf,
     std::cerr << std::endl;
 
     return image;
+}
+
+Image render_mesh(const Triangles& triangles, const Camera& cam,
+                  Image&& image) {
+    auto draw_pixel = [&image](int x, int y) {
+        if (0 <= x && static_cast<size_t>(x) < image.width() && 0 <= y &&
+            static_cast<size_t>(y) < image.height()) {
+            image(x, y) = Color();
+        }
+    };
+
+    for (const auto& tri : triangles) {
+        const auto& a =
+            cam.cam2raster(tri.vertices[0], image.width(), image.height());
+        const auto& b =
+            cam.cam2raster(tri.vertices[1], image.width(), image.height());
+        const auto& c =
+            cam.cam2raster(tri.vertices[2], image.width(), image.height());
+        bresenham(a.x, a.y, b.x, b.y, draw_pixel);
+        bresenham(b.x, b.y, c.x, c.y, draw_pixel);
+        bresenham(c.x, c.y, a.x, a.y, draw_pixel);
+    }
+
+    return std::move(image);
 }
 
 static const char USAGE[] =
@@ -748,7 +775,7 @@ int main(int argc, char const* argv[]) {
 
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
-    Tree tree(std::move(triangles));
+    KDTree tree(std::move(triangles));
 
     HierarchicalRadiosity model(tree);
     auto triangles_with_rad = model.compute();
@@ -761,7 +788,7 @@ int main(int argc, char const* argv[]) {
 
     Image image(width, height);
     image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
-    // image = render_feature_lines(refined_tree, conf, cam, std::move(image));
+    image = render_mesh(refined_tree.triangles(), cam, std::move(image));
     image = model.visualize_links(cam, std::move(image));
 
     // output stats
