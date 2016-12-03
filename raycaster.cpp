@@ -1,6 +1,6 @@
 #include "trace.h"
-#include "lib/output.h"
-#include "lib/image.h"
+#include "lib/raster.h"
+#include "lib/stats.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
 #include "lib/triangle.h"

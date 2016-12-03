@@ -1,6 +1,5 @@
 #pragma once
 
-#include "image.h"
 #include "stats.h"
 #include "triangle.h"
 #include "types.h"
@@ -92,32 +91,6 @@ inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
               << "mLookAt=" << cam.mLookAt << " "
               << "mPosition=" << cam.mPosition << " "
               << "mUp=" << cam.mUp << ")";
-}
-
-/**
- * Output image in PBM format.
- *
- * Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
- */
-inline std::ostream& operator<<(std::ostream& os, const Image& img) {
-    os << "P3" << std::endl;
-    os << img.width() << " " << img.height() << std::endl;
-    os << 255 << std::endl;
-    int i = 0;
-    for (auto color : img) {
-        if (i++ % img.width() == 0) {
-            os << std::endl;
-        }
-
-        os << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.r * color.a)) << " "
-           << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.g * color.a)) << " "
-           << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.b * color.a)) << " ";
-    }
-
-    return os;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Box& box) {
