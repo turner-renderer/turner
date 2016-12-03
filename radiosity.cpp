@@ -1,4 +1,5 @@
 #include "lib/radiosity.h"
+#include "lib/algorithm.h"
 #include "lib/effects.h"
 #include "lib/gauss_seidel.h"
 #include "lib/image.h"
@@ -106,7 +107,8 @@ class HierarchicalRadiosity {
     };
 
 public:
-    explicit HierarchicalRadiosity(const KDTree& tree) : tree_(&tree){};
+    explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps)
+        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps){};
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -185,7 +187,7 @@ public:
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
                 }
-                refine(p, q, 0.04f);
+                refine(p, q, F_eps_);
             }
         }
 
@@ -395,9 +397,10 @@ private:
 private:
     std::vector<Quadnode> nodes_;
     Triangles subdivided_tris_;
-    const KDTree* tree_;
 
-    static constexpr float A_eps_ = 0.03125;
+    const KDTree* tree_;
+    float F_eps_;
+    float A_eps_;
 };
 
 // -----------------------------------------------------------------------------
@@ -567,63 +570,56 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
 Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
               const std::vector<Color>& radiosity, Image&& image) {
-    {
-        Runtime rt(Stats::instance().runtime_ms);
+    Runtime rt(Stats::instance().runtime_ms);
 
-        std::cerr << "Rendering          ";
+    std::cerr << "Rendering          ";
 
-        ThreadPool pool(conf.num_threads);
-        std::vector<std::future<void>> tasks;
+    ThreadPool pool(conf.num_threads);
+    std::vector<std::future<void>> tasks;
 
-        for (size_t y = 0; y < image.height(); ++y) {
-            tasks.emplace_back(
-                pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
-                    for (size_t x = 0; x < image.width(); ++x) {
-                        // for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                        //     auto cam_dir =
-                        //         cam.raster2cam(aiVector2D(x, y), width,
-                        //         height);
+    for (size_t y = 0; y < image.height(); ++y) {
+        tasks.emplace_back(
+            pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
+                for (size_t x = 0; x < image.width(); ++x) {
+                    for (int i = 0; i < conf.num_pixel_samples; ++i) {
+                        auto cam_dir = cam.raster2cam(
+                            aiVector2D(x, y), image.width(), image.height());
 
-                        //     Stats::instance().num_prim_rays += 1;
-                        //     image(x, y) += trace(cam.mPosition, cam_dir,
-                        //     tree,
-                        //                          radiosity, conf);
-                        // }
-
-                        // image(x, y) = exposure(image(x, y), conf.exposure);
-
-                        // // gamma correction
-                        // if (conf.gamma_correction_enabled) {
-                        //     image(x, y) = gamma(image(x, y),
-                        //     conf.inverse_gamma);
-                        // }
-                        image(x, y) = Color(1, 1, 1, 1);
+                        Stats::instance().num_prim_rays += 1;
+                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
+                                             radiosity, conf);
                     }
-                }));
-        }
 
-        long completed = 0;
+                    image(x, y) = exposure(image(x, y), conf.exposure);
 
-        for (auto& task : tasks) {
-            task.get();
-            completed += 1;
-            float progress = static_cast<float>(completed) / tasks.size();
-            int bar_width = progress * 20;
-            std::cerr << "\rRendering          "
-                      << "[" << std::string(bar_width, '-')
-                      << std::string(20 - bar_width, ' ') << "] "
-                      << std::setfill(' ') << std::setw(6) << std::fixed
-                      << std::setprecision(2) << (progress * 100.0) << '%';
-            std::cerr.flush();
-        }
-        std::cerr << std::endl;
+                    // gamma correction
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    }
+                    // image(x, y) = Color(1, 1, 1, 1);
+                }
+            }));
     }
+
+    long completed = 0;
+
+    for (auto& task : tasks) {
+        task.get();
+        completed += 1;
+        float progress = static_cast<float>(completed) / tasks.size();
+        int bar_width = progress * 20;
+        std::cerr << "\rRendering          "
+                  << "[" << std::string(bar_width, '-')
+                  << std::string(20 - bar_width, ' ') << "] "
+                  << std::setfill(' ') << std::setw(6) << std::fixed
+                  << std::setprecision(2) << (progress * 100.0) << '%';
+        std::cerr.flush();
+    }
+    std::cerr << std::endl;
+
     return image;
 }
 
-/**
- * TODO: Remove or move somewhere else, since unused.
- */
 Image render_feature_lines(const KDTree& tree, const Configuration& conf,
                            const Camera& cam, Image&& image) {
     // Render feature lines after
@@ -716,7 +712,7 @@ Image render_mesh(const Triangles& triangles, const Camera& cam,
 }
 
 static const char USAGE[] =
-    R"(Usage: radiosity <filename> [options]
+    R"(Usage: radiosity (direct|hierarchical) <filename> [options]
 
 Options:
   -w --width=<px>                   Width of the image [default: 640].
@@ -728,13 +724,15 @@ Options:
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
-  --exposure=<float>                Exposure of the image. [default: 1.0]
+  -e --exposure=<float>             Exposure of the image. [default: 1.0]
+  --rad-simple-mesh                 Render mesh without depth overlapping.
+  --rad-links                       Render hierarchical radiosity links.
 )";
 
 int main(int argc, char const* argv[]) {
     // parameters
     std::map<std::string, docopt::value> args =
-        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
+        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity");
 
     const Configuration conf{1, 0, 1, 0 // unused configuration arguments
                              ,
@@ -770,26 +768,56 @@ int main(int argc, char const* argv[]) {
     assert(camNode != nullptr);
     const Camera cam(camNode->mTransformation, sceneCam);
 
-    // compute radiosity
-    // auto radiosity = compute_radiosity(tree);
-
+    // Scene triangles
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
     KDTree tree(std::move(triangles));
 
-    HierarchicalRadiosity model(tree);
-    auto triangles_with_rad = model.compute();
-    KDTree refined_tree(std::move(triangles_with_rad.first));
-    const auto& radiosity = triangles_with_rad.second;
-
+    // Image
     int width = args["--width"].asLong();
     assert(width > 0);
     int height = width / cam.mAspect;
-
     Image image(width, height);
-    image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
-    image = render_mesh(refined_tree.triangles(), cam, std::move(image));
-    image = model.visualize_links(cam, std::move(image));
+
+    // Compute radiosity
+    std::vector<Color> radiosity;
+    if (args["direct"].asBool()) {
+        radiosity = compute_radiosity(tree);
+        image = raycast(tree, conf, cam, radiosity, std::move(image));
+        if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
+            image = render_mesh(tree.triangles(), cam, std::move(image));
+        } else {
+            image = render_feature_lines(tree, conf, cam, std::move(image));
+        }
+    } else if (args["hierarchical"].asBool()) {
+        // compute minimal area
+        float min_area = ::min(tree.triangles().begin(), tree.triangles().end(),
+                               [](const Triangle& tri) { return tri.area(); });
+        min_area /= pow(4, 3);
+        std::cerr << "Minimal area: " << min_area << std::endl;
+
+        HierarchicalRadiosity model(tree, 0.04f, min_area);
+        auto triangles_with_rad = model.compute();
+        KDTree refined_tree(std::move(triangles_with_rad.first));
+        const auto& radiosity = triangles_with_rad.second;
+
+        image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
+
+        if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
+            image =
+                render_mesh(refined_tree.triangles(), cam, std::move(image));
+        } else {
+            image =
+                render_feature_lines(refined_tree, conf, cam, std::move(image));
+        }
+
+        if (args["--rad-links"] && args["--rad-links"].asBool()) {
+            image = model.visualize_links(cam, std::move(image));
+        }
+    } else {
+        assert(!"parsed arguments");
+        throw std::logic_error("parsed arguments");
+    }
 
     // output stats
     std::cerr << Stats::instance() << std::endl;
