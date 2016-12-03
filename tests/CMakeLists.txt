@@ -20,6 +20,7 @@ set(TESTS
     test_solid_angle
     test_algorithm
     test_raster
+    test_triangle
 )
 
 foreach (TEST_NAME ${TESTS})
