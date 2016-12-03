@@ -1,6 +1,6 @@
 #include "trace.h"
 #include "lib/output.h"
-#include "lib/image.h"
+#include "lib/raster.h"
 #include "lib/range.h"
 #include "lib/runtime.h"
 #include "lib/triangle.h"

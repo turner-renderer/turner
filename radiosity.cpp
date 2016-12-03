@@ -2,7 +2,6 @@
 #include "lib/algorithm.h"
 #include "lib/effects.h"
 #include "lib/gauss_seidel.h"
-#include "lib/image.h"
 #include "lib/lambertian.h"
 #include "lib/matrix.h"
 #include "lib/output.h"
