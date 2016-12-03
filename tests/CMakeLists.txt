@@ -18,6 +18,7 @@ set(TESTS
     test_radiosity
     test_effects
     test_solid_angle
+    test_algorithm
 )
 
 foreach (TEST_NAME ${TESTS})

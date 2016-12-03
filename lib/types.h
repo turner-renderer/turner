@@ -223,8 +223,8 @@ public:
         // move to camera position and convert to camera space
         auto v = inverse_trafo_ * (p - mPosition);
         // project on z = 1 in normal camera space
-        v.x /= v.z * delta_x_;
-        v.y /= v.z * delta_y_;
+        v.x /= v.z * -delta_x_;
+        v.y /= v.z * -delta_y_;
         // rescale to image space
         int x = (v.x + 1) * w / 2;
         int y = (1 - v.y) * h / 2;
