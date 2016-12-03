@@ -38,3 +38,30 @@ float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
 float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
                   const KDTree::TriangleId to_id,
                   const size_t num_samples = 128);
+
+/**
+ * Compute form factor of two parallel rectangles with sides a, b analytically.
+ *
+ * Cf. [CW93], 4.6, p. 73
+ *
+ * @param  a side of rectangles
+ * @param  b side of rectangles
+ * @param  c distance of rectangles
+ * @return   form factor
+ */
+float form_factor_of_parallel_rects(float a, float b, float c);
+
+/**
+ * Compute form factor of orthogonal rectangles with sides a, c and b, c
+ * analytically.
+ *
+ * Note: Both rectangles have the same side c, and a and b are orthogonal.
+ *
+ * Cf. [CW93], 4.6, p. 73
+ *
+ * @param  a side of rectangles
+ * @param  b side of rectangles
+ * @param  c distance of rectangles
+ * @return   form factor
+ */
+float form_factor_of_orthogonal_rects(float a, float b, float c);
