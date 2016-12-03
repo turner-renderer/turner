@@ -93,6 +93,7 @@ float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
         }
 
         float square_length = v.SquareLength();
+        v.Normalize();
 
         float cos_theta1 = v * from.normal;
         if (cos_theta1 < 0) {
