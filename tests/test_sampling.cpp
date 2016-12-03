@@ -46,6 +46,6 @@ TEST_CASE("Test Triangle sampling", "[sampling]")
         bool intersect = intersect_ray_triangle(
             Ray{Vec{0, 0, 0}, sample.Normalize()}, triangle, r, s, t);
         REQUIRE(intersect);
-        REQUIRE(length == Approx(r));
+        REQUIRE(length == Approx(r).epsilon(EPS * 10));
     }
 }
