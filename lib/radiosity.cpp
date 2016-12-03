@@ -1,5 +1,5 @@
 /**
- * Work in progress:
+ * Possible improvements:
  *
  * 1. tree.intersect can be replaced by a more performant visibility test
  * algorithm, which e.g. searches for the _first_ triangle between from and to
@@ -17,50 +17,6 @@
 
 #include "radiosity.h"
 #include "sampling.h"
-
-/**
- * [CW93], Algorithm 4.21 without obvious mistakes.
- */
-float form_factor_expiremental(const KDTree& tree, const Triangle& from,
-                               const Triangle& to,
-                               const KDTree::TriangleId to_id,
-                               const size_t num_samples) {
-    float result = 0;
-    for (size_t i = 0; i != num_samples; ++i) {
-        auto p1 = sampling::triangle(from);
-        auto p2 = sampling::triangle(to);
-
-        auto v = p2 - p1;
-        if (tree.intersect(Ray{p1 + EPS * v, v}) != to_id) {
-            continue;
-        }
-
-        auto square_length = v.SquareLength();
-
-        v.Normalize();
-        float cos_theta1 = v * from.normal;
-        float cos_theta2 = -v * to.normal;
-        float delta_F = cos_theta1 * cos_theta2 /
-                        (M_PI * square_length + to.area() / num_samples);
-        if (delta_F > 0) {
-            result += delta_F;
-        }
-    }
-
-    return result * from.area() / num_samples;
-}
-
-float form_factor_expiremental(const KDTree& tree,
-                               const KDTree::TriangleId from_id,
-                               const KDTree::TriangleId to_id,
-                               const size_t num_samples) {
-    assert(from_id != to_id);
-
-    const auto& from = tree[from_id];
-    const auto& to = tree[to_id];
-
-    return form_factor_expiremental(tree, from, to, to_id, num_samples);
-}
 
 /**
  * The form factor between faces `from` (i) and `to` (j) is defined as
@@ -119,4 +75,32 @@ float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
     const auto& to = tree[to_id];
 
     return form_factor(tree, from, to, to_id, num_samples);
+}
+
+/**
+ * @note A summand is missing in the formula on [CW93], 4.6, p. 73, .
+ */
+float form_factor_of_parallel_rects(float a, float b, float c) {
+    float X = a / c;
+    float Y = b / c;
+    return 2.f / (M_PI * X * Y) *
+           (log(sqrt((1 + X * X) * (1 + Y * Y) / (1 + X * X + Y * Y))) +
+            X * sqrt(1 + Y * Y) * atan(X / sqrt(1 + Y * Y)) +
+            Y * sqrt(1 + X * X) * atan(Y / sqrt(1 + X * X)) - X * atan(X) -
+            Y * atan(Y));
+}
+
+float form_factor_of_orthogonal_rects(float a, float b, float c) {
+    float H = a / c;
+    float W = b / c;
+    return 1.f / (M_PI * W) *
+           (W * atan(1 / W) + H * atan(1 / H) -
+            sqrt(H * H + W * W) * atan(1 / sqrt(H * H + W * W)) +
+            1.f / 4 * log((1 + W * W) * (1 + H * H) / (1 + W * W + H * H) *
+                          pow(W * W * (1 + W * W + H * H) /
+                                  ((1 + W * W) * (W * W + H * H)),
+                              W * W) *
+                          pow(H * H * (1 + W * W + H * H) /
+                                  ((1 + H * H) * (H * H + W * W)),
+                              H * H)));
 }
