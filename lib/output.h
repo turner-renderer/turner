@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <ostream>
 
+// LCOV_EXCL_START
+
 inline std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
 }
@@ -108,3 +110,5 @@ inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
               << " sec" << std::endl
               << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
 }
+
+// LCOV_EXCL_END
