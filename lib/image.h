@@ -7,42 +7,32 @@
 
 class Image {
 public:
-    const size_t width;
-    const size_t height;
-
     Image(const size_t width, const size_t height)
-        : width(width)
-        , height(height)
-        , _image_data(width * height)
-    {}
+        : width_(width), height_(height), image_data_(width * height) {}
+
+    size_t width() const { return width_; }
+    size_t height() const { return height_; }
 
     aiColor4D& operator()(size_t x, size_t y) {
-        assert(x < width && "x out of image bounds");
-        assert(y < height && "y out of image bounds");
-        return _image_data[y * width + x];
+        assert(x < width_ && "x out of image bounds");
+        assert(y < height_ && "y out of image bounds");
+        return image_data_[y * width_ + x];
     }
 
     const aiColor4D& operator()(size_t x, size_t y) const {
-        assert(x < width && "x out of image bounds");
-        assert(y < height && "y out of image bounds");
-        return _image_data[y * width + x];
+        assert(x < width_ && "x out of image bounds");
+        assert(y < height_ && "y out of image bounds");
+        return image_data_[y * width_ + x];
     }
 
-    auto end() const {
-        return _image_data.end();
-    }
-    auto begin() const {
-        return _image_data.begin();
-    }
+    auto end() { return image_data_.end(); }
+    auto begin() { return image_data_.begin(); }
 
-    auto end() {
-        return _image_data.end();
-    }
-    auto begin() {
-        return _image_data.begin();
-    }
+    auto end() const { return image_data_.end(); }
+    auto begin() const { return image_data_.begin(); }
 
 private:
-
-    std::vector<aiColor4D> _image_data;
+    size_t width_;
+    size_t height_;
+    std::vector<aiColor4D> image_data_;
 };
