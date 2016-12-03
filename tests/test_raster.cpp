@@ -1,4 +1,5 @@
 #include "../lib/raster.h"
+#include "../lib/output.h"
 #include <catch.hpp>
 
 #include <sstream>
@@ -53,4 +54,29 @@ TEST_CASE("Test image PBM serialization", "[raster]") {
   0   0   0   0   0   0
 255 255 255   0   0   0)";
     REQUIRE(ss.str() == EXPECTED);
+}
+
+TEST_CASE("Test Bresenham's line algorithm", "[raster]") {
+    Image img(2, 3);
+    Color white(1, 1, 1, 1);
+    bresenham(0, 0, 1, 2, [&](int x, int y) {
+        img(x, y) = white;
+    });
+
+    /**
+     * Expected image:
+     *   - x white
+     *   - 0 black
+     *
+     *    x 0
+     *    x 0
+     *    0 x
+     */
+    Color black;
+    REQUIRE(img(0, 0) == white);
+    REQUIRE(img(1, 0) == black);
+    REQUIRE(img(0, 1) == white);
+    REQUIRE(img(1, 1) == black);
+    REQUIRE(img(0, 2) == black);
+    REQUIRE(img(1, 2) == white);
 }
