@@ -49,6 +49,10 @@ std::array<Triangle, 4> subdivide4(const Triangle& tri) {
 
     auto copy_tri = [&tri](const Vec& a, const Vec& b, const Vec& c,
                            const Vec& na, const Vec& nb, const Vec& nc) {
+        // auto normal_diff = tri.normal - ((b - a) ^ (c - a)).Normalize();
+        // assert(is_eps_zero(normal_diff[0]));
+        // assert(is_eps_zero(normal_diff[1]));
+        // assert(is_eps_zero(normal_diff[2]));
         return Triangle{{a, b, c},       {na, nb, nc}, tri.ambient,
                         tri.diffuse,     tri.emissive, tri.reflective,
                         tri.reflectivity};
@@ -69,15 +73,12 @@ class HierarchicalRadiosity {
     struct Quadnode;
 
     /**
-     * Link: q <- p, i.e.
-     *   - p shouts light to q
-     *   - the link shoudl be stored in q
-     *   - the link contains the form factor for F_qp
+     * Links owner node p to q, s.t. p gathers radiosity from q. In particular,
+     * form_factor is F_pq.
      */
     struct Linknode {
-        const Quadnode* q; // gathering node
-        const Quadnode* p; // shooting node
-        float F_qp;        // form factor from q to p
+        const Quadnode* q; // shooting node
+        float form_factor; // form factor F_pq, where q is the owner node
     };
 
     struct Quadnode {
@@ -102,7 +103,7 @@ class HierarchicalRadiosity {
 
         Quadnode* parent = nullptr;
         std::array<std::unique_ptr<Quadnode>, 4> children;
-        std::vector<Linknode> gathering_links; // links to this node
+        std::vector<Linknode> gathering_from; // links to this node
     };
 
 public:
@@ -129,12 +130,12 @@ public:
 
                 nodes_counter += 1;
 
-                if (!p->gathering_links.empty()) {
+                if (!p->gathering_from.empty()) {
                     auto to = cam.cam2raster(get_triangle(*p).midpoint(),
                                              image.width(), image.height());
-                    for (const auto& l : p->gathering_links) {
+                    for (const auto& link : p->gathering_from) {
                         auto from =
-                            cam.cam2raster(get_triangle(*l.p).midpoint(),
+                            cam.cam2raster(get_triangle(*link.q).midpoint(),
                                            image.width(), image.height());
                         bresenham(from.x, from.y, to.x, to.y, draw_pixel);
                     }
@@ -186,7 +187,7 @@ public:
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
                 }
-                refine(p, q, F_eps_);
+                refine(p, q);
             }
         }
 
@@ -200,7 +201,6 @@ public:
         // dfs for each node
         for (const auto& root : nodes_) {
             stack.push(&root);
-            Color c = root.rad_gather;
 
             std::cerr << "Root " << root.root_tri_id << std::endl;
 
@@ -211,26 +211,19 @@ public:
                 std::cerr << "Quadnode " << get_id(p) << std::endl;
                 std::cerr << "  Triangle: A = " << get_triangle(*p).area()
                           << std::endl;
-                std::cerr << "  " << p->gathering_links.size() << " Links "
+                std::cerr << "  " << p->gathering_from.size() << " Links "
                           << std::endl;
-                for (const auto& l : p->gathering_links) {
-                    std::cerr << "    <- " << get_id(l.p)
-                              << " with F = " << l.F_qp << std::endl;
+                for (const auto& link : p->gathering_from) {
+                    std::cerr << "    <- " << get_id(link.q)
+                              << " with F = " << link.form_factor << std::endl;
                 }
-                std::cerr << std::endl;
 
-                if (!p->gathering_links.empty()) {
-                    c = p->rad_gather;
-                }
+                std::cerr << get_id(p) << " : " << p->emission << std::endl;
 
                 if (p->is_leaf()) {
-                    // const Quadnode* q = p;
-                    // while (!q->gather_links_head) {
-                    //     q = p->parent;
-                    // }
                     out.first.emplace_back(get_triangle(*p));
                     out.second.emplace_back(p->rad_shoot);
-                    out.second.back().a = 1;
+                    out.second.back().a = 1; // TODO
                 } else {
                     for (const auto& child : p->children) {
                         stack.push(child.get());
@@ -277,69 +270,65 @@ private:
             return false;
         }
 
-        if (p.is_leaf()) {
-            const auto& child_tris = subdivide4(get_triangle(p));
-            for (size_t i = 0; i < 4; ++i) {
-                const auto& tri = child_tris[i];
-                auto& qnode = p.children[i];
+        const auto& child_tris = subdivide4(get_triangle(p));
+        for (size_t i = 0; i < 4; ++i) {
+            const auto& tri = child_tris[i];
+            auto& qnode = p.children[i];
 
-                // create a new quanode
-                qnode = std::make_unique<Quadnode>();
-                qnode->parent = &p;
-                qnode->rad_gather = Color();
-                qnode->rad_shoot = p.rad_shoot;
-                qnode->emission = p.emission;
-                qnode->area = p_area_4;
-                qnode->rho = p.rho;
-                qnode->tri_id = OptionalId(subdivided_tris_.size());
-                qnode->root_tri_id = p.root_tri_id;
+            // create a new quanode
+            qnode = std::make_unique<Quadnode>();
+            qnode->parent = &p;
+            qnode->rad_gather = Color();
+            qnode->rad_shoot = p.rad_shoot;
+            qnode->emission = p.emission;
+            qnode->area = p_area_4;
+            qnode->rho = p.rho;
+            qnode->tri_id = OptionalId(subdivided_tris_.size());
+            qnode->root_tri_id = p.root_tri_id;
 
-                // add a new subdivided traingle
-                subdivided_tris_.emplace_back(tri);
-            }
+            // add a new subdivided traingle
+            subdivided_tris_.emplace_back(tri);
         }
 
         return true;
     }
 
-    // p - shooting
-    // q - gathering
+    /**
+     * Link p to q s.t. p gathers energy from q.
+     * @param p gathering node
+     * @param q shooting node
+     */
     void link(Quadnode& p, Quadnode& q) {
         const Triangle& tri_p = get_triangle(p);
         const Triangle& tri_q = get_triangle(q);
-        float F_qp = form_factor(*tree_, tri_q, tri_p, p.root_tri_id);
+        float F_pq = form_factor(*tree_, tri_p, tri_q, q.root_tri_id);
+        // assert(0 <= F_pq && F_pq < 1); // TODO: not true now
 
-        q.gathering_links.emplace_back();
-        auto& link = q.gathering_links.back();
-        link.p = &p;
+        p.gathering_from.emplace_back();
+        auto& link = p.gathering_from.back();
         link.q = &q;
-        link.F_qp = F_qp;
+        link.form_factor = F_pq;
     };
 
-    void refine(Quadnode& p, Quadnode& q, float F_eps) {
-        if (p.area < A_eps_ && p.area < A_eps_) {
-            link(p, q);
-            return;
-        }
-
-        float F_qp = estimate_form_factor(q, p);
-        if (F_qp < F_eps) {
-            link(p, q);
-            return;
-        }
-
+    void refine(Quadnode& p, Quadnode& q) {
         float F_pq = estimate_form_factor(p, q);
+        float F_qp = estimate_form_factor(q, p);
+        if (F_pq < F_eps_ && F_qp < F_eps_) {
+            link(p, q);
+            return;
+        }
+
         if (F_qp < F_pq) {
             if (subdivide(q)) {
                 for (auto& child : q.children) {
-                    refine(p, *child, F_eps);
+                    refine(p, *child);
                 }
                 return;
             }
         } else {
             if (subdivide(p)) {
                 for (auto& child : p.children) {
-                    refine(*child, q, F_eps);
+                    refine(*child, q);
                 }
                 return;
             }
@@ -349,7 +338,7 @@ private:
     }
 
     void solve_system() {
-        constexpr size_t MAX_ITERATIONS = 100;
+        constexpr size_t MAX_ITERATIONS = 1000;
         size_t iteration = MAX_ITERATIONS;
         while (iteration--) // TODO: need a better convergence criteria
         {
@@ -357,36 +346,34 @@ private:
                 gather_radiosity(p);
             }
             for (auto& p : nodes_) {
-                push_pull_radiosity(p);
+                push_pull_radiosity(p, Color());
             }
         }
     }
 
-    void gather_radiosity(Quadnode& q) {
-        q.rad_gather = Color();
-        for (const auto& l : q.gathering_links) {
-            q.rad_gather += q.rho * l.F_qp * l.p->rad_shoot;
+    void gather_radiosity(Quadnode& p) {
+        p.rad_gather = Color();
+        for (const auto& link : p.gathering_from) {
+            p.rad_gather += link.form_factor * link.q->rad_shoot;
         }
+        p.rad_gather = p.rho * p.rad_gather;
 
-        if (q.is_leaf()) {
+        if (p.is_leaf()) {
             return;
         }
 
-        for (auto& child : q.children) {
+        for (auto& child : p.children) {
             gather_radiosity(*child);
         }
     }
 
-    Color push_pull_radiosity(Quadnode& p, const Color& rad_down = Color()) {
+    Color push_pull_radiosity(Quadnode& p, const Color& rad_down) {
         if (p.is_leaf()) {
             p.rad_shoot = p.emission + p.rad_gather + rad_down;
         } else {
-            Color rad_up;
+            Color rad_up = Color();
             for (auto& child : p.children) {
-                Color rad =
-                    push_pull_radiosity(*child, p.rad_gather + rad_down);
-                // rad_up += (child->area / p.area) * rad;
-                rad_up += rad;
+                rad_up += push_pull_radiosity(*child, p.rad_gather + rad_down);
             }
             p.rad_shoot = rad_up / 4.f;
         }
@@ -725,6 +712,7 @@ Options:
   --no-gamma-correction             Disables gamma correction.
   -e --exposure=<float>             Exposure of the image. [default: 1.0]
   --rad-simple-mesh                 Render mesh without depth overlapping.
+  --rad-features-mesh               Render mesh of features.
   --rad-links                       Render hierarchical radiosity links.
 )";
 
@@ -795,17 +783,19 @@ int main(int argc, char const* argv[]) {
         min_area /= pow(4, 3);
         std::cerr << "Minimal area: " << min_area << std::endl;
 
-        HierarchicalRadiosity model(tree, 0.04f, min_area);
+        HierarchicalRadiosity model(tree, 0.04, min_area);
         auto triangles_with_rad = model.compute();
         KDTree refined_tree(std::move(triangles_with_rad.first));
-        const auto& radiosity = triangles_with_rad.second;
+        radiosity = triangles_with_rad.second;
+        // radiosity = compute_radiosity(refined_tree);
 
         image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
 
         if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
             image =
                 render_mesh(refined_tree.triangles(), cam, std::move(image));
-        } else {
+        } else if (args["--rad-features-mesh"] &&
+                   args["--rad-features-mesh"].asBool()) {
             image =
                 render_feature_lines(refined_tree, conf, cam, std::move(image));
         }
