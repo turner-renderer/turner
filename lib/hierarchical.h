@@ -289,30 +289,42 @@ private:
     };
 
     void refine(Quadnode& p, Quadnode& q) {
-        float F_pq = estimate_form_factor(p, q);
-        float F_qp = estimate_form_factor(q, p);
-        if (F_pq < F_eps_ && F_qp < F_eps_) {
+
+        std::stack<std::pair<Quadnode*, Quadnode*>> node_stack;
+        node_stack.push({&p, &q});
+        while(!node_stack.empty()) {
+
+            auto pq = node_stack.top();
+            node_stack.pop();
+
+            auto& p = *pq.first;
+            auto& q = *pq.second;
+
+            float F_pq = estimate_form_factor(p, q);
+            float F_qp = estimate_form_factor(q, p);
+            if (F_pq < F_eps_ && F_qp < F_eps_) {
+                link(p, q);
+                continue;
+            }
+
+            if (F_qp < F_pq) {
+                if (subdivide(q)) {
+                    for (auto& child : q.children) {
+                        node_stack.push({&p, child.get()});
+                    }
+                    continue;
+                }
+            } else {
+                if (subdivide(p)) {
+                    for (auto& child : p.children) {
+                        node_stack.push({child.get(), &q});
+                    }
+                    continue;
+                }
+            }
+
             link(p, q);
-            return;
         }
-
-        if (F_qp < F_pq) {
-            if (subdivide(q)) {
-                for (auto& child : q.children) {
-                    refine(p, *child);
-                }
-                return;
-            }
-        } else {
-            if (subdivide(p)) {
-                for (auto& child : p.children) {
-                    refine(*child, q);
-                }
-                return;
-            }
-        }
-
-        link(p, q);
     }
 
     void solve_system() {
@@ -329,19 +341,26 @@ private:
         }
     }
 
-    void gather_radiosity(Quadnode& p) {
-        p.rad_gather = Color();
-        for (const auto& link : p.gathering_from) {
-            p.rad_gather += link.form_factor * link.q->rad_shoot;
-        }
-        p.rad_gather = p.rho * p.rad_gather;
+    void gather_radiosity(Quadnode& in) {
+        std::stack<Quadnode*> node_stack;
+        node_stack.push(&in);
+        while(!node_stack.empty()) {
+            auto& p = *node_stack.top();
+            node_stack.pop();
 
-        if (p.is_leaf()) {
-            return;
-        }
+            p.rad_gather = Color();
+            for (const auto& link : p.gathering_from) {
+                p.rad_gather += link.form_factor * link.q->rad_shoot;
+            }
+            p.rad_gather = p.rho * p.rad_gather;
 
-        for (auto& child : p.children) {
-            gather_radiosity(*child);
+            if (p.is_leaf()) {
+                continue;
+            }
+
+            for (auto& child : p.children) {
+                node_stack.push(child.get());
+            }
         }
     }
 
