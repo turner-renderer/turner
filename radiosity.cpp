@@ -1,5 +1,5 @@
 #include "lib/radiosity.h"
-#include "lib/hierarchical_radiosity.h"
+#include "lib/hierarchical.h"
 #include "lib/algorithm.h"
 #include "lib/effects.h"
 #include "lib/gauss_seidel.h"
