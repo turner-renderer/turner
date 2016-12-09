@@ -50,3 +50,34 @@ TEST_CASE("Test interpolate triangle normal", "[triangle]")
         REQUIRE(length == Approx(1.f));
     }
 }
+
+TEST_CASE("Test interpolate triangle normal with trivial case", "[triangle]")
+{
+    static constexpr int NUM_SAMPLES = 100;
+    static xorshift64star<float> uniform{4};
+
+    auto normal = random_vec().Normalize();
+    Triangle triangle = test_triangle( random_vec(), random_vec(),
+        random_vec(), normal, normal, normal);
+    for (int j = 0; j < NUM_SAMPLES; ++j) {
+
+        float r = uniform();
+        float s = uniform();
+        float t = uniform();
+        while( r+s+t > 1.0f) {
+          r = uniform();
+          s = uniform();
+          t = uniform();
+        }
+        Vec interpolated_normal = triangle.interpolate_normal(r, s, t);
+
+        // Verify unit length of normal.
+        float length = interpolated_normal.Length();
+        REQUIRE(length == Approx(1.f));
+
+        // Verify that interpolated normal is equal to actual normal
+        REQUIRE(interpolated_normal.x == Approx(normal.x));
+        REQUIRE(interpolated_normal.y == Approx(normal.y));
+        REQUIRE(interpolated_normal.z == Approx(normal.z));
+    }
+}
