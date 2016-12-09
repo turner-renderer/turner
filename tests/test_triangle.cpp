@@ -1,5 +1,6 @@
 #include "helper.h"
 #include "../lib/triangle.h"
+#include "../lib/xorshift.h"
 
 #include <catch.hpp>
 
@@ -27,6 +28,7 @@ TEST_CASE("Test Triangle normal", "[triangle]")
 TEST_CASE("Test interpolate triangle normal", "[triangle]")
 {
     static constexpr int NUM_SAMPLES = 100;
+    static xorshift64star<float> uniform{4};
 
     for (int j = 0; j < NUM_SAMPLES; ++j) {
         Triangle triangle = test_triangle( random_vec(), random_vec(),
