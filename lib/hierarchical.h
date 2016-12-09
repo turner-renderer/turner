@@ -7,6 +7,7 @@
 #include "types.h"
 
 #include <iostream>
+#include <sstream>
 #include <stack>
 
 std::array<Triangle, 4> subdivide4(const Triangle& tri) {
