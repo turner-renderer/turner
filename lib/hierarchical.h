@@ -10,7 +10,7 @@
 #include <sstream>
 #include <stack>
 
-std::array<Triangle, 4> subdivide4(const Triangle& tri) {
+inline std::array<Triangle, 4> subdivide4(const Triangle& tri) {
     const auto& a = tri.vertices[0];
     const auto& b = tri.vertices[1];
     const auto& c = tri.vertices[2];
@@ -29,10 +29,6 @@ std::array<Triangle, 4> subdivide4(const Triangle& tri) {
 
     auto copy_tri = [&tri](const Vec& a, const Vec& b, const Vec& c,
                            const Vec& na, const Vec& nb, const Vec& nc) {
-        // auto normal_diff = tri.normal - ((b - a) ^ (c - a)).Normalize();
-        // assert(is_eps_zero(normal_diff[0]));
-        // assert(is_eps_zero(normal_diff[1]));
-        // assert(is_eps_zero(normal_diff[2]));
         return Triangle{{a, b, c},       {na, nb, nc}, tri.ambient,
                         tri.diffuse,     tri.emissive, tri.reflective,
                         tri.reflectivity};
@@ -292,7 +288,7 @@ private:
 
         std::stack<std::pair<Quadnode*, Quadnode*>> node_stack;
         node_stack.push({&p, &q});
-        while(!node_stack.empty()) {
+        while (!node_stack.empty()) {
 
             auto pq = node_stack.top();
             node_stack.pop();
@@ -344,7 +340,7 @@ private:
     void gather_radiosity(Quadnode& in) {
         std::stack<Quadnode*> node_stack;
         node_stack.push(&in);
-        while(!node_stack.empty()) {
+        while (!node_stack.empty()) {
             auto& p = *node_stack.top();
             node_stack.pop();
 
