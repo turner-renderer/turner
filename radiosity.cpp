@@ -355,6 +355,10 @@ Options:
   --rad-simple-mesh                 Render mesh without depth overlapping.
   --rad-features-mesh               Render mesh of features.
   --rad-links                       Render hierarchical radiosity links.
+  --form-factor-eps=<float>         Link when form factor estimate is below [default: 0.04].
+                                    Hierarchical radiosity only.
+  --max-subdivisions=<int>          Maximum number of subdivisions for smallest
+                                    triangle [default: 3].
 )";
 
 int main(int argc, char const* argv[]) {
@@ -419,12 +423,16 @@ int main(int argc, char const* argv[]) {
         }
     } else if (args["hierarchical"].asBool()) {
         // compute minimal area
+        int max_subdivisions = args["--max-subdivisions"].asLong();
         float min_area = ::min(tree.triangles().begin(), tree.triangles().end(),
                                [](const Triangle& tri) { return tri.area(); });
-        min_area /= pow(4, 3);
+        min_area /= pow(4, max_subdivisions);
         std::cerr << "Minimal area: " << min_area << std::endl;
 
-        HierarchicalRadiosity model(tree, 0.04, min_area);
+        float F_eps = std::stof(args["--form-factor-eps"].asString());
+        std::cerr << "Form factor epsilon: " << F_eps << std::endl;
+
+        HierarchicalRadiosity model(tree, F_eps, min_area);
         auto triangles_with_rad = model.compute();
         KDTree refined_tree(std::move(triangles_with_rad.first));
         radiosity = triangles_with_rad.second;
