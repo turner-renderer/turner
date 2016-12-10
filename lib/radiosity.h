@@ -3,18 +3,25 @@
 #include "kdtree.h"
 
 /**
+ * Numerical integration of form factor from infinitesimal area to finite area.
+ *
+ * Cf. [CW93], 4.9, p. 91. and Algorithm 4.21.
+ *
  * The form factor between faces `from` (i) and `to` (j) is defined as
  *
  * F_ij = 1/A_i ∫_x ∫_y G'(x, y) dA_y dA_x
  *
- * Here, x and y are points on face i and j, A_i is the area of i, and A_i, and
- * A_j are infinitesimal areas around x and y. Further,
+ * Here, x and y are points on face i and j, A_i is an infinitesimal area on i
+ * around x, and A_j is the area of j. Further,
  *
  * G'(x, y) = V(x, y) * cos+(θ_i) * cos+(θ_j) / (π * ||x-y||^2), where
  *
  * V(x, y) - visibility indicator between x and y (1 if visible, 0 else)
  * θ_i - angle between normal of x and vector to y (ω)
  * θ_j - angle between normal of y and vector to x (-ω)
+ *
+ * @note When the distance from i to j is small relative to the size of j, the
+ *       result is inexact.
  *
  * @param  tree        Kd-tree used for determining V(x, y)
  * @param  from        Triangle i (does not need to be contained in tree)
