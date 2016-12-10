@@ -21,7 +21,6 @@ set(TESTS
     test_algorithm
     test_raster
     test_triangle
-    test_triangle_subdivision
 )
 
 foreach (TEST_NAME ${TESTS})
