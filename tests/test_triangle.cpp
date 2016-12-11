@@ -1,12 +1,10 @@
-#include "helper.h"
 #include "../lib/triangle.h"
-#include "../lib/hierarchical.h"
 #include "../lib/xorshift.h"
+#include "helper.h"
 
 #include <catch.hpp>
 
-TEST_CASE("Test Triangle normal", "[triangle]")
-{
+TEST_CASE("Test Triangle normal", "[triangle]") {
     static constexpr int NUM_SAMPLES = 100;
 
     for (int j = 0; j < NUM_SAMPLES; ++j) {
@@ -26,45 +24,22 @@ TEST_CASE("Test Triangle normal", "[triangle]")
     }
 }
 
-TEST_CASE("Test subdivision of triangle", "[triangle]")
-{
-    static constexpr int NUM_SAMPLES = 100;
-
-    for (int j = 0; j < NUM_SAMPLES; ++j) {
-        Triangle triangle = random_triangle();
-
-        auto triangles = subdivide4(triangle);
-
-        // Verify that all triangles have the same size.
-        REQUIRE(triangles[0].area() == Approx(triangles[1].area()));
-        REQUIRE(triangles[1].area() == Approx(triangles[2].area()));
-        REQUIRE(triangles[2].area() == Approx(triangles[3].area()));
-        REQUIRE(triangles[3].area() == Approx(triangles[0].area()));
-
-        // Verify sum of sub triangles to be full area.
-        float summed_area = triangles[0].area() + triangles[1].area() +
-            triangles[2].area() + triangles[3].area();
-        REQUIRE(summed_area == Approx(triangle.area()));
-    }
-}
-
-TEST_CASE("Test interpolate triangle normal", "[triangle]")
-{
+TEST_CASE("Test interpolate triangle normal", "[triangle]") {
     static constexpr int NUM_SAMPLES = 100;
     static xorshift64star<float> uniform{4};
 
     for (int j = 0; j < NUM_SAMPLES; ++j) {
-        Triangle triangle = test_triangle( random_vec(), random_vec(),
-            random_vec(), random_vec().Normalize(), random_vec().Normalize(),
-            random_vec().Normalize());
+        Triangle triangle = test_triangle(
+            random_vec(), random_vec(), random_vec(), random_vec().Normalize(),
+            random_vec().Normalize(), random_vec().Normalize());
 
         float r = uniform();
         float s = uniform();
         float t = uniform();
-        while( r+s+t > 1.0f) {
-          r = uniform();
-          s = uniform();
-          t = uniform();
+        while (r + s + t > 1.0f) {
+            r = uniform();
+            s = uniform();
+            t = uniform();
         }
         Vec normal = triangle.interpolate_normal(r, s, t);
 
@@ -74,23 +49,22 @@ TEST_CASE("Test interpolate triangle normal", "[triangle]")
     }
 }
 
-TEST_CASE("Test interpolate triangle normal with trivial case", "[triangle]")
-{
+TEST_CASE("Test interpolate triangle normal with trivial case", "[triangle]") {
     static constexpr int NUM_SAMPLES = 100;
     static xorshift64star<float> uniform{4};
 
     auto normal = random_vec().Normalize();
-    Triangle triangle = test_triangle( random_vec(), random_vec(),
-        random_vec(), normal, normal, normal);
+    Triangle triangle = test_triangle(random_vec(), random_vec(), random_vec(),
+                                      normal, normal, normal);
     for (int j = 0; j < NUM_SAMPLES; ++j) {
 
         float r = uniform();
         float s = uniform();
         float t = uniform();
-        while( r+s+t > 1.0f) {
-          r = uniform();
-          s = uniform();
-          t = uniform();
+        while (r + s + t > 1.0f) {
+            r = uniform();
+            s = uniform();
+            t = uniform();
         }
         Vec interpolated_normal = triangle.interpolate_normal(r, s, t);
 
