@@ -21,6 +21,7 @@ set(TESTS
     test_algorithm
     test_raster
     test_triangle
+    test_incidence
 )
 
 foreach (TEST_NAME ${TESTS})
