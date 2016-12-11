@@ -85,6 +85,10 @@ struct Vec2 {
 
 using Color = aiColor4D;
 
+inline Color operator/(const Color& c, size_t x) {
+    return c / static_cast<float>(x);
+}
+
 inline float fmin(float x, float y, float z) {
     return std::fmin(x, std::min(y, z));
 }
