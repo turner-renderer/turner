@@ -3,8 +3,7 @@
 
 template <typename Iter, typename ValueFun>
 auto min(Iter begin, Iter end, ValueFun&& get_value)
-    ->decltype(get_value(*begin))
-{
+    -> decltype(get_value(*begin)) {
     using value_type = decltype(get_value(*begin));
     auto min = std::numeric_limits<value_type>::max();
     for (auto it = begin; it != end; ++it) {
@@ -18,8 +17,7 @@ auto min(Iter begin, Iter end, ValueFun&& get_value)
 
 template <typename Iter, typename ValueFun>
 auto max(Iter begin, Iter end, ValueFun&& get_value)
-    ->decltype(get_value(*begin))
-{
+    -> decltype(get_value(*begin)) {
     using value_type = decltype(get_value(*begin));
     auto max = std::numeric_limits<value_type>::min();
     for (auto it = begin; it != end; ++it) {
@@ -31,3 +29,15 @@ auto max(Iter begin, Iter end, ValueFun&& get_value)
     return max;
 }
 
+template <typename Iter, typename ValueFun>
+auto avg(Iter begin, Iter end, ValueFun&& get_value)
+    -> decltype(get_value(*begin)) {
+    using value_type = decltype(get_value(*begin));
+    value_type avg{};
+    size_t count = 0;
+    for (auto it = begin; it != end; ++it) {
+        avg += get_value(*it);
+        count += 1;
+    }
+    return avg / count;
+}
