@@ -2,11 +2,12 @@
 #include "helper.h"
 #include <catch.hpp>
 
+#include <cmath>
 #include <random>
 
 namespace {
 constexpr float NUM_SAMPLES = 32;
-constexpr float TOLERANCE = 0.1f;
+constexpr float TOLERANCE = 0.01f;
 constexpr size_t NUM_RANDOM_TESTS = 50;
 
 std::pair<float, float> parallel_scenario(float a, float b, float c) {
@@ -94,9 +95,9 @@ TEST_CASE("Form factor of two orthogonal unit squares", "[form_factor]") {
     float F_ij, F_ji;
     std::tie(F_ij, F_ji) = orthogonal_scenario(1, 1, 1);
 
-    constexpr float F_EXPECTED = 0.2;
-    REQUIRE(F_ij == Approx(F_EXPECTED).epsilon(TOLERANCE));
-    REQUIRE(F_ji == Approx(F_EXPECTED).epsilon(TOLERANCE));
+    constexpr float F_EXPECTED = 0.20004; // cf. [CW93], Figure 4.25., p. 100
+    REQUIRE(F_ij == Approx(F_EXPECTED).epsilon(0.08));
+    REQUIRE(F_ji == Approx(F_EXPECTED).epsilon(0.08));
 }
 
 TEST_CASE(
@@ -109,7 +110,7 @@ TEST_CASE(
 TEST_CASE("Form factor of two orthogonal unit squares (analytically)",
           "[form_factor]") {
     float form_factor = form_factor_of_orthogonal_rects(1, 1, 1);
-    REQUIRE(form_factor == Approx(0.2).epsilon(0.0001));
+    REQUIRE(form_factor == Approx(0.20004).epsilon(0.0001));
 }
 
 TEST_CASE("Form factor of two random parallel rectangles", "[form_factor]") {
@@ -154,4 +155,17 @@ TEST_CASE("Form factor of two random orthogonal rectangles", "[form_factor]") {
     // Variance in Monte Carlo integration is too high, so we only require that
     // 99% of all checks pass.
     REQUIRE(2.0 * passed / NUM_RANDOM_TESTS > 0.99);
+}
+
+TEST_CASE("Form factor distance dependency", "[form_factor]") {
+    static constexpr size_t NUM_STEPS = 100;
+    for (size_t i = 0; i < NUM_STEPS; ++i) {
+        float distance = std::sqrt(static_cast<float>(i + 1));
+        float F_ij, F_ji;
+        std::tie(F_ij, F_ji) = parallel_scenario(1, 1, distance);
+
+        const float F_EXPECTED = form_factor_of_parallel_rects(1, 1, distance);
+        REQUIRE(F_ij == Approx(F_ij).epsilon(TOLERANCE));
+        REQUIRE(F_ji == Approx(F_ij).epsilon(TOLERANCE)); // reciprocity
+    }
 }
