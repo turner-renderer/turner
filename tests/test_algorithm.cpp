@@ -1,4 +1,5 @@
 #include "../lib/algorithm.h"
+#include "../lib/types.h"
 #include <catch.hpp>
 
 #include <algorithm>
@@ -42,4 +43,12 @@ TEST_CASE("Test average as int", "[algorithm]") {
     auto numbers = shuffled_sequence();
     float val = avg(numbers.begin(), numbers.end(), [](int x) { return x; });
     REQUIRE(val == 49);
+}
+
+TEST_CASE("Test average of Colors", "[algorithm]") {
+    std::vector<Color> colors = {Color(1, 1, 1, 1), Color(0, 0, 0, 0),
+                                 Color(0, 1, 1, 0), Color(1, 1, 1, 1)};
+    auto val =
+        avg(colors.begin(), colors.end(), [](const Color& x) { return x; });
+    REQUIRE(val == Color(2.f / 4, 3.f / 4, 3.f / 4, 2.f / 4));
 }

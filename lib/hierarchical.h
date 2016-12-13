@@ -196,6 +196,29 @@ public:
         return triangles;
     }
 
+    auto triangle_index() const {
+        std::unordered_map<TriangleId, TriangleId> index;
+        std::stack<const Quadnode*> stack;
+
+        // dfs for each node
+        for (const auto& root : nodes_) {
+            stack.push(&root);
+            while (!stack.empty()) {
+                const auto& p = *stack.top();
+                stack.pop();
+
+                if (p.is_leaf()) {
+                    index.emplace(p.tri_id, index.size());
+                } else {
+                    for (const auto& child : p.children) {
+                        stack.push(child.get());
+                    }
+                }
+            }
+        }
+        return index;
+    }
+
     auto radiosity() const {
         std::vector<Color /*rad*/> rad;
         std::stack<const Quadnode*> stack;
@@ -221,8 +244,10 @@ public:
     }
 
     auto radiosity_at_vertices() const {
+        // TODO: Would be better to do a single traversal instead of 3
         auto rad = radiosity();
         Incidence inc = incidence();
+        auto index = triangle_index();
 
         std::vector<Color /*rad*/> result;
         std::stack<const Quadnode*> stack;
@@ -239,12 +264,20 @@ public:
                     for (size_t i = 0; i < 3; ++i) {
                         const auto& vertex_incidence = inc.vertex_incidence(
                             {tri.vertices[i], tri.normals[i]});
-                        Color avg_rad = avg(
-                            vertex_incidence.begin(), vertex_incidence.end(),
-                            [&](TriangleId tri_id) { return rad[tri_id]; },
-                            Color(0, 0, 0, 0));
+                        // FIXME: See bug below
+                        // assert(vertex_incidence.size() <= 6);
+                        Color avg_rad =
+                            avg(vertex_incidence.begin(),
+                                vertex_incidence.end(), [&](TriangleId tri_id) {
+                                    // FIXME: Not only leaves are in the
+                                    // incidence set.
+                                    if (index.count(tri_id)) {
+                                        return rad.at(index.at(tri_id));
+                                    }
+                                    return Color();
+                                });
                         result.emplace_back(avg_rad);
-                        result.back().a = 1; // TODO
+                        result.back().a = 1; // TODO: Use 3-channels color
                     }
                 } else {
                     for (const auto& child : p.children) {
@@ -258,10 +291,13 @@ public:
 
     Incidence incidence() const {
         Incidence inc;
+        for (const auto& root : nodes_) {
+            inc.add_triangle(root.tri_id, get_triangle(root));
+        }
+
         std::stack<const Quadnode*> stack;
         for (const auto& root : nodes_) {
             stack.push(&root);
-            inc.add_triangle(root.tri_id, get_triangle(root));
             while (!stack.empty()) {
                 const auto& p = *stack.top();
                 stack.pop();
@@ -284,6 +320,7 @@ public:
                 }
             }
         }
+
         return inc;
     }
 

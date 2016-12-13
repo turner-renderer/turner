@@ -91,6 +91,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
     }
 
     // color interpolation
+    assert(3 * static_cast<size_t>(triangle_id) + 2 < tree.num_triangles());
     const auto& rad_a = radiosity[3 * static_cast<size_t>(triangle_id) + 0];
     const auto& rad_b = radiosity[3 * static_cast<size_t>(triangle_id) + 1];
     const auto& rad_c = radiosity[3 * static_cast<size_t>(triangle_id) + 2];
