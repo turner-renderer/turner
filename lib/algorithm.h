@@ -30,7 +30,7 @@ auto max(Iter begin, Iter end, ValueFun&& get_value)
 }
 
 template <typename Iter, typename ValueFun>
-auto avg(Iter begin, Iter end, ValueFun&& get_value)
+auto average(Iter begin, Iter end, ValueFun&& get_value)
     -> decltype(get_value(*begin)) {
     using value_type = decltype(get_value(*begin));
     value_type avg{};

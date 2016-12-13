@@ -1,5 +1,6 @@
 #pragma once
 
+#include "algorithm.h"
 #include "incidence.h"
 #include "kdtree.h"
 #include "output.h"
@@ -266,16 +267,16 @@ public:
                             {tri.vertices[i], tri.normals[i]});
                         // FIXME: See bug below
                         // assert(vertex_incidence.size() <= 6);
-                        Color avg_rad =
-                            avg(vertex_incidence.begin(),
-                                vertex_incidence.end(), [&](TriangleId tri_id) {
-                                    // FIXME: Not only leaves are in the
-                                    // incidence set.
-                                    if (index.count(tri_id)) {
-                                        return rad.at(index.at(tri_id));
-                                    }
-                                    return Color();
-                                });
+                        Color avg_rad = average(
+                            vertex_incidence.begin(), vertex_incidence.end(),
+                            [&](TriangleId tri_id) {
+                                // FIXME: Not only leaves are in the
+                                // incidence set.
+                                if (index.count(tri_id)) {
+                                    return rad.at(index.at(tri_id));
+                                }
+                                return Color();
+                            });
                         result.emplace_back(avg_rad);
                         result.back().a = 1; // TODO: Use 3-channels color
                     }
