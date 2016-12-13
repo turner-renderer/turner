@@ -3,6 +3,7 @@
 #include "lib/effects.h"
 #include "lib/gauss_seidel.h"
 #include "lib/hierarchical.h"
+#include "lib/incidence.h"
 #include "lib/lambertian.h"
 #include "lib/matrix.h"
 #include "lib/output.h"
@@ -381,11 +382,15 @@ Options:
   --inverse-gamma=<float>           Inverse of gamma for gamma correction
                                     [default: 0.454545].
   --no-gamma-correction             Disables gamma correction.
-  -e --exposure=<float>             Exposure of the image. [default: 1.0]
+  -e --exposure=<float>             Exposure of the image [default: 1.0].
   --rad-simple-mesh                 Render mesh without depth overlapping.
   --rad-features-mesh               Render mesh of features.
   --rad-links                       Render hierarchical radiosity links.
-  --form-factor-eps=<float>         Link when form factor estimate is below [default: 0.04].
+  --rad-exact                       Render hierarchical mesh with exact
+                                    radiosity solution.
+  --gouraud                         Enable gouraud shading [default: false].
+  --form-factor-eps=<float>         Link when form factor estimate is below
+                                    [default: 0.04].
                                     Hierarchical radiosity only.
   --max-subdivisions=<int>          Maximum number of subdivisions for smallest
                                     triangle [default: 3].
@@ -467,9 +472,18 @@ int main(int argc, char const* argv[]) {
         model.compute();
 
         KDTree refined_tree(model.triangles());
-        radiosity = model.radiosity_at_vertices();
-        assert(3 * refined_tree.num_triangles() == radiosity.size());
-        // radiosity = compute_radiosity(refined_tree);
+        Stats::instance().num_triangles = refined_tree.num_triangles();
+        Stats::instance().kdtree_height = refined_tree.height();
+
+        if (args["--rad-exact"] && args["--rad-exact"].asBool()) {
+            radiosity = compute_radiosity(refined_tree);
+        } else {
+            radiosity = model.radiosity();
+        }
+        if (args["--gouraud"] && args["--gouraud"].asBool()) {
+            radiosity = model.radiosity_at_vertices(radiosity);
+            assert(3 * refined_tree.num_triangles() == radiosity.size());
+        }
 
         image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
 

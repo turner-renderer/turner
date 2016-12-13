@@ -244,9 +244,8 @@ public:
         return rad;
     }
 
-    auto radiosity_at_vertices() const {
-        // TODO: Would be better to do a single traversal instead of 3
-        auto rad = radiosity();
+    auto radiosity_at_vertices(const std::vector<Color>& rad) const {
+        // TODO: Would be better to do a single traversal instead of 2
         Incidence inc = incidence();
         auto index = triangle_index();
 
