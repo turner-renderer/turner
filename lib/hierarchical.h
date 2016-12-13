@@ -144,7 +144,7 @@ public:
         return os.str();
     }
 
-    auto compute() {
+    void compute() {
         // Create quad nodes
         for (size_t i = 0; i < tree_->num_triangles(); ++i) {
             nodes_.emplace_back();
@@ -171,45 +171,120 @@ public:
 
         // Solve system
         solve_system();
+    }
 
-        // Return leaves
-        std::pair<std::vector<Triangle>, std::vector<Color /*rad*/>> out;
+    auto triangles() const {
+        std::vector<Triangle> triangles;
         std::stack<const Quadnode*> stack;
 
         // dfs for each node
         for (const auto& root : nodes_) {
             stack.push(&root);
-
-            std::cerr << "Root " << root.root_tri_id << std::endl;
-
             while (!stack.empty()) {
-                auto p = stack.top();
+                const auto& p = *stack.top();
                 stack.pop();
 
-                std::cerr << "Quadnode " << get_id(p) << std::endl;
-                std::cerr << "  Triangle: A = " << get_triangle(*p).area()
-                          << std::endl;
-                std::cerr << "  " << p->gathering_from.size() << " Links "
-                          << std::endl;
-                for (const auto& link : p->gathering_from) {
-                    std::cerr << "    <- " << get_id(link.q)
-                              << " with F = " << link.form_factor << std::endl;
-                }
-
-                std::cerr << get_id(p) << " : " << p->emission << std::endl;
-
-                if (p->is_leaf()) {
-                    out.first.emplace_back(get_triangle(*p));
-                    out.second.emplace_back(p->rad_shoot);
-                    out.second.back().a = 1; // TODO
+                if (p.is_leaf()) {
+                    triangles.emplace_back(get_triangle(p));
                 } else {
-                    for (const auto& child : p->children) {
+                    for (const auto& child : p.children) {
                         stack.push(child.get());
                     }
                 }
             }
         }
-        return out;
+        return triangles;
+    }
+
+    auto radiosity() const {
+        std::vector<Color /*rad*/> rad;
+        std::stack<const Quadnode*> stack;
+
+        // dfs for each node
+        for (const auto& root : nodes_) {
+            stack.push(&root);
+            while (!stack.empty()) {
+                const auto& p = *stack.top();
+                stack.pop();
+
+                if (p.is_leaf()) {
+                    rad.emplace_back(p.rad_shoot);
+                    rad.back().a = 1; // TODO
+                } else {
+                    for (const auto& child : p.children) {
+                        stack.push(child.get());
+                    }
+                }
+            }
+        }
+        return rad;
+    }
+
+    auto radiosity_at_vertices() const {
+        auto rad = radiosity();
+        Incidence inc = incidence();
+
+        std::vector<Color /*rad*/> result;
+        std::stack<const Quadnode*> stack;
+
+        // dfs for each node
+        for (const auto& root : nodes_) {
+            stack.push(&root);
+            while (!stack.empty()) {
+                const auto& p = *stack.top();
+                stack.pop();
+
+                if (p.is_leaf()) {
+                    const auto& tri = get_triangle(p);
+                    for (size_t i = 0; i < 3; ++i) {
+                        const auto& vertex_incidence = inc.vertex_incidence(
+                            {tri.vertices[i], tri.normals[i]});
+                        Color avg_rad = avg(
+                            vertex_incidence.begin(), vertex_incidence.end(),
+                            [&](TriangleId tri_id) { return rad[tri_id]; },
+                            Color(0, 0, 0, 0));
+                        result.emplace_back(avg_rad);
+                        result.back().a = 1; // TODO
+                    }
+                } else {
+                    for (const auto& child : p.children) {
+                        stack.push(child.get());
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    Incidence incidence() const {
+        Incidence inc;
+        std::stack<const Quadnode*> stack;
+        for (const auto& root : nodes_) {
+            stack.push(&root);
+            inc.add_triangle(root.tri_id, get_triangle(root));
+            while (!stack.empty()) {
+                const auto& p = *stack.top();
+                stack.pop();
+                if (!p.is_leaf()) {
+                    std::array<TriangleId, 4> children_ids = {
+                        p.children[0]->tri_id, p.children[1]->tri_id,
+                        p.children[2]->tri_id, p.children[3]->tri_id};
+                    std::array<const Triangle*, 4> children_tris = {
+                        &get_triangle(*p.children[0]),
+                        &get_triangle(*p.children[1]),
+                        &get_triangle(*p.children[2]),
+                        &get_triangle(*p.children[3])};
+
+                    inc.add_subdivision(p.tri_id, get_triangle(p), children_ids,
+                                        children_tris);
+
+                    for (const auto& child : p.children) {
+                        stack.push(child.get());
+                    }
+                }
+            }
+        }
+        return inc;
     }
 
 private:
@@ -388,6 +463,7 @@ private:
 private:
     std::vector<Quadnode> nodes_;
     Triangles subdivided_tris_;
+    Incidence incidence_;
 
     const KDTree* tree_;
     float F_eps_;

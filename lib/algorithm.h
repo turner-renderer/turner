@@ -41,3 +41,15 @@ auto avg(Iter begin, Iter end, ValueFun&& get_value)
     }
     return avg / count;
 }
+
+template <typename Iter, typename ValueFun>
+auto avg(Iter begin, Iter end, ValueFun&& get_value,
+         decltype(get_value(*begin)) init_val) -> decltype(get_value(*begin)) {
+    auto avg = init_val;
+    size_t count = 0;
+    for (auto it = begin; it != end; ++it) {
+        avg += get_value(*it);
+        count += 1;
+    }
+    return avg / count;
+}

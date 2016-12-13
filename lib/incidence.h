@@ -64,7 +64,9 @@ private:
     using TriangleIds = std::unordered_set<TriangleId>;
 
 public:
-    Incidence() = default;
+    bool empty() const {
+        return vertex_incidence_.empty() && side_incidence_.empty();
+    }
 
     const auto& vertex_incidence() const { return vertex_incidence_; }
 
@@ -85,7 +87,11 @@ public:
      */
     void add_subdivision(TriangleId tri_id, const Triangle& tri,
                          const std::array<TriangleId, 4>& children_ids,
-                         const std::array<Triangle, 4>& children);
+                         const std::array<const Triangle*, 4>& children);
+
+    size_t vertex_index(TriangleId tri_id, const TriangleVertex& vertex) const {
+        return vertex_index_.at({tri_id, vertex});
+    }
 
 private:
     /** Get triangle vertex by index */
@@ -123,13 +129,18 @@ private:
 private:
     std::unordered_map<TriangleVertex, TriangleIds> vertex_incidence_;
     std::unordered_map<TriangleSide, TriangleIds> side_incidence_;
+    std::unordered_map<std::pair<TriangleId, TriangleVertex>,
+                       size_t /* index */>
+        vertex_index_;
 };
 
 // -----------------------------------------------------------------------------
 
 inline void Incidence::add_triangle(TriangleId tri_id, const Triangle& tri) {
     for (size_t i = 0; i < 3; ++i) {
-        vertex_incidence_[vertex(tri, i)].insert(tri_id);
+        const auto& v = vertex(tri, i);
+        vertex_incidence_[v].insert(tri_id);
+        vertex_index_[{tri_id, v}] = i;
         side_incidence_[side(tri, i)].insert(tri_id);
     }
 }
@@ -137,14 +148,14 @@ inline void Incidence::add_triangle(TriangleId tri_id, const Triangle& tri) {
 inline void
 Incidence::add_subdivision(TriangleId tri_id, const Triangle& tri,
                            const std::array<TriangleId, 4>& children_ids,
-                           const std::array<Triangle, 4>& children) {
+                           const std::array<const Triangle*, 4>& children) {
     auto a = vertex(tri, 0);
     auto b = vertex(tri, 1);
     auto c = vertex(tri, 2);
 
-    auto mc = vertex(children[0], 1);
-    auto ma = vertex(children[1], 2);
-    auto mb = vertex(children[2], 0);
+    auto mc = vertex(*children[0], 1);
+    auto ma = vertex(*children[1], 2);
+    auto mb = vertex(*children[2], 0);
 
     auto side_c = side(tri, 0); // ab
     auto side_a = side(tri, 1); // bc
@@ -165,6 +176,24 @@ Incidence::add_subdivision(TriangleId tri_id, const Triangle& tri,
         auto it = vertex_incidence_[c].find(tri_id);
         assert(it != vertex_incidence_[c].end());
         vertex_incidence_[c].erase(it);
+    }
+    {
+        auto it = vertex_incidence_[ma].find(tri_id);
+        if (it != vertex_incidence_[ma].end()) {
+            vertex_incidence_[ma].erase(it);
+        }
+    }
+    {
+        auto it = vertex_incidence_[mb].find(tri_id);
+        if (it != vertex_incidence_[mb].end()) {
+            vertex_incidence_[mb].erase(it);
+        }
+    }
+    {
+        auto it = vertex_incidence_[mc].find(tri_id);
+        if (it != vertex_incidence_[mc].end()) {
+            vertex_incidence_[mc].erase(it);
+        }
     }
 
     // erase side incidence of current triangle
@@ -212,33 +241,74 @@ Incidence::add_subdivision(TriangleId tri_id, const Triangle& tri,
     side_incidence_[{mb, mc}].insert(children_ids[0]);
     side_incidence_[{mb, mc}].insert(children_ids[3]);
 
-    // add vertex incidences for new vertices
-    vertex_incidence_[mc].insert(children_ids[0]);
-    vertex_incidence_[mc].insert(children_ids[1]);
-    vertex_incidence_[mc].insert(children_ids[3]);
+    // add vertex incidences
+    for (size_t i = 0; i < 4; ++i) {
+        auto tri_id = children_ids[i];
+        for (size_t j = 0; j < 3; ++j) {
+            auto v = vertex(*children[i], j);
+            vertex_incidence_[v].insert(tri_id);
+        }
+    }
+
+    // remove current triangle from vertex incidences
+    for (size_t j = 0; j < 3; ++j) {
+        auto v = vertex(tri, j);
+        vertex_incidence_[v].erase(tri_id);
+    }
+
+    // vertex_incidence_[mc].insert(children_ids[0]);
+    // vertex_incidence_[mc].insert(children_ids[1]);
+    // vertex_incidence_[mc].insert(children_ids[3]);
     for (auto tri_id : side_incidence_[side_c]) {
         vertex_incidence_[mc].insert(tri_id);
     }
-    vertex_incidence_[ma].insert(children_ids[1]);
-    vertex_incidence_[ma].insert(children_ids[2]);
-    vertex_incidence_[ma].insert(children_ids[3]);
+    // vertex_incidence_[ma].insert(children_ids[1]);
+    // vertex_incidence_[ma].insert(children_ids[2]);
+    // vertex_incidence_[ma].insert(children_ids[3]);
     for (auto tri_id : side_incidence_[side_a]) {
         vertex_incidence_[ma].insert(tri_id);
     }
-    vertex_incidence_[mb].insert(children_ids[0]);
-    vertex_incidence_[mb].insert(children_ids[2]);
-    vertex_incidence_[mb].insert(children_ids[3]);
+    // vertex_incidence_[mb].insert(children_ids[0]);
+    // vertex_incidence_[mb].insert(children_ids[2]);
+    // vertex_incidence_[mb].insert(children_ids[3]);
     for (auto tri_id : side_incidence_[side_b]) {
         vertex_incidence_[mb].insert(tri_id);
     }
 
     // add children to vertex incidences
-    vertex_incidence_[a].insert(children_ids[0]);
-    vertex_incidence_[b].insert(children_ids[1]);
-    vertex_incidence_[c].insert(children_ids[2]);
+    // vertex_incidence_[a].insert(children_ids[0]);
+    // vertex_incidence_[b].insert(children_ids[1]);
+    // vertex_incidence_[c].insert(children_ids[2]);
 
-    // remove sides of current triangle completely
-    side_incidence_.erase(side_c);
-    side_incidence_.erase(side_a);
-    side_incidence_.erase(side_b);
+    // update vertex index
+    vertex_index_.erase({tri_id, a});
+    vertex_index_.erase({tri_id, b});
+    vertex_index_.erase({tri_id, c});
+
+    vertex_index_[{children_ids[0], a}] = 0;
+    vertex_index_[{children_ids[0], mc}] = 1;
+    vertex_index_[{children_ids[0], mb}] = 2;
+
+    vertex_index_[{children_ids[1], mc}] = 0;
+    vertex_index_[{children_ids[1], b}] = 1;
+    vertex_index_[{children_ids[1], ma}] = 2;
+
+    vertex_index_[{children_ids[2], mb}] = 0;
+    vertex_index_[{children_ids[2], ma}] = 1;
+    vertex_index_[{children_ids[2], c}] = 2;
+
+    vertex_index_[{children_ids[3], mc}] = 0;
+    vertex_index_[{children_ids[3], ma}] = 1;
+    vertex_index_[{children_ids[3], mb}] = 2;
+
+    // remove sides of current triangle completely if empty
+    if (side_incidence_[side_c].empty()) {
+        side_incidence_.erase(side_c);
+    }
+    if (side_incidence_[side_a].empty()) {
+        side_incidence_.erase(side_a);
+    }
+    if (side_incidence_[side_b].empty()) {
+        side_incidence_.erase(side_b);
+    }
 }
