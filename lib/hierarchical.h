@@ -85,8 +85,9 @@ class HierarchicalRadiosity {
     };
 
 public:
-    explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps)
-        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps){};
+    explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
+            size_t max_iterations)
+        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), max_iterations_(max_iterations){};
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -161,6 +162,7 @@ public:
         }
 
         // Refine
+        std::cerr << "Refine nodes...";
         for (auto& p : nodes_) {
             for (auto& q : nodes_) {
                 if (p.root_tri_id == q.root_tri_id) {
@@ -169,9 +171,12 @@ public:
                 refine(p, q);
             }
         }
+        std::cerr << "done." << std::endl;
 
         // Solve system
+        std::cerr << "Solve system...";
         solve_system();
+        std::cerr << "done." << std::endl;
     }
 
     auto triangles() const {
@@ -448,8 +453,7 @@ private:
     }
 
     void solve_system() {
-        constexpr size_t MAX_ITERATIONS = 1000;
-        size_t iteration = MAX_ITERATIONS;
+        size_t iteration = max_iterations_;
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -505,4 +509,5 @@ private:
     const KDTree* tree_;
     float F_eps_;
     float A_eps_;
+    int max_iterations_;
 };

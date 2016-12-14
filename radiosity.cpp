@@ -394,6 +394,8 @@ Options:
                                     Hierarchical radiosity only.
   --max-subdivisions=<int>          Maximum number of subdivisions for smallest
                                     triangle [default: 3].
+  --max-iterations=<int>            Maximum iterations to solve system
+                                    [default: 1000].
 )";
 
 int main(int argc, char const* argv[]) {
@@ -468,7 +470,10 @@ int main(int argc, char const* argv[]) {
         float F_eps = std::stof(args["--form-factor-eps"].asString());
         std::cerr << "Form factor epsilon: " << F_eps << std::endl;
 
-        HierarchicalRadiosity model(tree, F_eps, min_area);
+        size_t max_iterations = args["--max-iterations"].asLong();
+        std::cerr << "Maximum iterations: " << max_iterations << std::endl;
+
+        HierarchicalRadiosity model(tree, F_eps, min_area, max_iterations);
         model.compute();
 
         KDTree refined_tree(model.triangles());
