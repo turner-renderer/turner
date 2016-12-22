@@ -55,8 +55,8 @@ class HierarchicalRadiosity {
      * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
-        const Quadnode* q; // shooting node
-        float form_factor; // form factor F_pq, where q is the owner node
+        Quadnode* q; // shooting node
+        float form_factor; // form factor F_pq, where p is the owner node
     };
 
     struct Quadnode {
@@ -86,8 +86,9 @@ class HierarchicalRadiosity {
 
 public:
     explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
-            size_t max_iterations)
-        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), max_iterations_(max_iterations){};
+            size_t max_iterations, float BF_eps)
+        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), BF_eps_(BF_eps),
+          max_iterations_(max_iterations){};
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -173,10 +174,21 @@ public:
         }
         std::cerr << "done." << std::endl;
 
-        // Solve system
-        std::cerr << "Solve system...";
-        solve_system();
-        std::cerr << "done." << std::endl;
+        // Solve system and refine links
+        bool done = false;
+        while (!done) {
+            done = true;
+
+            std::cerr << "Solve system...";
+            solve_system();
+            std::cerr << "done." << std::endl;
+
+            std::cerr << "Refine links...";
+            if(!refine_links()) {
+                done = false;
+            }
+            std::cerr << "done." << std::endl;
+        }
     }
 
     auto triangles() const {
@@ -465,6 +477,117 @@ private:
         }
     }
 
+    /**
+     * Refine all links in all nodes.
+     * @return true if links have been refined.
+     */
+    bool refine_links() {
+        bool done = true;
+        for (auto& p : nodes_) {
+            if(!refine_links(p)) {
+                done = false;
+            }
+        }
+        return done;
+    }
+
+    /**
+     * Refine all links in node p.
+     * @return true if a link has been refined.
+     */
+    bool refine_links(Quadnode& p) {
+        bool done = true;
+
+        // We create a copy of gathering links because refine_link might remove
+        // elements.
+        // TODO: Avoid the copy
+        std::vector<Linknode> links = p.gathering_from;
+        for (auto& link: links) {
+            if (!refine_link(p, link)) {
+                done = false;
+            }
+        }
+
+        // Recursive for all child nodes.
+        // TODO: Use stack instead.
+        // TODO: BUG children will have refined links already. BAD.
+        if (!p.is_leaf()) {
+            for (auto& child: p.children) {
+                if(!refine_links(*child.get())) {
+                    done = false;
+                }
+            }
+        }
+        return done;
+    }
+
+    /**
+     * Refine link of receiver node p.
+     *
+     * @param q receiver node
+     * @param link link between shooter and receiver node
+     * @return true if a link has been refined.
+     */
+    bool refine_link(Quadnode& q, Linknode& link_node) {
+        bool no_subdivision = true;
+
+        // Shooter node p
+        Quadnode& p = *link_node.q;
+
+        const Triangle& tri_q = get_triangle(q);
+        const Triangle& tri_p = get_triangle(p);
+
+        auto oracle = p.rad_shoot * tri_p.area() * link_node.form_factor;
+        //std::cerr << oracle << std::endl;
+        if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
+            std::cerr << "Refine link.." << std::endl;
+            no_subdivision = false;
+
+            float F_qp = link_node.form_factor;
+            float F_pq = F_qp * tri_q.area() / tri_p.area();
+
+            // Remove p from q's gather nodes. It's safe because we are
+            // iterating over it's copy.
+            // TODO: Make gather_from an unordered set for fast delete.
+            std::cerr << "Remove link." << std::endl;
+            for (auto it = q.gathering_from.begin(); it != q.gathering_from.end();) {
+                if (it->q->tri_id == p.tri_id) {
+                    it = q.gathering_from.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // Decide which side to subdivide. See refine()
+            if (F_qp < F_pq) {
+                if (subdivide(q)) {
+                    // We've subdivided reciever node q. So all children of q
+                    // should gather from p now.
+                    for (auto& child : q.children) {
+                        link(*child.get(), p);
+                    }
+                } else {
+                    // We could not subdivide so relink
+                    link(q, p);
+                    no_subdivision = true;
+                }
+            } else {
+                if (subdivide(p)) {
+                    // We've subdivided shooter node p. So receiver node q
+                    // should gather from all children of p now.
+                    for (auto& child : p.children) {
+                        link(q, *child.get());
+                    }
+                } else {
+                    // We could not subdivide so relink
+                    link(q, p);
+                    no_subdivision = true;
+                }
+            }
+        }
+        return no_subdivision;
+    }
+
     void gather_radiosity(Quadnode& in) {
         std::stack<Quadnode*> node_stack;
         node_stack.push(&in);
@@ -509,5 +632,6 @@ private:
     const KDTree* tree_;
     float F_eps_;
     float A_eps_;
+    float BF_eps_;
     int max_iterations_;
 };
