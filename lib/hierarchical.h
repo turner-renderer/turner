@@ -524,63 +524,63 @@ private:
     /**
      * Refine link of receiver node p.
      *
-     * @param q receiver node
+     * @param p receiver node
      * @param link link between shooter and receiver node
      * @return true if a link has been refined.
      */
-    bool refine_link(Quadnode& q, Linknode& link_node) {
+    bool refine_link(Quadnode& p, Linknode& link_node) {
         bool no_subdivision = true;
 
         // Shooter node p
-        Quadnode& p = *link_node.q;
+        Quadnode& q = *link_node.q;
 
-        const Triangle& tri_q = get_triangle(q);
         const Triangle& tri_p = get_triangle(p);
+        const Triangle& tri_q = get_triangle(q);
 
-        auto oracle = p.rad_shoot * tri_p.area() * link_node.form_factor;
+        auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
         //std::cerr << oracle << std::endl;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
             std::cerr << "Refine link.." << std::endl;
             no_subdivision = false;
 
-            float F_qp = link_node.form_factor;
-            float F_pq = F_qp * tri_q.area() / tri_p.area();
+            float F_pq = link_node.form_factor;
+            float F_qp = F_pq * tri_p.area() / tri_q.area();
 
             // Remove p from q's gather nodes. It's safe because we are
             // iterating over it's copy.
             // TODO: Make gather_from an unordered set for fast delete.
             std::cerr << "Remove link." << std::endl;
-            for (auto it = q.gathering_from.begin(); it != q.gathering_from.end();) {
-                if (it->q->tri_id == p.tri_id) {
-                    it = q.gathering_from.erase(it);
+            for (auto it = p.gathering_from.begin(); it != p.gathering_from.end();) {
+                if (it->q->tri_id == q.tri_id) {
+                    it = p.gathering_from.erase(it);
                 } else {
                     ++it;
                 }
             }
 
             // Decide which side to subdivide. See refine()
-            if (F_qp < F_pq) {
-                if (subdivide(q)) {
-                    // We've subdivided reciever node q. So all children of q
-                    // should gather from p now.
-                    for (auto& child : q.children) {
-                        link(*child.get(), p);
+            if (F_pq < F_qp) {
+                if (subdivide(p)) {
+                    // We've subdivided reciever node p. So all children of p
+                    // should gather from q now.
+                    for (auto& child : p.children) {
+                        link(*child.get(), q);
                     }
                 } else {
                     // We could not subdivide so relink
-                    link(q, p);
+                    link(p, q);
                     no_subdivision = true;
                 }
             } else {
-                if (subdivide(p)) {
-                    // We've subdivided shooter node p. So receiver node q
-                    // should gather from all children of p now.
-                    for (auto& child : p.children) {
-                        link(q, *child.get());
+                if (subdivide(q)) {
+                    // We've subdivided shooter node q. So receiver node p
+                    // should gather from all children of q now.
+                    for (auto& child : q.children) {
+                        link(p, *child.get());
                     }
                 } else {
                     // We could not subdivide so relink
-                    link(q, p);
+                    link(p, q);
                     no_subdivision = true;
                 }
             }
