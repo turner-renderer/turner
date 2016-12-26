@@ -373,6 +373,16 @@ private:
     bool refine_links(Quadnode& p) {
         bool done = true;
 
+        // Process all child nodes first.
+        if (!p.is_leaf()) {
+            for (auto& child: p.children) {
+                if(!refine_links(*child.get())) {
+                    done = false;
+                }
+            }
+        }
+
+        // Post-order: Process links.
         // We create a copy of gathering links because refine_link might remove
         // elements.
         // TODO: Avoid the copy
@@ -383,16 +393,6 @@ private:
             }
         }
 
-        // Recursive for all child nodes.
-        // TODO: Use stack instead.
-        // TODO: BUG children will have refined links already. BAD.
-        if (!p.is_leaf()) {
-            for (auto& child: p.children) {
-                if(!refine_links(*child.get())) {
-                    done = false;
-                }
-            }
-        }
         return done;
     }
 
