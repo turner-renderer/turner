@@ -170,16 +170,12 @@ public:
         // Solve system and refine links
         bool done = false;
         while (!done) {
-            done = true;
-
             std::cerr << "Solve system...";
             solve_system();
             std::cerr << "done." << std::endl;
 
             std::cerr << "Refine links...";
-            if(refine_links()) {
-                done = false;
-            }
+            done = !refine_links();
             std::cerr << "done." << std::endl;
         }
 
@@ -354,21 +350,20 @@ private:
 
     /**
      * Refine all links in all nodes.
-     * @return true if a link has been refined.
+     * @return true if at least one link has been refined.
      */
     bool refine_links() {
         bool refined = false;
         for (auto& p : nodes_) {
-            if(refine_links(p)) {
-                refined = true;
-            }
+            refined |= refine_links(p);
         }
+
         return refined;
     }
 
     /**
      * Refine all links in node p.
-     * @return true if a link has been refined.
+     * @return true if at least one link has been refined.
      */
     bool refine_links(Quadnode& p) {
         bool refined = false;
@@ -376,9 +371,7 @@ private:
         // Process all child nodes first.
         if (!p.is_leaf()) {
             for (auto& child: p.children) {
-                if(refine_links(*child.get())) {
-                    refined = true;
-                }
+                refined |= refine_links(*child.get());
             }
         }
 
@@ -391,8 +384,9 @@ private:
         while (i < size) {
             if (refine_link(p, links[i])) {
                 links.erase(links.begin() + i);
-                refined = true;
                 --size;
+
+                refined |= true;
             } else {
                 ++i;
             }
