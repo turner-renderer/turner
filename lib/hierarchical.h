@@ -177,7 +177,7 @@ public:
             std::cerr << "done." << std::endl;
 
             std::cerr << "Refine links...";
-            if(!refine_links()) {
+            if(refine_links()) {
                 done = false;
             }
             std::cerr << "done." << std::endl;
@@ -354,16 +354,16 @@ private:
 
     /**
      * Refine all links in all nodes.
-     * @return true if links have been refined.
+     * @return true if a link has been refined.
      */
     bool refine_links() {
-        bool done = true;
+        bool refined = false;
         for (auto& p : nodes_) {
-            if(!refine_links(p)) {
-                done = false;
+            if(refine_links(p)) {
+                refined = true;
             }
         }
-        return done;
+        return refined;
     }
 
     /**
@@ -371,13 +371,13 @@ private:
      * @return true if a link has been refined.
      */
     bool refine_links(Quadnode& p) {
-        bool done = true;
+        bool refined = false;
 
         // Process all child nodes first.
         if (!p.is_leaf()) {
             for (auto& child: p.children) {
-                if(!refine_links(*child.get())) {
-                    done = false;
+                if(refine_links(*child.get())) {
+                    refined = true;
                 }
             }
         }
@@ -388,12 +388,12 @@ private:
         // TODO: Avoid the copy
         std::vector<Linknode> links = p.gathering_from;
         for (auto& link: links) {
-            if (!refine_link(p, link)) {
-                done = false;
+            if (refine_link(p, link)) {
+                refined = true;
             }
         }
 
-        return done;
+        return refined;
     }
 
     /**
@@ -404,7 +404,7 @@ private:
      * @return true if a link has been refined.
      */
     bool refine_link(Quadnode& p, Linknode& link_node) {
-        bool no_subdivision = true;
+        bool refined = false;
 
         // Shooter node p
         Quadnode& q = *link_node.q;
@@ -416,7 +416,7 @@ private:
         //std::cerr << oracle << std::endl;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
             std::cerr << "Refine link.." << std::endl;
-            no_subdivision = false;
+            refined = true;
 
             float F_pq = link_node.form_factor;
             float F_qp = F_pq * tri_p.area() / tri_q.area();
@@ -444,7 +444,7 @@ private:
                 } else {
                     // We could not subdivide so relink
                     link(p, q);
-                    no_subdivision = true;
+                    refined = false;
                 }
             } else {
                 if (subdivide(q)) {
@@ -456,11 +456,11 @@ private:
                 } else {
                     // We could not subdivide so relink
                     link(p, q);
-                    no_subdivision = true;
+                    refined = false;
                 }
             }
         }
-        return no_subdivision;
+        return refined;
     }
 
     void gather_radiosity(Quadnode& in) {
