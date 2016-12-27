@@ -409,7 +409,6 @@ private:
      * @return true if a link has been refined.
      */
     bool refine_link(Quadnode& p, Linknode& link_node) {
-        bool refined = false;
 
         // Shooter node p
         Quadnode& q = *link_node.q;
@@ -428,28 +427,28 @@ private:
             // Decide which side to subdivide. See refine()
             if (F_pq < F_qp) {
                 if (subdivide(p)) {
-                    refined = true;
-
                     // We've subdivided reciever node p. So all children of p
                     // should gather from q now.
                     for (auto& child : p.children) {
                         link(*child.get(), q);
                     }
+
+                    return true;
                 }
             } else {
                 if (subdivide(q)) {
-                    refined = true;
-
                     // We've subdivided shooter node q. So receiver node p
                     // should gather from all children of q now.
                     for (auto& child : q.children) {
                         link(p, *child.get());
                     }
+
+                    return true;
                 }
             }
         }
 
-        return refined;
+        return false;
     }
 
     void gather_radiosity(Quadnode& in) {
