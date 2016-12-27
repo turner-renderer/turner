@@ -55,8 +55,8 @@ class HierarchicalRadiosity {
      * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
-        const Quadnode* q; // shooting node
-        float form_factor; // form factor F_pq, where q is the owner node
+        Quadnode* q; // shooting node
+        float form_factor; // form factor F_pq, where p is the owner node
     };
 
     struct Quadnode {
@@ -86,8 +86,9 @@ class HierarchicalRadiosity {
 
 public:
     explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
-            size_t max_iterations)
-        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), max_iterations_(max_iterations){};
+            size_t max_iterations, float BF_eps)
+        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), BF_eps_(BF_eps),
+          max_iterations_(max_iterations){};
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -173,10 +174,21 @@ public:
         }
         std::cerr << "done." << std::endl;
 
-        // Solve system
-        std::cerr << "Solve system...";
-        solve_system();
-        std::cerr << "done." << std::endl;
+        // Solve system and refine links
+        bool done = false;
+        while (!done) {
+            done = true;
+
+            std::cerr << "Solve system...";
+            solve_system();
+            std::cerr << "done." << std::endl;
+
+            std::cerr << "Refine links...";
+            if(refine_links()) {
+                done = false;
+            }
+            std::cerr << "done." << std::endl;
+        }
     }
 
     auto triangles() const {
@@ -465,6 +477,103 @@ private:
         }
     }
 
+    /**
+     * Refine all links in all nodes.
+     * @return true if at least one link has been refined.
+     */
+    bool refine_links() {
+        bool refined = false;
+        for (auto& p : nodes_) {
+            refined |= refine_links(p);
+        }
+
+        return refined;
+    }
+
+    /**
+     * Refine all links in node p.
+     * @return true if at least one link has been refined.
+     */
+    bool refine_links(Quadnode& p) {
+        bool refined = false;
+
+        // Process all child nodes first.
+        if (!p.is_leaf()) {
+            for (auto& child: p.children) {
+                refined |= refine_links(*child.get());
+            }
+        }
+
+        // Post-order: Process links.
+        // Remove link if we refined. Note: new links might be added that's why
+        // we keep track of the old size.
+        std::vector<Linknode>& links = p.gathering_from;
+        size_t size = links.size();
+        size_t i = 0;
+        while (i < size) {
+            if (refine_link(p, links[i])) {
+                links.erase(links.begin() + i);
+                --size;
+
+                refined |= true;
+            } else {
+                ++i;
+            }
+        }
+
+        return refined;
+    }
+
+    /**
+     * Refine link of receiver node p.
+     *
+     * @param p receiver node
+     * @param link link between shooter and receiver node
+     * @return true if a link has been refined.
+     */
+    bool refine_link(Quadnode& p, Linknode& link_node) {
+
+        // Shooter node p
+        Quadnode& q = *link_node.q;
+
+        const Triangle& tri_p = get_triangle(p);
+        const Triangle& tri_q = get_triangle(q);
+
+        auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
+        //std::cerr << oracle << std::endl;
+        if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
+            std::cerr << "Refine link.." << std::endl;
+
+            float F_pq = link_node.form_factor;
+            float F_qp = F_pq * tri_p.area() / tri_q.area();
+
+            // Decide which side to subdivide. See refine()
+            if (F_pq < F_qp) {
+                if (subdivide(p)) {
+                    // We've subdivided reciever node p. So all children of p
+                    // should gather from q now.
+                    for (auto& child : p.children) {
+                        link(*child.get(), q);
+                    }
+
+                    return true;
+                }
+            } else {
+                if (subdivide(q)) {
+                    // We've subdivided shooter node q. So receiver node p
+                    // should gather from all children of q now.
+                    for (auto& child : q.children) {
+                        link(p, *child.get());
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     void gather_radiosity(Quadnode& in) {
         std::stack<Quadnode*> node_stack;
         node_stack.push(&in);
@@ -509,5 +618,6 @@ private:
     const KDTree* tree_;
     float F_eps_;
     float A_eps_;
+    float BF_eps_;
     int max_iterations_;
 };

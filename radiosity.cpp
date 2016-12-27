@@ -392,6 +392,8 @@ Options:
   --form-factor-eps=<float>         Link when form factor estimate is below
                                     [default: 0.04].
                                     Hierarchical radiosity only.
+  --rad-shoot-eps=<float>           Refine link when shooting radiosity times
+                                    form factor is too high [default: 1e-6].
   --max-subdivisions=<int>          Maximum number of subdivisions for smallest
                                     triangle [default: 3].
   --max-iterations=<int>            Maximum iterations to solve system
@@ -473,7 +475,10 @@ int main(int argc, char const* argv[]) {
         size_t max_iterations = args["--max-iterations"].asLong();
         std::cerr << "Maximum iterations: " << max_iterations << std::endl;
 
-        HierarchicalRadiosity model(tree, F_eps, min_area, max_iterations);
+        float BF_eps = std::stof(args["--rad-shoot-eps"].asString());
+        std::cerr << "Shooting radiosity epsilon: " << BF_eps << std::endl;
+
+        HierarchicalRadiosity model(tree, F_eps, min_area, max_iterations, BF_eps);
         model.compute();
 
         KDTree refined_tree(model.triangles());
