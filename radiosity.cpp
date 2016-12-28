@@ -361,6 +361,8 @@ Options:
                                     form factor is too high [default: 1e-6].
   --max-subdivisions=<int>          Maximum number of subdivisions for smallest
                                     triangle [default: 3].
+  --max-iterations=<int>            Maximum iterations to solve system
+                                    [default: 1000].
 )";
 
 int main(int argc, char const* argv[]) {

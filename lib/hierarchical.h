@@ -335,8 +335,7 @@ private:
     }
 
     void solve_system() {
-        constexpr size_t MAX_ITERATIONS = 1000;
-        size_t iteration = MAX_ITERATIONS;
+        size_t iteration = max_iterations_;
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
