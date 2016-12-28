@@ -2,6 +2,7 @@
 
 #include "functional.h"
 #include "triangle.h"
+#include "types.h"
 
 #include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
 #include <OpenMesh/Core/Utils/PropertyManager.hh>
@@ -18,6 +19,10 @@ using CornerVertices =
     OpenMesh::FPropHandleT<std::array<RadiosityMesh::VertexHandle, 3>>;
 using CornerVerticesProperty =
     OpenMesh::PropertyManager<CornerVertices, RadiosityMesh>;
+
+using RadiosityHandle = OpenMesh::FPropHandleT<Color>;
+using RadiosityHandleProperty =
+    OpenMesh::PropertyManager<RadiosityHandle, RadiosityMesh>;
 
 namespace detail {
 auto get_halfedge_handle(const RadiosityMesh& mesh,
@@ -218,4 +223,28 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
                                       mesh.to_vertex_handle(he_3)};
 
     return faces;
+}
+
+const auto& triangle_vertices(const RadiosityMesh& mesh,
+                              const RadiosityMesh::FaceHandle face) {
+    CornerVertices prop_handle;
+    mesh.get_property_handle(prop_handle, "corner_vertices");
+    const auto& corners = mesh.property(prop_handle, face);
+    return corners;
+}
+
+auto triangle_midpoint(const RadiosityMesh& mesh,
+                       const std::array<RadiosityMesh::VertexHandle, 3>& vs) {
+    const auto& a = mesh.point(vs[0]);
+    const auto& b = mesh.point(vs[1]);
+    const auto& c = mesh.point(vs[2]);
+    return (a + b + c) / 3.f;
+}
+
+auto triangle_normal(const RadiosityMesh& mesh,
+                     const std::array<RadiosityMesh::VertexHandle, 3>& vs) {
+    const auto& a = mesh.point(vs[0]);
+    const auto& b = mesh.point(vs[1]);
+    const auto& c = mesh.point(vs[2]);
+    return ((b - a) % (c - a)).normalize();
 }
