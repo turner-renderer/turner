@@ -36,19 +36,20 @@ inline std::array<Triangle, 4> subdivide4(const Triangle& tri) {
 
     return {
         copy_tri(a, mc, mb, na, nmc, nmb), copy_tri(mc, b, ma, nmc, nb, nma),
-        copy_tri(ma, c, mb, nma, nc, nmb), copy_tri(mb, mc, ma, nmb, nmc, nma)};
+        copy_tri(mb, ma, c, nmb, nma, nc), copy_tri(mb, mc, ma, nmb, nmc, nma)};
 };
 
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
-    using OptionalId = KDTree::OptionalId;
 
     struct Quadnode;
 
     /**
-     * Links owner node p to q, s.t. p gathers radiosity from q. In particular,
-     * form_factor is F_pq.
+     * Links a node p to a node q.
+     *
+     * The node p is always the owner of the link. A link from p to q means that
+     * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
         Quadnode* q; // shooting node
@@ -64,9 +65,9 @@ class HierarchicalRadiosity {
         }
 
         TriangleId root_tri_id; // original parent triangle from scene
-        OptionalId tri_id;      // underlying triangle (if this quadnode
-                                // represents a root node, then this is an
-                                // invalid id)
+        TriangleId tri_id;      // underlying triangle (if this quadnode
+                                // represents a root node, then this is equal
+                                // to root_tri_id)
         float area;
 
         Color rad_gather; // gathering radiosity
@@ -134,7 +135,7 @@ public:
 
     std::string get_id(const Quadnode* p) {
         std::stringstream os;
-        if (p->tri_id) {
+        if (!is_root(*p)) {
             os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
                << ")";
         } else {
@@ -149,6 +150,7 @@ public:
             nodes_.emplace_back();
 
             nodes_.back().root_tri_id = i;
+            nodes_.back().tri_id = i;
             const auto& tri = (*tree_)[i];
             nodes_.back().area = tri.area();
             nodes_.back().rad_gather = Color(); // black
@@ -228,11 +230,20 @@ public:
     }
 
 private:
+
+    TriangleId next_triangle_id() const {
+        return tree_->num_triangles() + subdivided_tris_.size();
+    }
+
+    bool is_root(const Quadnode& p) const {
+        return p.tri_id < tree_->num_triangles();
+    }
+
     const Triangle& get_triangle(const Quadnode& p) const {
-        if (!p.tri_id) {
+        if (is_root(p)) {
             return (*tree_)[p.root_tri_id];
         }
-        return subdivided_tris_[p.tri_id];
+        return subdivided_tris_[p.tri_id - tree_->num_triangles()];
     }
 
     float estimate_form_factor(const Quadnode& p, const Quadnode& q) const {
@@ -276,7 +287,7 @@ private:
             qnode->emission = p.emission;
             qnode->area = p_area_4;
             qnode->rho = p.rho;
-            qnode->tri_id = OptionalId(subdivided_tris_.size());
+            qnode->tri_id = next_triangle_id();
             qnode->root_tri_id = p.root_tri_id;
 
             // add a new subdivided traingle
