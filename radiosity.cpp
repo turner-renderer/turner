@@ -51,7 +51,7 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
 }
 
 Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
-            const RadiosityMesh& mesh, const RadiosityHandle& rad,
+            const RadiosityMesh& mesh, const FaceRadiosityHandle& rad,
             const Configuration& conf) {
     Stats::instance().num_rays += 1;
 
@@ -85,6 +85,37 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
     const auto& rad_a = radiosity[3 * static_cast<size_t>(triangle_id) + 0];
     const auto& rad_b = radiosity[3 * static_cast<size_t>(triangle_id) + 1];
     const auto& rad_c = radiosity[3 * static_cast<size_t>(triangle_id) + 2];
+
+    auto rad = (1 - s - t) * rad_a + s * rad_b + t * rad_c;
+    rad.a = 1; // TODO
+    return rad;
+}
+
+Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
+                    const RadiosityMesh& mesh,
+                    const VertexRadiosityHandle& vrad,
+                    const Configuration& conf) {
+    Stats::instance().num_rays += 1;
+
+    // intersection
+    float dist_to_triangle, s, t;
+    auto triangle_id =
+        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+    if (!triangle_id) {
+        return conf.bg_color;
+    }
+
+    // TODO: do it outside
+    CornerVertices corners;
+    auto exists = mesh.get_property_handle(corners, "corner_vertices");
+    assert(exists);
+    RadiosityMesh::FaceHandle face(static_cast<size_t>(triangle_id));
+    const auto& vs = mesh.property(corners, face);
+
+    // color interpolation
+    const auto& rad_a = mesh.property(vrad, vs[0]);
+    const auto& rad_b = mesh.property(vrad, vs[1]);
+    const auto& rad_c = mesh.property(vrad, vs[2]);
 
     auto rad = (1 - s - t) * rad_a + s * rad_b + t * rad_c;
     rad.a = 1; // TODO
@@ -269,21 +300,31 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
 
-    RadiosityHandle rad_handle;
-    bool exists = mesh.get_property_handle(rad_handle, "radiosity");
+    FaceRadiosityHandle frad;
+    bool exists;
+    exists = mesh.get_property_handle(frad, "face_radiosity");
+    assert(exists);
+    VertexRadiosityHandle vrad;
+    exists = mesh.get_property_handle(vrad, "vertex_radiosity");
     assert(exists);
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh,
-                                         &rad_handle, y, &conf]() {
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
+                                         &vrad, y, &conf]() {
             for (size_t x = 0; x < image.width(); ++x) {
                 for (int i = 0; i < conf.num_pixel_samples; ++i) {
                     auto cam_dir = cam.raster2cam(
                         aiVector2D(x, y), image.width(), image.height());
 
                     Stats::instance().num_prim_rays += 1;
-                    image(x, y) += trace(cam.mPosition, cam_dir, tree, mesh,
-                                         rad_handle, conf);
+
+                    if (!conf.rad_gouraud_enabled) {
+                        image(x, y) += trace(cam.mPosition, cam_dir, tree, mesh,
+                                             frad, conf);
+                    } else {
+                        image(x, y) += trace_gouraud(cam.mPosition, cam_dir,
+                                                     tree, mesh, vrad, conf);
+                    }
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -488,13 +529,15 @@ int main(int argc, char const* argv[]) {
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity");
 
-    const Configuration conf{1, 0, 1, 0 // unused configuration arguments
-                             ,
-                             args["--threads"].asLong(),
-                             args["--background"].asString(),
-                             std::stof(args["--inverse-gamma"].asString()),
-                             args["--no-gamma-correction"].asBool(), 1,
-                             std::stof(args["--exposure"].asString())};
+    Configuration conf{1, 0, 1, 0 // unused configuration arguments
+                       ,
+                       args["--threads"].asLong(),
+                       args["--background"].asString(),
+                       std::stof(args["--inverse-gamma"].asString()),
+                       args["--no-gamma-correction"].asBool(), 1,
+                       std::stof(args["--exposure"].asString())};
+
+    conf.rad_gouraud_enabled = args["--gouraud"].asBool();
 
     // import scene
     Assimp::Importer importer;
@@ -589,11 +632,7 @@ int main(int argc, char const* argv[]) {
             image = raycast(refined_tree, conf, cam, model.mesh(),
                             std::move(image));
         }
-        // if (args["--gouraud"] && args["--gouraud"].asBool()) {
-        //     radiosity = model.radiosity_at_vertices(radiosity);
-        //     assert(3 * refined_tree.num_triangles() == radiosity.size());
-        // }
-        //
+
         if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
             image =
                 render_mesh(refined_tree.triangles(), cam, std::move(image));
