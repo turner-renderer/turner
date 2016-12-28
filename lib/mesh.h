@@ -20,9 +20,13 @@ using CornerVertices =
 using CornerVerticesProperty =
     OpenMesh::PropertyManager<CornerVertices, RadiosityMesh>;
 
-using RadiosityHandle = OpenMesh::FPropHandleT<Color>;
-using RadiosityHandleProperty =
-    OpenMesh::PropertyManager<RadiosityHandle, RadiosityMesh>;
+using VertexRadiosityHandle = OpenMesh::VPropHandleT<Color>;
+using VertexRadiosityHandleProperty =
+    OpenMesh::PropertyManager<VertexRadiosityHandle, RadiosityMesh>;
+
+using FaceRadiosityHandle = OpenMesh::FPropHandleT<Color>;
+using FaceRadiosityHandleProperty =
+    OpenMesh::PropertyManager<FaceRadiosityHandle, RadiosityMesh>;
 
 namespace detail {
 auto get_halfedge_handle(const RadiosityMesh& mesh,

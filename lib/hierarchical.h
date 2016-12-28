@@ -157,7 +157,8 @@ public:
         }
 
         // store radiosity in mesh
-        store_radiosity();
+        store_radiosity_at_triangles();
+        store_radiosity_at_vertices();
     }
 
     // TODO: Use mesh directly
@@ -174,9 +175,9 @@ public:
         return triangles;
     }
 
-    void store_radiosity() {
-        auto rad =
-            RadiosityHandleProperty::createIfNotExists(mesh_, "radiosity");
+    void store_radiosity_at_triangles() {
+        auto rad = FaceRadiosityHandleProperty::createIfNotExists(
+            mesh_, "face_radiosity");
 
         std::stack<const Quadnode*> stack;
 
@@ -196,6 +197,28 @@ public:
                     }
                 }
             }
+        }
+    }
+
+    void store_radiosity_at_vertices() {
+        auto vrad = VertexRadiosityHandleProperty::createIfNotExists(
+            mesh_, "vertex_radiosity");
+        FaceRadiosityHandle frad;
+        auto exists = mesh_.get_property_handle(frad, "face_radiosity");
+        assert(exists);
+
+        for (const auto v : mesh_.vertices()) {
+            Color& avg = vrad[v];
+            avg = Color(0, 0, 0, 1);
+
+            size_t n = 0;
+            for (const auto f : mesh_.vf_range(v)) {
+                avg += mesh_.property(frad, f);
+                std::cerr << avg << std::endl;
+                n++;
+            }
+            std::cerr << std::endl;
+            avg /= n;
         }
     }
 
