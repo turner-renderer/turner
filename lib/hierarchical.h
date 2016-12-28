@@ -157,26 +157,34 @@ public:
             nodes_.back().rho = tri.diffuse;
         }
 
-        // Refine
-        for (auto& p : nodes_) {
+        // Refine nodes
+        for (size_t n = 0; n < nodes_.size(); ++n) {
+            auto&p = nodes_[n];
             for (auto& q : nodes_) {
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
                 }
                 refine(p, q);
             }
+
+            // Print progress bar
+            float progress = static_cast<float>(n+1) / nodes_.size();
+            const int bar_width = progress * 20;
+            std::cerr << "\rRefine Nodes       "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
         }
+        std::cerr << std::endl;
 
         // Solve system and refine links
         bool done = false;
         while (!done) {
-            std::cerr << "Solve system...";
             solve_system();
-            std::cerr << "done." << std::endl;
 
-            std::cerr << "Refine links...";
             done = !refine_links();
-            std::cerr << "done." << std::endl;
         }
 
         // Return leaves
@@ -344,7 +352,18 @@ private:
             for (auto& p : nodes_) {
                 push_pull_radiosity(p, Color());
             }
+
+            // Print progress bar
+            float progress = static_cast<float>(max_iterations_ - iteration) / max_iterations_;
+            const int bar_width = progress * 20;
+            std::cerr << "\rSolving System     "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
         }
+        std::cerr << std::endl;
     }
 
     /**
@@ -353,9 +372,20 @@ private:
      */
     bool refine_links() {
         bool refined = false;
-        for (auto& p : nodes_) {
-            refined |= refine_links(p);
+        for (size_t n = 0; n < nodes_.size(); ++n) {
+            refined |= refine_links(nodes_[n]);
+
+            // Print progress bar
+            float progress = static_cast<float>(n+1) / nodes_.size();
+            const int bar_width = progress * 20;
+            std::cerr << "\rRefining Links     "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
         }
+        std::cerr << std::endl;
 
         return refined;
     }
@@ -412,7 +442,6 @@ private:
         auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
         //std::cerr << oracle << std::endl;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
-            std::cerr << "Refine link.." << std::endl;
 
             float F_pq = link_node.form_factor;
             float F_qp = F_pq * tri_p.area() / tri_q.area();

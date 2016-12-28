@@ -234,7 +234,7 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
         task.get();
         completed += 1;
         float progress = static_cast<float>(completed) / tasks.size();
-        int bar_width = progress * 20;
+        const int bar_width = progress * 20;
         std::cerr << "\rRendering          "
                   << "[" << std::string(bar_width, '-')
                   << std::string(20 - bar_width, ' ') << "] "
