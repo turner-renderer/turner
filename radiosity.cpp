@@ -45,7 +45,26 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
         return conf.bg_color;
     }
 
+    assert(false);
+
     return radiosity[triangle_id];
+}
+
+Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
+            const RadiosityMesh& mesh, const RadiosityHandle& rad,
+            const Configuration& conf) {
+    Stats::instance().num_rays += 1;
+
+    // intersection
+    float dist_to_triangle, s, t;
+    auto triangle_id =
+        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+    if (!triangle_id) {
+        return conf.bg_color;
+    }
+
+    auto face = RadiosityMesh::FaceHandle(static_cast<size_t>(triangle_id));
+    return mesh.property(rad, face);
 }
 
 Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
@@ -235,6 +254,61 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
         task.get();
         completed += 1;
         progress_bar.update(completed);
+    }
+    std::cerr << std::endl;
+
+    return image;
+}
+
+Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
+              const RadiosityMesh& mesh, Image&& image) {
+    Runtime rt(Stats::instance().runtime_ms);
+
+    std::cerr << "Rendering          ";
+
+    ThreadPool pool(conf.num_threads);
+    std::vector<std::future<void>> tasks;
+
+    RadiosityHandle rad_handle;
+    bool exists = mesh.get_property_handle(rad_handle, "radiosity");
+    assert(exists);
+
+    for (size_t y = 0; y < image.height(); ++y) {
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh,
+                                         &rad_handle, y, &conf]() {
+            for (size_t x = 0; x < image.width(); ++x) {
+                for (int i = 0; i < conf.num_pixel_samples; ++i) {
+                    auto cam_dir = cam.raster2cam(
+                        aiVector2D(x, y), image.width(), image.height());
+
+                    Stats::instance().num_prim_rays += 1;
+                    image(x, y) += trace(cam.mPosition, cam_dir, tree, mesh,
+                                         rad_handle, conf);
+
+                    image(x, y) = exposure(image(x, y), conf.exposure);
+
+                    // gamma correction
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    }
+                }
+            }
+        }));
+    }
+
+    long completed = 0;
+
+    for (auto& task : tasks) {
+        task.get();
+        completed += 1;
+        float progress = static_cast<float>(completed) / tasks.size();
+        int bar_width = progress * 20;
+        std::cerr << "\rRendering          "
+                  << "[" << std::string(bar_width, '-')
+                  << std::string(20 - bar_width, ' ') << "] "
+                  << std::setfill(' ') << std::setw(6) << std::fixed
+                  << std::setprecision(2) << (progress * 100.0) << '%';
+        std::cerr.flush();
     }
     std::cerr << std::endl;
 
@@ -509,16 +583,17 @@ int main(int argc, char const* argv[]) {
 
         if (args["--rad-exact"] && args["--rad-exact"].asBool()) {
             radiosity = compute_radiosity(refined_tree);
+            image =
+                raycast(refined_tree, conf, cam, radiosity, std::move(image));
         } else {
-            radiosity = model.radiosity();
+            image = raycast(refined_tree, conf, cam, model.mesh(),
+                            std::move(image));
         }
-        if (args["--gouraud"] && args["--gouraud"].asBool()) {
-            radiosity = model.radiosity_at_vertices(radiosity);
-            assert(3 * refined_tree.num_triangles() == radiosity.size());
-        }
-
-        image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
-
+        // if (args["--gouraud"] && args["--gouraud"].asBool()) {
+        //     radiosity = model.radiosity_at_vertices(radiosity);
+        //     assert(3 * refined_tree.num_triangles() == radiosity.size());
+        // }
+        //
         if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
             image =
                 render_mesh(refined_tree.triangles(), cam, std::move(image));

@@ -34,6 +34,15 @@
  *                     `from` and y is on the triangle `to`.
  * @return             form factor F_ij
  */
+float form_factor(const KDTree& tree, const Vec& from_pos, const Vec& from_u,
+                  const Vec& from_v, const Vec& from_normal, const Vec& to_pos,
+                  const Vec& to_u, const Vec& to_v, const Vec& to_normal,
+                  const float to_area, const KDTree::TriangleId to_id,
+                  const size_t num_samples = 128);
+
+/*
+ * Same as above, with explicitly defined triangles.
+ */
 float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
                   const KDTree::TriangleId to_id,
                   const size_t num_samples = 128);
