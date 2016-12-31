@@ -82,7 +82,7 @@ class HierarchicalRadiosity {
     };
 
 public:
-    explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
+    HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
             size_t max_iterations, float BF_eps)
         : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), BF_eps_(BF_eps),
           max_iterations_(max_iterations){};
@@ -451,7 +451,6 @@ private:
         const Triangle& tri_q = get_triangle(q);
 
         auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
-        //std::cerr << oracle << std::endl;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
 
             float F_pq = link_node.form_factor;
