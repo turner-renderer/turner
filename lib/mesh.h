@@ -300,11 +300,13 @@ bool triangulate_t_vertex(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
                     corner_index.end());
         std::rotate(corner_vertices.begin(), corner_vertices.begin() + 1,
                     corner_vertices.end());
-    } else {
+    } else if (N - corner_index[2] + corner_index[0] > 1) {
         std::rotate(corner_index.begin(), corner_index.begin() + 2,
                     corner_index.end());
         std::rotate(corner_vertices.begin(), corner_vertices.begin() + 2,
                     corner_vertices.end());
+    } else {
+        assert(!"logic error");
     }
 
     // find halfedges after the first corner, and at the third corner
@@ -313,24 +315,23 @@ bool triangulate_t_vertex(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     for (auto he : mesh.fh_range(face)) {
         if (index == (corner_index[0] + 1) % N) {
             he_from = he;
-        } else if (index == corner_index[2]) {
+        } else if (index == (corner_index[2] + 1) % N) {
             he_to = he;
         }
         index++;
     }
     assert(mesh.from_vertex_handle(he_from) == corner_vertices[0]);
-    assert(mesh.to_vertex_handle(he_to) == corner_vertices[2]);
+    assert(mesh.from_vertex_handle(he_to) == corner_vertices[2]);
 
     // subdivide this face by connecting the halfedges
     mesh.insert_edge(he_from, he_to);
 
     // update corners
-    corner_vertices_prop[face] = {
-        corner_vertices[0], mesh.to_vertex_handle(he_from), corner_vertices[2]};
-
     auto new_face = RadiosityMesh::FaceHandle(mesh.n_faces() - 1);
-    corner_vertices_prop[new_face] = {mesh.to_vertex_handle(he_from),
-                                      corner_vertices[1], corner_vertices[2]};
+    corner_vertices_prop[new_face] = {
+        corner_vertices[0], mesh.to_vertex_handle(he_from), corner_vertices[2]};
+    corner_vertices_prop[face] = {mesh.to_vertex_handle(he_from),
+                                  corner_vertices[1], corner_vertices[2]};
 
     return N == 4; // is the face fully triangulated?
 }

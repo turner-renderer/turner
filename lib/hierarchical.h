@@ -14,6 +14,8 @@
 #include <sstream>
 #include <stack>
 
+#define UNUSED(x) (void)(x)
+
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
@@ -27,7 +29,7 @@ class HierarchicalRadiosity {
      * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
-        Quadnode* q; // shooting node
+        Quadnode* q;       // shooting node
         float form_factor; // form factor F_pq, where p is the owner node
     };
 
@@ -57,7 +59,7 @@ class HierarchicalRadiosity {
 
 public:
     HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
-                          size_t max_iterations, float BF_eps)
+                          float BF_eps, size_t max_iterations)
         : tree_(&tree)
         , F_eps_(F_eps)
         , A_eps_(A_eps)
@@ -135,7 +137,8 @@ public:
         }
 
         // Refine nodes
-        auto progress_bar = ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
+        auto progress_bar =
+            ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             auto& p = nodes_[n];
             for (auto& q : nodes_) {
@@ -145,7 +148,7 @@ public:
                 refine(p, q);
             }
 
-            progress_bar.update(n+1);
+            progress_bar.update(n + 1);
         }
         std::cerr << std::endl;
 
@@ -158,6 +161,7 @@ public:
 
         // store radiosity in mesh
         store_radiosity_at_triangles();
+        std::cerr << "Triangulating T-vertices." << std::endl;
         triangulate_t_vertices();
         store_radiosity_at_vertices();
     }
@@ -207,6 +211,7 @@ public:
         FaceRadiosityHandle frad;
         auto exists = mesh_.get_property_handle(frad, "face_radiosity");
         assert(exists);
+        UNUSED(exists);
 
         for (const auto v : mesh_.vertices()) {
             Color& avg = vrad[v];
@@ -376,7 +381,8 @@ private:
 
     void solve_system() {
         size_t iteration = max_iterations_;
-        auto progress_bar = ProgressBar(std::cerr, "Solving System", max_iterations_);
+        auto progress_bar =
+            ProgressBar(std::cerr, "Solving System", max_iterations_);
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -397,11 +403,12 @@ private:
      */
     bool refine_links() {
         bool refined = false;
-        auto progress_bar = ProgressBar(std::cerr, "Refining Links", nodes_.size());
+        auto progress_bar =
+            ProgressBar(std::cerr, "Refining Links", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             refined |= refine_links(nodes_[n]);
 
-            progress_bar.update(n+1);
+            progress_bar.update(n + 1);
         }
         std::cerr << std::endl;
 
@@ -417,7 +424,7 @@ private:
 
         // Process all child nodes first.
         if (!p.is_leaf()) {
-            for (auto& child: p.children) {
+            for (auto& child : p.children) {
                 refined |= refine_links(*child.get());
             }
         }
@@ -450,18 +457,14 @@ private:
      * @return true if a link has been refined.
      */
     bool refine_link(Quadnode& p, Linknode& link_node) {
-
         // Shooter node p
         Quadnode& q = *link_node.q;
 
-        const Triangle& tri_p = get_triangle(p);
-        const Triangle& tri_q = get_triangle(q);
-
-        auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
+        auto oracle = q.rad_shoot * q.area * link_node.form_factor;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
 
             float F_pq = link_node.form_factor;
-            float F_qp = F_pq * tri_p.area() / tri_q.area();
+            float F_qp = F_pq * p.area / q.area;
 
             // Decide which side to subdivide. See refine()
             if (F_pq < F_qp) {

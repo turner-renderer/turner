@@ -109,6 +109,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
     CornerVertices corners;
     auto exists = mesh.get_property_handle(corners, "corner_vertices");
     assert(exists);
+    UNUSED(exists);
     RadiosityMesh::FaceHandle face(static_cast<size_t>(triangle_id));
     const auto& vs = mesh.property(corners, face);
 
@@ -606,11 +607,6 @@ int main(int argc, char const* argv[]) {
 
         HierarchicalRadiosity model(tree, F_eps, min_area, BF_eps,
                                     max_iterations);
-        auto triangles_with_rad = model.compute();
-        KDTree refined_tree(std::move(triangles_with_rad.first));
-        radiosity = triangles_with_rad.second;
-
-        HierarchicalRadiosity model(tree, F_eps, min_area, BF_eps, max_iterations);
         try {
             model.compute();
         } catch (std::runtime_error e) {
