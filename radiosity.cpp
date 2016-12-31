@@ -6,6 +6,7 @@
 #include "lib/lambertian.h"
 #include "lib/matrix.h"
 #include "lib/output.h"
+#include "lib/progress_bar.h"
 #include "lib/range.h"
 #include "lib/raster.h"
 #include "lib/runtime.h"
@@ -229,18 +230,11 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     }
 
     long completed = 0;
-
+    const auto progress_bar = ProgressBar(std::cerr, "Rendering", tasks.size());
     for (auto& task : tasks) {
         task.get();
         completed += 1;
-        float progress = static_cast<float>(completed) / tasks.size();
-        const int bar_width = progress * 20;
-        std::cerr << "\rRendering          "
-                  << "[" << std::string(bar_width, '-')
-                  << std::string(20 - bar_width, ' ') << "] "
-                  << std::setfill(' ') << std::setw(6) << std::fixed
-                  << std::setprecision(2) << (progress * 100.0) << '%';
-        std::cerr.flush();
+        progress_bar.update(completed);
     }
     std::cerr << std::endl;
 
