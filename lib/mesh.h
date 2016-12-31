@@ -252,3 +252,85 @@ auto triangle_normal(const RadiosityMesh& mesh,
     const auto& c = mesh.point(vs[2]);
     return ((b - a) % (c - a)).normalize();
 }
+
+bool has_t_vertex(const RadiosityMesh& mesh,
+                  const RadiosityMesh::FaceHandle face) {
+    size_t count = 0;
+    for (auto it = mesh.cfv_iter(face); it.is_valid(); ++it) {
+        if (count > 2) {
+            return true;
+        }
+        ++count;
+    }
+    return false;
+}
+
+// TODO: Test
+bool triangulate_t_vertex(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
+    CornerVerticesProperty corner_vertices_prop(mesh, "corner_vertices", true);
+
+    // build corners index and compute number of vertices
+    const auto corners = corner_vertices_prop[face];
+    std::array<RadiosityMesh::VertexHandle, 3>
+        corner_vertices;                // corner vertices
+    std::array<size_t, 3> corner_index; // corner indices
+    size_t index = 0;
+    size_t current = 0;
+    for (auto v : mesh.fv_range(face)) {
+        if (v == corners[0] || v == corners[1] || v == corners[2]) {
+            corner_index[current] = index;
+            corner_vertices[current] = v;
+            current++;
+        }
+        index++;
+    }
+    assert(current == 3);
+    size_t N = index;
+
+    if (N == 3) {
+        return true; // is already fully triangulated
+    }
+
+    // find a corner s.t. there is a vertex between it and the next corner, and
+    // rotate it to the first position
+    if (corner_index[1] - corner_index[0] > 1) {
+        // nothing to do
+    } else if (corner_index[2] - corner_index[1] > 1) {
+        std::rotate(corner_index.begin(), corner_index.begin() + 1,
+                    corner_index.end());
+        std::rotate(corner_vertices.begin(), corner_vertices.begin() + 1,
+                    corner_vertices.end());
+    } else {
+        std::rotate(corner_index.begin(), corner_index.begin() + 2,
+                    corner_index.end());
+        std::rotate(corner_vertices.begin(), corner_vertices.begin() + 2,
+                    corner_vertices.end());
+    }
+
+    // find halfedges after the first corner, and at the third corner
+    index = 0;
+    RadiosityMesh::HalfedgeHandle he_from, he_to;
+    for (auto he : mesh.fh_range(face)) {
+        if (index == (corner_index[0] + 1) % N) {
+            he_from = he;
+        } else if (index == corner_index[2]) {
+            he_to = he;
+        }
+        index++;
+    }
+    assert(mesh.from_vertex_handle(he_from) == corner_vertices[0]);
+    assert(mesh.to_vertex_handle(he_to) == corner_vertices[2]);
+
+    // subdivide this face by connecting the halfedges
+    mesh.insert_edge(he_from, he_to);
+
+    // update corners
+    corner_vertices_prop[face] = {
+        corner_vertices[0], mesh.to_vertex_handle(he_from), corner_vertices[2]};
+
+    auto new_face = RadiosityMesh::FaceHandle(mesh.n_faces() - 1);
+    corner_vertices_prop[new_face] = {mesh.to_vertex_handle(he_from),
+                                      corner_vertices[1], corner_vertices[2]};
+
+    return N == 4; // is the face fully triangulated?
+}
