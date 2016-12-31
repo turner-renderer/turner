@@ -158,6 +158,7 @@ public:
 
         // store radiosity in mesh
         store_radiosity_at_triangles();
+        triangulate_t_vertices();
         store_radiosity_at_vertices();
     }
 
@@ -214,11 +215,39 @@ public:
             size_t n = 0;
             for (const auto f : mesh_.vf_range(v)) {
                 avg += mesh_.property(frad, f);
-                std::cerr << avg << std::endl;
                 n++;
             }
-            std::cerr << std::endl;
             avg /= n;
+        }
+    }
+
+    void triangulate_t_vertices() {
+        auto rad = FaceRadiosityHandleProperty::createIfNotExists(
+            mesh_, "face_radiosity");
+
+        size_t n_faces = mesh_.n_faces();
+        for (size_t i = 0; i < n_faces; ++i) {
+            auto face = RadiosityMesh::FaceHandle(i);
+            if (has_t_vertex(mesh_, face)) {
+                size_t n = mesh_.n_faces();
+                triangulate_t_vertices(face);
+
+                // copy radiosity
+                const auto& face_rad = rad[face];
+                for (; n < mesh_.n_faces(); ++n) {
+                    auto new_face = RadiosityMesh::FaceHandle(n);
+                    rad[new_face] = face_rad;
+                }
+            }
+        }
+    }
+
+    void triangulate_t_vertices(RadiosityMesh::FaceHandle face) {
+        size_t n = mesh_.n_faces();
+        auto fully_triangulated = triangulate_t_vertex(mesh_, face);
+        if (n < mesh_.n_faces() && !fully_triangulated) {
+            triangulate_t_vertices(face);
+            triangulate_t_vertices(RadiosityMesh::FaceHandle(n));
         }
     }
 
