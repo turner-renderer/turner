@@ -36,23 +36,24 @@ inline std::array<Triangle, 4> subdivide4(const Triangle& tri) {
 
     return {
         copy_tri(a, mc, mb, na, nmc, nmb), copy_tri(mc, b, ma, nmc, nb, nma),
-        copy_tri(ma, c, mb, nma, nc, nmb), copy_tri(mb, mc, ma, nmb, nmc, nma)};
+        copy_tri(mb, ma, c, nmb, nma, nc), copy_tri(mb, mc, ma, nmb, nmc, nma)};
 };
 
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
-    using OptionalId = KDTree::OptionalId;
 
     struct Quadnode;
 
     /**
-     * Links owner node p to q, s.t. p gathers radiosity from q. In particular,
-     * form_factor is F_pq.
+     * Links a node p to a node q.
+     *
+     * The node p is always the owner of the link. A link from p to q means that
+     * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
-        const Quadnode* q; // shooting node
-        float form_factor; // form factor F_pq, where q is the owner node
+        Quadnode* q; // shooting node
+        float form_factor; // form factor F_pq, where p is the owner node
     };
 
     struct Quadnode {
@@ -64,9 +65,9 @@ class HierarchicalRadiosity {
         }
 
         TriangleId root_tri_id; // original parent triangle from scene
-        OptionalId tri_id;      // underlying triangle (if this quadnode
-                                // represents a root node, then this is an
-                                // invalid id)
+        TriangleId tri_id;      // underlying triangle (if this quadnode
+                                // represents a root node, then this is equal
+                                // to root_tri_id)
         float area;
 
         Color rad_gather; // gathering radiosity
@@ -81,8 +82,10 @@ class HierarchicalRadiosity {
     };
 
 public:
-    explicit HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps)
-        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps){};
+    HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
+            size_t max_iterations, float BF_eps)
+        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), BF_eps_(BF_eps),
+          max_iterations_(max_iterations){};
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -132,7 +135,7 @@ public:
 
     std::string get_id(const Quadnode* p) {
         std::stringstream os;
-        if (p->tri_id) {
+        if (!is_root(*p)) {
             os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
                << ")";
         } else {
@@ -147,6 +150,7 @@ public:
             nodes_.emplace_back();
 
             nodes_.back().root_tri_id = i;
+            nodes_.back().tri_id = i;
             const auto& tri = (*tree_)[i];
             nodes_.back().area = tri.area();
             nodes_.back().rad_gather = Color(); // black
@@ -155,18 +159,35 @@ public:
             nodes_.back().rho = tri.diffuse;
         }
 
-        // Refine
-        for (auto& p : nodes_) {
+        // Refine nodes
+        for (size_t n = 0; n < nodes_.size(); ++n) {
+            auto&p = nodes_[n];
             for (auto& q : nodes_) {
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
                 }
                 refine(p, q);
             }
-        }
 
-        // Solve system
-        solve_system();
+            // Print progress bar
+            float progress = static_cast<float>(n+1) / nodes_.size();
+            const int bar_width = progress * 20;
+            std::cerr << "\rRefine Nodes       "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
+        }
+        std::cerr << std::endl;
+
+        // Solve system and refine links
+        bool done = false;
+        while (!done) {
+            solve_system();
+
+            done = !refine_links();
+        }
 
         // Return leaves
         std::pair<std::vector<Triangle>, std::vector<Color /*rad*/>> out;
@@ -209,11 +230,20 @@ public:
     }
 
 private:
+
+    TriangleId next_triangle_id() const {
+        return tree_->num_triangles() + subdivided_tris_.size();
+    }
+
+    bool is_root(const Quadnode& p) const {
+        return p.tri_id < tree_->num_triangles();
+    }
+
     const Triangle& get_triangle(const Quadnode& p) const {
-        if (!p.tri_id) {
+        if (is_root(p)) {
             return (*tree_)[p.root_tri_id];
         }
-        return subdivided_tris_[p.tri_id];
+        return subdivided_tris_[p.tri_id - tree_->num_triangles()];
     }
 
     float estimate_form_factor(const Quadnode& p, const Quadnode& q) const {
@@ -257,7 +287,7 @@ private:
             qnode->emission = p.emission;
             qnode->area = p_area_4;
             qnode->rho = p.rho;
-            qnode->tri_id = OptionalId(subdivided_tris_.size());
+            qnode->tri_id = next_triangle_id();
             qnode->root_tri_id = p.root_tri_id;
 
             // add a new subdivided traingle
@@ -324,8 +354,7 @@ private:
     }
 
     void solve_system() {
-        constexpr size_t MAX_ITERATIONS = 1000;
-        size_t iteration = MAX_ITERATIONS;
+        size_t iteration = max_iterations_;
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -334,7 +363,124 @@ private:
             for (auto& p : nodes_) {
                 push_pull_radiosity(p, Color());
             }
+
+            // Print progress bar
+            float progress = static_cast<float>(max_iterations_ - iteration) / max_iterations_;
+            const int bar_width = progress * 20;
+            std::cerr << "\rSolving System     "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
         }
+        std::cerr << std::endl;
+    }
+
+    /**
+     * Refine all links in all nodes.
+     * @return true if at least one link has been refined.
+     */
+    bool refine_links() {
+        bool refined = false;
+        for (size_t n = 0; n < nodes_.size(); ++n) {
+            refined |= refine_links(nodes_[n]);
+
+            // Print progress bar
+            float progress = static_cast<float>(n+1) / nodes_.size();
+            const int bar_width = progress * 20;
+            std::cerr << "\rRefining Links     "
+                      << "[" << std::string(bar_width, '-')
+                      << std::string(20 - bar_width, ' ') << "] "
+                      << std::setfill(' ') << std::setw(6) << std::fixed
+                      << std::setprecision(2) << (progress * 100.0) << '%';
+            std::cerr.flush();
+        }
+        std::cerr << std::endl;
+
+        return refined;
+    }
+
+    /**
+     * Refine all links in node p.
+     * @return true if at least one link has been refined.
+     */
+    bool refine_links(Quadnode& p) {
+        bool refined = false;
+
+        // Process all child nodes first.
+        if (!p.is_leaf()) {
+            for (auto& child: p.children) {
+                refined |= refine_links(*child.get());
+            }
+        }
+
+        // Post-order: Process links.
+        // Remove link if we refined. Note: new links might be added that's why
+        // we keep track of the old size.
+        std::vector<Linknode>& links = p.gathering_from;
+        size_t size = links.size();
+        size_t i = 0;
+        while (i < size) {
+            if (refine_link(p, links[i])) {
+                links.erase(links.begin() + i);
+                --size;
+
+                refined |= true;
+            } else {
+                ++i;
+            }
+        }
+
+        return refined;
+    }
+
+    /**
+     * Refine link of receiver node p.
+     *
+     * @param p receiver node
+     * @param link link between shooter and receiver node
+     * @return true if a link has been refined.
+     */
+    bool refine_link(Quadnode& p, Linknode& link_node) {
+
+        // Shooter node p
+        Quadnode& q = *link_node.q;
+
+        const Triangle& tri_p = get_triangle(p);
+        const Triangle& tri_q = get_triangle(q);
+
+        auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
+        if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
+
+            float F_pq = link_node.form_factor;
+            float F_qp = F_pq * tri_p.area() / tri_q.area();
+
+            // Decide which side to subdivide. See refine()
+            if (F_pq < F_qp) {
+                if (subdivide(p)) {
+                    // We've subdivided reciever node p. So all children of p
+                    // should gather from q now.
+                    for (auto& child : p.children) {
+                        link(*child.get(), q);
+                    }
+
+                    return true;
+                }
+            } else {
+                if (subdivide(q)) {
+                    // We've subdivided shooter node q. So receiver node p
+                    // should gather from all children of q now.
+                    for (auto& child : q.children) {
+                        link(p, *child.get());
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     void gather_radiosity(Quadnode& in) {
@@ -380,4 +526,6 @@ private:
     const KDTree* tree_;
     float F_eps_;
     float A_eps_;
+    float BF_eps_;
+    int max_iterations_;
 };

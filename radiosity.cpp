@@ -234,7 +234,7 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
         task.get();
         completed += 1;
         float progress = static_cast<float>(completed) / tasks.size();
-        int bar_width = progress * 20;
+        const int bar_width = progress * 20;
         std::cerr << "\rRendering          "
                   << "[" << std::string(bar_width, '-')
                   << std::string(20 - bar_width, ' ') << "] "
@@ -357,8 +357,12 @@ Options:
   --rad-links                       Render hierarchical radiosity links.
   --form-factor-eps=<float>         Link when form factor estimate is below [default: 0.04].
                                     Hierarchical radiosity only.
+  --rad-shoot-eps=<float>           Refine link when shooting radiosity times
+                                    form factor is too high [default: 1e-6].
   --max-subdivisions=<int>          Maximum number of subdivisions for smallest
                                     triangle [default: 3].
+  --max-iterations=<int>            Maximum iterations to solve system
+                                    [default: 1000].
 )";
 
 int main(int argc, char const* argv[]) {
@@ -432,11 +436,16 @@ int main(int argc, char const* argv[]) {
         float F_eps = std::stof(args["--form-factor-eps"].asString());
         std::cerr << "Form factor epsilon: " << F_eps << std::endl;
 
-        HierarchicalRadiosity model(tree, F_eps, min_area);
+        size_t max_iterations = args["--max-iterations"].asLong();
+        std::cerr << "Maximum iterations: " << max_iterations << std::endl;
+
+        float BF_eps = std::stof(args["--rad-shoot-eps"].asString());
+        std::cerr << "Shooting radiosity epsilon: " << BF_eps << std::endl;
+
+        HierarchicalRadiosity model(tree, F_eps, min_area, max_iterations, BF_eps);
         auto triangles_with_rad = model.compute();
         KDTree refined_tree(std::move(triangles_with_rad.first));
         radiosity = triangles_with_rad.second;
-        // radiosity = compute_radiosity(refined_tree);
 
         image = raycast(refined_tree, conf, cam, radiosity, std::move(image));
 
