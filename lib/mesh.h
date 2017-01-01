@@ -73,6 +73,7 @@ auto find_vertex(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
 }
 } // namespace detail
 
+// TODO: test
 /**
  * Build RadiosityMesh from a set of triangles.
  * @param  triangles The set of triangles, to build the mesh from.
@@ -99,24 +100,24 @@ auto build_mesh(const Triangles& triangles) {
 
         auto ita = lookup.emplace(std::make_pair(a, na),
                                   RadiosityMesh::VertexHandle());
+        auto& va = ita.first->second;
         if (ita.second) {
-            ita.first->second = mesh.add_vertex({a.x, a.y, a.z});
+            va = mesh.add_vertex({a.x, a.y, a.z});
         }
-        auto va = ita.first->second;
 
         auto itb = lookup.emplace(std::make_pair(b, nb),
                                   RadiosityMesh::VertexHandle());
+        auto& vb = itb.first->second;
         if (itb.second) {
-            itb.first->second = mesh.add_vertex({b.x, b.y, b.z});
+            vb = mesh.add_vertex({b.x, b.y, b.z});
         }
-        auto vb = itb.first->second;
 
         auto itc = lookup.emplace(std::make_pair(c, nc),
                                   RadiosityMesh::VertexHandle());
+        auto& vc = itc.first->second;
         if (itc.second) {
-            itc.first->second = mesh.add_vertex({c.x, c.y, c.z});
+            vc = mesh.add_vertex({c.x, c.y, c.z});
         }
-        auto vc = itc.first->second;
 
         auto face = mesh.add_face(va, vb, vc);
         corners_prop[face] = {va, vb, vc};
