@@ -230,7 +230,7 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     }
 
     long completed = 0;
-    const auto progress_bar = ProgressBar(std::cerr, "Rendering", tasks.size());
+    auto progress_bar = ProgressBar(std::cerr, "Rendering", tasks.size());
     for (auto& task : tasks) {
         task.get();
         completed += 1;
