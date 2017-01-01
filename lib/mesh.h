@@ -10,25 +10,43 @@
 #include <array>
 #include <unordered_map>
 
+/**
+ * Mesh type for storing hierarchical radiosity triangle subdivision.
+ *
+ * We are not using triangle mesh, since after subdivisition of a triangle, the
+ * neighbor triangles are triangles with additional vertices at sides.
+ */
 using RadiosityMesh = OpenMesh::PolyMesh_ArrayKernelT<>;
 
-// Property to store the vertices describing corners of a triangle
-// Since after subdivision, a triangle may consists of more than 3 vertices, we
-// have to keep track of the corners.
+/**
+ * Mesh property for storing the vertices defining the corners of a triangle.
+ *
+ * Since after the subdivision, a triangle may consists of more than 3 vertices,
+ * we have to keep track of the corners.
+ */
 using CornerVertices =
     OpenMesh::FPropHandleT<std::array<RadiosityMesh::VertexHandle, 3>>;
 using CornerVerticesProperty =
     OpenMesh::PropertyManager<CornerVertices, RadiosityMesh>;
 
-using VertexRadiosityHandle = OpenMesh::VPropHandleT<Color>;
-using VertexRadiosityHandleProperty =
-    OpenMesh::PropertyManager<VertexRadiosityHandle, RadiosityMesh>;
-
+/**
+ * Property for storing radiosity values at triangles.
+ */
 using FaceRadiosityHandle = OpenMesh::FPropHandleT<Color>;
 using FaceRadiosityHandleProperty =
     OpenMesh::PropertyManager<FaceRadiosityHandle, RadiosityMesh>;
 
+/**
+ * Property for storing radiosity values at triangle corners.
+ */
+using VertexRadiosityHandle = OpenMesh::VPropHandleT<Color>;
+using VertexRadiosityHandleProperty =
+    OpenMesh::PropertyManager<VertexRadiosityHandle, RadiosityMesh>;
+
 namespace detail {
+/**
+ * Get halfedge of a face by index.
+ */
 auto get_halfedge_handle(const RadiosityMesh& mesh,
                          RadiosityMesh::FaceHandle face, size_t index) {
     auto it = mesh.cfh_iter(face);
@@ -38,6 +56,9 @@ auto get_halfedge_handle(const RadiosityMesh& mesh,
     return *it;
 }
 
+/**
+ * Get vertex of a face by its coordinates.
+ */
 auto find_vertex(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
                  const RadiosityMesh::Point& pt) {
     size_t index = 0;
@@ -51,6 +72,13 @@ auto find_vertex(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
 }
 } // namespace detail
 
+/**
+ * Build RadiosityMesh from a set of triangles.
+ * @param  triangles The set of triangles, to build the mesh from.
+ * @return           RadiosityMesh, with faces corresponging to given
+ *                   triangles. A face id corresponds exactly to the position
+ *                   of the corresponding triangle.
+ */
 auto build_mesh(const Triangles& triangles) {
     RadiosityMesh mesh;
     // a vertex is uniquely determined by its coordinates and a normal
@@ -96,6 +124,35 @@ auto build_mesh(const Triangles& triangles) {
     return mesh;
 }
 
+/**
+ * Subdivide the triangle given by `face` into 4 subtriangles.
+ *
+ * Triangle abc is subdivided in the following way.
+ *                        c
+ *                        /\
+ *                       /  \
+ *                      /    \
+ *                     /  2   \
+ *                    /        \
+ *                mb \----------/ ma
+ *                  / \        / \
+ *                 /   \ face /   \
+ *                /     \    /     \
+ *               /   0   \  /   1   \
+ *              /         \/         \
+ *             -----------/\-----------
+ *            a           mc          b
+ *
+ * The face given by `face` is then the middle triangle. The new triangles are
+ * added to the mesh and have consecutive ids starting after the last ids in
+ * the mesh.
+ *
+ * TODO: Consider to remove the return value.
+ *
+ * @param  mesh Mesh storing triangles
+ * @param  face Triangle to subdivide
+ * @return      list of ids of subdivided triangles, i.e. [face, 0, 1, 2].
+ */
 auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     CornerVerticesProperty corner_vertices_prop(mesh, "corner_vertices", true);
 
@@ -229,6 +286,9 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     return faces;
 }
 
+/**
+ * Helper to get the triangle vertices property.
+ */
 const auto& triangle_vertices(const RadiosityMesh& mesh,
                               const RadiosityMesh::FaceHandle face) {
     CornerVertices prop_handle;
@@ -237,6 +297,9 @@ const auto& triangle_vertices(const RadiosityMesh& mesh,
     return corners;
 }
 
+/**
+ * Compute triangle midpoint of the triangle given by vertices `vs`.
+ */
 auto triangle_midpoint(const RadiosityMesh& mesh,
                        const std::array<RadiosityMesh::VertexHandle, 3>& vs) {
     const auto& a = mesh.point(vs[0]);
@@ -245,6 +308,9 @@ auto triangle_midpoint(const RadiosityMesh& mesh,
     return (a + b + c) / 3.f;
 }
 
+/**
+ * Compute triangle normal given by vertices `vs`.
+ */
 auto triangle_normal(const RadiosityMesh& mesh,
                      const std::array<RadiosityMesh::VertexHandle, 3>& vs) {
     const auto& a = mesh.point(vs[0]);
@@ -253,6 +319,9 @@ auto triangle_normal(const RadiosityMesh& mesh,
     return ((b - a) % (c - a)).normalize();
 }
 
+/**
+ * Check if the triangle given by `face` has a T-vertex.
+ */
 bool has_t_vertex(const RadiosityMesh& mesh,
                   const RadiosityMesh::FaceHandle face) {
     size_t count = 0;
@@ -266,6 +335,19 @@ bool has_t_vertex(const RadiosityMesh& mesh,
 }
 
 // TODO: Test
+/**
+ * Find a T-vertex on a triangle and triangulate it.
+ *
+ * The triangle is split at a T-vertex, which has a corner vertex as a neighbor.
+ * A new triangle is added, consisting of exactly three points: the T-vertex and
+ * the two corners of the original triangle. The original triangle may still
+ * contain further T-vertices.
+ *
+ * @param  mesh Mesh containing the triangles
+ * @param  face Triangle
+ * @return      true, if the triangle is fully triangulated, i.e. does not
+ *              contain any T-vertices anymore; otherwise false.
+ */
 bool triangulate_t_vertex(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     CornerVerticesProperty corner_vertices_prop(mesh, "corner_vertices", true);
 
