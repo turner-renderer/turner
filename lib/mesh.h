@@ -8,6 +8,7 @@
 #include <OpenMesh/Core/Utils/PropertyManager.hh>
 
 #include <array>
+#include <stack>
 #include <unordered_map>
 
 /**
@@ -319,29 +320,14 @@ auto triangle_normal(const RadiosityMesh& mesh,
     return ((b - a) % (c - a)).normalize();
 }
 
-/**
- * Check if the triangle given by `face` has a T-vertex.
- */
-bool has_t_vertex(const RadiosityMesh& mesh,
-                  const RadiosityMesh::FaceHandle face) {
-    size_t count = 0;
-    for (auto it = mesh.cfv_iter(face); it.is_valid(); ++it) {
-        if (count > 2) {
-            return true;
-        }
-        ++count;
-    }
-    return false;
-}
-
 // TODO: Test
 /**
  * Find a T-vertex on a triangle and triangulate it.
  *
  * The triangle is split at a T-vertex, which has a corner vertex as a neighbor.
- * A new triangle is added, consisting of exactly three points: the T-vertex and
- * the two corners of the original triangle. The original triangle may still
- * contain further T-vertices.
+ * A new triangle is added, defined by three points: the T-vertex and the two
+ * corners of the original triangle. The original triangle and the new triangle
+ * may still contain another T-vertices.
  *
  * @param  mesh Mesh containing the triangles
  * @param  face Triangle
@@ -416,4 +402,20 @@ bool triangulate_t_vertex(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
                                   corner_vertices[1], corner_vertices[2]};
 
     return N == 4; // is the face fully triangulated?
+}
+
+/**
+ * Triangulate all T-vertices of the triangle given by `face`.
+ */
+void triangulate_t_vertices(RadiosityMesh& mesh,
+                            RadiosityMesh::FaceHandle face) {
+    std::stack<RadiosityMesh::FaceHandle> to_triangulate;
+    to_triangulate.push(face);
+    while (!to_triangulate.empty()) {
+        auto f = to_triangulate.top();
+        to_triangulate.pop();
+        while (!triangulate_t_vertex(mesh, f)) {
+            to_triangulate.push(RadiosityMesh::FaceHandle(mesh.n_faces() - 1));
+        }
+    }
 }
