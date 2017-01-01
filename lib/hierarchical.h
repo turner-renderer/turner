@@ -233,10 +233,10 @@ public:
         size_t n_faces = mesh_.n_faces();
         for (size_t i = 0; i < n_faces; ++i) {
             auto face = RadiosityMesh::FaceHandle(i);
-            if (has_t_vertex(mesh_, face)) {
-                size_t n = mesh_.n_faces();
-                triangulate_t_vertices(face);
+            size_t n = mesh_.n_faces();
+            ::triangulate_t_vertices(mesh_, face); // no-op if nothing to do
 
+            if (n < mesh_.n_faces()) {
                 // copy radiosity
                 const auto& face_rad = rad[face];
                 for (; n < mesh_.n_faces(); ++n) {
@@ -244,15 +244,6 @@ public:
                     rad[new_face] = face_rad;
                 }
             }
-        }
-    }
-
-    void triangulate_t_vertices(RadiosityMesh::FaceHandle face) {
-        size_t n = mesh_.n_faces();
-        auto fully_triangulated = triangulate_t_vertex(mesh_, face);
-        if (n < mesh_.n_faces() && !fully_triangulated) {
-            triangulate_t_vertices(face);
-            triangulate_t_vertices(RadiosityMesh::FaceHandle(n));
         }
     }
 
