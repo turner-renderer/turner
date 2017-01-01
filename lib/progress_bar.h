@@ -8,10 +8,10 @@
 class ProgressBar {
 
 public:
-    explicit ProgressBar(std::ostream& out, const std::string label, const size_t max)
+    ProgressBar(std::ostream& out, const std::string label, const size_t max)
         : out_(out), label_(label), max_(max) {}
 
-    void update(const size_t current) const {
+    void update(const size_t current) {
         const float progress = static_cast<float>(current) / max_;
         const int bar_width = std::min(static_cast<int>(progress * 20), 20);
         out_ << "\r" << std::setw(20) << std::setfill(' ') << std::left << label_;

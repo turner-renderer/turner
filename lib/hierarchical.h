@@ -161,7 +161,7 @@ public:
         }
 
         // Refine nodes
-        const auto progress_bar = ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
+        auto progress_bar = ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             auto&p = nodes_[n];
             for (auto& q : nodes_) {
@@ -349,7 +349,7 @@ private:
 
     void solve_system() {
         size_t iteration = max_iterations_;
-        const auto progress_bar = ProgressBar(std::cerr, "Solving System", max_iterations_);
+        auto progress_bar = ProgressBar(std::cerr, "Solving System", max_iterations_);
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -370,7 +370,7 @@ private:
      */
     bool refine_links() {
         bool refined = false;
-        const auto progress_bar = ProgressBar(std::cerr, "Refining Links", nodes_.size());
+        auto progress_bar = ProgressBar(std::cerr, "Refining Links", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             refined |= refine_links(nodes_[n]);
 
