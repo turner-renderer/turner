@@ -25,10 +25,6 @@ float solid_angle(const Point& O, const Point& A, const Point& B,
     const auto b = (B - O).normalize();
     const auto c = (C - O).normalize();
 
-    // std::cerr << a << std::endl;
-    // std::cerr << b << std::endl;
-    // std::cerr << c << std::endl;
-
     float tan_omega_2 =
         std::abs(a | (b % c)) / (1 + (b | c) + (a | c) + (a | b));
     float omega = 2 * std::atan(tan_omega_2);

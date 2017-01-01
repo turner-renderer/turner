@@ -58,6 +58,14 @@ auto get_halfedge_handle(const RadiosityMesh& mesh,
 }
 
 /**
+ * Get edge of a face by index.
+ */
+auto get_edge_handle(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
+                     size_t index) {
+    return mesh.edge_handle(get_halfedge_handle(mesh, face, index));
+}
+
+/**
  * Get vertex of a face by its coordinates.
  */
 auto find_vertex(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
@@ -100,21 +108,21 @@ auto build_mesh(const Triangles& triangles) {
 
         auto ita = lookup.emplace(std::make_pair(a, na),
                                   RadiosityMesh::VertexHandle());
-        auto& va = ita.first->second;
+        RadiosityMesh::VertexHandle& va = ita.first->second;
         if (ita.second) {
             va = mesh.add_vertex({a.x, a.y, a.z});
         }
 
         auto itb = lookup.emplace(std::make_pair(b, nb),
                                   RadiosityMesh::VertexHandle());
-        auto& vb = itb.first->second;
+        RadiosityMesh::VertexHandle& vb = itb.first->second;
         if (itb.second) {
             vb = mesh.add_vertex({b.x, b.y, b.z});
         }
 
         auto itc = lookup.emplace(std::make_pair(c, nc),
                                   RadiosityMesh::VertexHandle());
-        auto& vc = itc.first->second;
+        RadiosityMesh::VertexHandle& vc = itc.first->second;
         if (itc.second) {
             vc = mesh.add_vertex({c.x, c.y, c.z});
         }
@@ -194,8 +202,7 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     if (k0 == N) {
         // no vertex found, i.e. neighbor face was not divided yet
         k0 = i0 + 1;
-        auto he = detail::get_halfedge_handle(mesh, face, k0);
-        auto edge = mesh.edge_handle(he);
+        auto edge = detail::get_edge_handle(mesh, face, k0);
         mesh.split(edge, mab);
         N += 1;
         i1 += 1;
@@ -207,8 +214,7 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     if (k1 == N) {
         // no vertex found, i.e. neighbor face was not divided yet
         k1 = i1 + 1;
-        auto he = detail::get_halfedge_handle(mesh, face, k1);
-        auto edge = mesh.edge_handle(he);
+        auto edge = detail::get_edge_handle(mesh, face, k1);
         mesh.split(edge, mbc);
         N += 1;
         i2 += 1;
@@ -219,8 +225,7 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     if (k2 == N) {
         // no vertex found, i.e. neighbor face was not divided yet
         k2 = i2 + 1;
-        auto he = detail::get_halfedge_handle(mesh, face, k2 % N);
-        auto edge = mesh.edge_handle(he);
+        auto edge = detail::get_edge_handle(mesh, face, k2 % N);
         mesh.split(edge, mac);
         N += 1;
 
@@ -235,7 +240,7 @@ auto subdivide4(RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
         }
     }
 
-    // collect halfedges before and after midpoints
+    // collect halfedges before and after midpoints of edges
     std::array<RadiosityMesh::HalfedgeHandle, 6> halfedges;
     index = 0;
     current = 0;
