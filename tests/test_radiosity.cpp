@@ -19,10 +19,10 @@ std::pair<float, float> parallel_scenario(float a, float b, float c) {
 
     // compute the form factor F_(bottom,top) = F_01_23 using the form
     // factor algebra
-    float F_0_2 = form_factor(tree, bottom_lft, top_lft, 2, NUM_SAMPLES);
-    float F_0_3 = form_factor(tree, bottom_lft, top_rht, 3, NUM_SAMPLES);
-    float F_1_2 = form_factor(tree, bottom_rht, top_lft, 2, NUM_SAMPLES);
-    float F_1_3 = form_factor(tree, bottom_rht, top_rht, 3, NUM_SAMPLES);
+    float F_0_2 = form_factor(tree, 0, 2, NUM_SAMPLES);
+    float F_0_3 = form_factor(tree, 0, 3, NUM_SAMPLES);
+    float F_1_2 = form_factor(tree, 1, 2, NUM_SAMPLES);
+    float F_1_3 = form_factor(tree, 1, 3, NUM_SAMPLES);
 
     float F_01_2 = (bottom_lft.area() * F_0_2 + bottom_rht.area() * F_1_2) /
                    (bottom_lft.area() + bottom_rht.area());
@@ -31,10 +31,10 @@ std::pair<float, float> parallel_scenario(float a, float b, float c) {
     float F_01_23 = F_01_2 + F_01_3;
 
     // reciproc factor
-    float F_2_0 = form_factor(tree, top_lft, bottom_lft, 0, NUM_SAMPLES);
-    float F_2_1 = form_factor(tree, top_lft, bottom_rht, 1, NUM_SAMPLES);
-    float F_3_0 = form_factor(tree, top_rht, bottom_lft, 0, NUM_SAMPLES);
-    float F_3_1 = form_factor(tree, top_rht, bottom_rht, 1, NUM_SAMPLES);
+    float F_2_0 = form_factor(tree, 2, 0, NUM_SAMPLES);
+    float F_2_1 = form_factor(tree, 2, 1, NUM_SAMPLES);
+    float F_3_0 = form_factor(tree, 3, 0, NUM_SAMPLES);
+    float F_3_1 = form_factor(tree, 3, 1, NUM_SAMPLES);
 
     float F_23_0 = (top_lft.area() * F_2_0 + top_rht.area() * F_3_0) /
                    (top_lft.area() + top_rht.area());
@@ -54,10 +54,10 @@ std::pair<float, float> orthogonal_scenario(float a, float b, float c) {
 
     // compute the form factor F_(bottom,top) = F_01_23 using the form
     // factor algebra
-    float F_0_2 = form_factor(tree, bottom_lft, back_lft, 2, NUM_SAMPLES);
-    float F_0_3 = form_factor(tree, bottom_lft, back_rht, 3, NUM_SAMPLES);
-    float F_1_2 = form_factor(tree, bottom_rht, back_lft, 2, NUM_SAMPLES);
-    float F_1_3 = form_factor(tree, bottom_rht, back_rht, 3, NUM_SAMPLES);
+    float F_0_2 = form_factor(tree, 0, 2, NUM_SAMPLES);
+    float F_0_3 = form_factor(tree, 0, 3, NUM_SAMPLES);
+    float F_1_2 = form_factor(tree, 1, 2, NUM_SAMPLES);
+    float F_1_3 = form_factor(tree, 1, 3, NUM_SAMPLES);
 
     float F_01_2 = (bottom_lft.area() * F_0_2 + bottom_rht.area() * F_1_2) /
                    (bottom_lft.area() + bottom_rht.area());
@@ -66,10 +66,10 @@ std::pair<float, float> orthogonal_scenario(float a, float b, float c) {
     float F_01_23 = F_01_2 + F_01_3;
 
     // reciproc factor
-    float F_2_0 = form_factor(tree, back_lft, bottom_lft, 0, NUM_SAMPLES);
-    float F_2_1 = form_factor(tree, back_lft, bottom_rht, 1, NUM_SAMPLES);
-    float F_3_0 = form_factor(tree, back_rht, bottom_lft, 0, NUM_SAMPLES);
-    float F_3_1 = form_factor(tree, back_rht, bottom_rht, 1, NUM_SAMPLES);
+    float F_2_0 = form_factor(tree, 2, 0, NUM_SAMPLES);
+    float F_2_1 = form_factor(tree, 2, 1, NUM_SAMPLES);
+    float F_3_0 = form_factor(tree, 3, 0, NUM_SAMPLES);
+    float F_3_1 = form_factor(tree, 3, 1, NUM_SAMPLES);
 
     float F_23_0 = (back_lft.area() * F_2_0 + back_rht.area() * F_3_0) /
                    (back_lft.area() + back_rht.area());
@@ -168,4 +168,35 @@ TEST_CASE("Form factor distance dependency", "[form_factor]") {
         REQUIRE(F_ij == Approx(F_ij).epsilon(TOLERANCE));
         REQUIRE(F_ji == Approx(F_ij).epsilon(TOLERANCE)); // reciprocity
     }
+}
+
+TEST_CASE("Form factor of fully occluded triangles", "[form_factor]") {
+    auto bottom = test_triangle({0, 0, 0}, {1, 0, 1}, {1, 0, 0});
+    auto top = test_triangle({0, 1, 0}, {1, 1, 0}, {1, 1, 1});
+    auto between = test_triangle({0, 0.5, 0}, {1, 0.5, 0}, {1, 0.5, 1});
+    KDTree tree({bottom, top, between});
+
+    float ff = form_factor(tree, 0, 1);
+    REQUIRE(ff == 0);
+}
+
+TEST_CASE("Form factor of triangles with inverted normal", "[form_factor]") {
+    auto bottom = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 0, 1});
+    auto top = test_triangle({0, 1, 0}, {1, 1, 1}, {1, 1, 0});
+    KDTree tree({bottom, top});
+
+    float ff = form_factor(tree, 0, 1);
+    REQUIRE(ff == 0);
+}
+
+TEST_CASE("Form factor of triangles with parallel normal", "[form_factor]") {
+    auto bottom = test_triangle({0, 0, 0}, {1, 0, 1}, {1, 0, 0});
+    auto top = test_triangle({0, 1, 0}, {1, 1, 1}, {1, 1, 0});
+    KDTree tree({bottom, top});
+
+    float ff = form_factor(tree, 0, 1);
+    REQUIRE(ff == 0);
+
+    ff = form_factor(tree, 1, 0);
+    REQUIRE(ff == 0);
 }

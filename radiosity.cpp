@@ -68,30 +68,6 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
 }
 
 Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
-                    const std::vector<Color>& radiosity,
-                    const Configuration& conf) {
-    Stats::instance().num_rays += 1;
-
-    // intersection
-    float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
-    if (!triangle_id) {
-        return conf.bg_color;
-    }
-
-    // color interpolation
-    assert(3 * static_cast<size_t>(triangle_id) + 2 < tree.num_triangles());
-    const auto& rad_a = radiosity[3 * static_cast<size_t>(triangle_id) + 0];
-    const auto& rad_b = radiosity[3 * static_cast<size_t>(triangle_id) + 1];
-    const auto& rad_c = radiosity[3 * static_cast<size_t>(triangle_id) + 2];
-
-    auto rad = (1 - s - t) * rad_a + s * rad_b + t * rad_c;
-    rad.a = 1; // TODO
-    return rad;
-}
-
-Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
                     const RadiosityMesh& mesh,
                     const VertexRadiosityHandle& vrad,
                     const Configuration& conf) {
@@ -105,7 +81,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
         return conf.bg_color;
     }
 
-    // TODO: do it outside
+    // TODO: Use vertices directly. Beware of ordering!
     CornerVertices corners;
     auto exists = mesh.get_property_handle(corners, "corner_vertices");
     assert(exists);
@@ -250,34 +226,26 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     std::vector<std::future<void>> tasks;
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &radiosity, y,
-                                         &conf]() {
-            for (size_t x = 0; x < image.width(); ++x) {
-                for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                    auto cam_dir = cam.raster2cam(
-                        aiVector2D(x, y), image.width(), image.height());
+        tasks.emplace_back(
+            pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
+                for (size_t x = 0; x < image.width(); ++x) {
+                    for (int i = 0; i < conf.num_pixel_samples; ++i) {
+                        auto cam_dir = cam.raster2cam(
+                            aiVector2D(x, y), image.width(), image.height());
 
-                    Stats::instance().num_prim_rays += 1;
-                    if (tree.num_triangles() == radiosity.size()) {
+                        Stats::instance().num_prim_rays += 1;
                         image(x, y) += trace(cam.mPosition, cam_dir, tree,
                                              radiosity, conf);
-                    } else if (3 * tree.num_triangles() == radiosity.size()) {
-                        image(x, y) += trace_gouraud(cam.mPosition, cam_dir,
-                                                     tree, radiosity, conf);
-                    } else {
-                        throw std::logic_error("unexpected radiosity");
+                    }
+
+                    image(x, y) = exposure(image(x, y), conf.exposure);
+
+                    // gamma correction
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                     }
                 }
-
-                image(x, y) = exposure(image(x, y), conf.exposure);
-
-                // gamma correction
-                if (conf.gamma_correction_enabled) {
-                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
-                }
-                // image(x, y) = Color(1, 1, 1, 1);
-            }
-        }));
+            }));
     }
 
     long completed = 0;
