@@ -1,6 +1,7 @@
 #pragma once
 
 #include "output.h"
+#include "progress_bar.h"
 #include "radiosity.h"
 #include "raster.h"
 #include "solid_angle.h"
@@ -160,6 +161,7 @@ public:
         }
 
         // Refine nodes
+        auto progress_bar = ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             auto&p = nodes_[n];
             for (auto& q : nodes_) {
@@ -169,15 +171,7 @@ public:
                 refine(p, q);
             }
 
-            // Print progress bar
-            float progress = static_cast<float>(n+1) / nodes_.size();
-            const int bar_width = progress * 20;
-            std::cerr << "\rRefine Nodes       "
-                      << "[" << std::string(bar_width, '-')
-                      << std::string(20 - bar_width, ' ') << "] "
-                      << std::setfill(' ') << std::setw(6) << std::fixed
-                      << std::setprecision(2) << (progress * 100.0) << '%';
-            std::cerr.flush();
+            progress_bar.update(n+1);
         }
         std::cerr << std::endl;
 
@@ -355,6 +349,7 @@ private:
 
     void solve_system() {
         size_t iteration = max_iterations_;
+        auto progress_bar = ProgressBar(std::cerr, "Solving System", max_iterations_);
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -364,15 +359,7 @@ private:
                 push_pull_radiosity(p, Color());
             }
 
-            // Print progress bar
-            float progress = static_cast<float>(max_iterations_ - iteration) / max_iterations_;
-            const int bar_width = progress * 20;
-            std::cerr << "\rSolving System     "
-                      << "[" << std::string(bar_width, '-')
-                      << std::string(20 - bar_width, ' ') << "] "
-                      << std::setfill(' ') << std::setw(6) << std::fixed
-                      << std::setprecision(2) << (progress * 100.0) << '%';
-            std::cerr.flush();
+            progress_bar.update(max_iterations_ - iteration);
         }
         std::cerr << std::endl;
     }
@@ -383,18 +370,11 @@ private:
      */
     bool refine_links() {
         bool refined = false;
+        auto progress_bar = ProgressBar(std::cerr, "Refining Links", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             refined |= refine_links(nodes_[n]);
 
-            // Print progress bar
-            float progress = static_cast<float>(n+1) / nodes_.size();
-            const int bar_width = progress * 20;
-            std::cerr << "\rRefining Links     "
-                      << "[" << std::string(bar_width, '-')
-                      << std::string(20 - bar_width, ' ') << "] "
-                      << std::setfill(' ') << std::setw(6) << std::fixed
-                      << std::setprecision(2) << (progress * 100.0) << '%';
-            std::cerr.flush();
+            progress_bar.update(n+1);
         }
         std::cerr << std::endl;
 
