@@ -7,20 +7,21 @@ add_library(catch_main OBJECT catch_main.cpp)
 add_dependencies(catch_main catch)
 
 set(TESTS
+    test_algorithm
     test_clipping
     test_config
+    test_effects
     test_gauss_seidel
     test_intersection
     test_kdtree
     test_lambertian
-    test_sampling
-    test_types
+    test_progress_bar
     test_radiosity
-    test_effects
-    test_solid_angle
-    test_algorithm
     test_raster
+    test_sampling
+    test_solid_angle
     test_triangle
+    test_types
 )
 
 foreach (TEST_NAME ${TESTS})
