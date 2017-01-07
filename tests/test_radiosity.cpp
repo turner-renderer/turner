@@ -6,8 +6,8 @@
 #include <random>
 
 namespace {
-constexpr float NUM_SAMPLES = 32;
-constexpr float TOLERANCE = 0.01f;
+constexpr float NUM_SAMPLES = 128;
+constexpr float TOLERANCE = 0.003f;
 constexpr size_t NUM_RANDOM_TESTS = 50;
 
 std::pair<float, float> parallel_scenario(float a, float b, float c) {
@@ -96,8 +96,8 @@ TEST_CASE("Form factor of two orthogonal unit squares", "[form_factor]") {
     std::tie(F_ij, F_ji) = orthogonal_scenario(1, 1, 1);
 
     constexpr float F_EXPECTED = 0.20004; // cf. [CW93], Figure 4.25., p. 100
-    REQUIRE(F_ij == Approx(F_EXPECTED).epsilon(0.08));
-    REQUIRE(F_ji == Approx(F_EXPECTED).epsilon(0.08));
+    REQUIRE(F_ij == Approx(F_EXPECTED).epsilon(TOLERANCE));
+    REQUIRE(F_ji == Approx(F_EXPECTED).epsilon(TOLERANCE));
 }
 
 TEST_CASE(
@@ -114,7 +114,7 @@ TEST_CASE("Form factor of two orthogonal unit squares (analytically)",
 }
 
 TEST_CASE("Form factor of two random parallel rectangles", "[form_factor]") {
-    static std::default_random_engine gen(0);
+    static std::default_random_engine gen(42);
     static std::uniform_real_distribution<float> rnd(1, 10);
 
     size_t passed = 0;
@@ -131,12 +131,12 @@ TEST_CASE("Form factor of two random parallel rectangles", "[form_factor]") {
     }
 
     // Variance in Monte Carlo integration is too high, so we only require that
-    // 99% of all checks pass.
-    REQUIRE(2.0 * passed / NUM_RANDOM_TESTS > 0.99);
+    // 95% of all checks pass.
+    REQUIRE(passed / 2. / NUM_RANDOM_TESTS > 0.95);
 }
 
 TEST_CASE("Form factor of two random orthogonal rectangles", "[form_factor]") {
-    static std::default_random_engine gen(0);
+    static std::default_random_engine gen(42);
     static std::uniform_real_distribution<float> rnd(1, 10);
 
     size_t passed = 0;
@@ -146,15 +146,15 @@ TEST_CASE("Form factor of two random orthogonal rectangles", "[form_factor]") {
         float c = rnd(gen);
 
         float F_ij, F_ji;
-        std::tie(F_ij, F_ji) = parallel_scenario(a, b, c);
-        float F_EXPECTED = form_factor_of_parallel_rects(a, b, c);
+        std::tie(F_ij, F_ji) = orthogonal_scenario(a, b, c);
+        float F_EXPECTED = form_factor_of_orthogonal_rects(a, b, c);
         passed += F_ij == Approx(F_EXPECTED).epsilon(TOLERANCE);
         passed += F_ji == Approx(F_EXPECTED).epsilon(TOLERANCE);
     }
 
     // Variance in Monte Carlo integration is too high, so we only require that
-    // 99% of all checks pass.
-    REQUIRE(2.0 * passed / NUM_RANDOM_TESTS > 0.99);
+    // 95% of all checks pass.
+    REQUIRE(passed / 2. / NUM_RANDOM_TESTS > 0.95);
 }
 
 TEST_CASE("Form factor distance dependency", "[form_factor]") {
