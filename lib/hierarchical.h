@@ -7,7 +7,6 @@
 #include "progress_bar.h"
 #include "radiosity.h"
 #include "raster.h"
-#include "solid_angle.h"
 #include "types.h"
 
 #include <iostream>

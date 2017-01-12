@@ -12,7 +12,6 @@
 #include "lib/raster.h"
 #include "lib/runtime.h"
 #include "lib/sampling.h"
-#include "lib/solid_angle.h"
 #include "lib/stats.h"
 #include "lib/triangle.h"
 #include "lib/xorshift.h"

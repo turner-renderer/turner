@@ -19,7 +19,6 @@ set(TESTS
     test_radiosity
     test_raster
     test_sampling
-    test_solid_angle
     test_triangle
     test_types
     test_mesh
@@ -33,4 +32,4 @@ foreach (TEST_NAME ${TESTS})
 endforeach ()
 
 target_link_libraries(test_mesh ${openmesh_LIBRARIES})
-target_link_libraries(test_solid_angle ${openmesh_LIBRARIES})
+target_link_libraries(test_radiosity ${openmesh_LIBRARIES})
