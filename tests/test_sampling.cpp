@@ -5,6 +5,10 @@
 
 #include <catch.hpp>
 
+namespace {
+constexpr float TOLERANCE = 0.01f;
+}
+
 TEST_CASE("Test Hemisphere sampling", "[sampling]")
 {
     static constexpr int NUM_VECS = 100;
@@ -22,9 +26,9 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
             auto sampled_vec = trafo * res.first;
             auto cos_vec = sampled_vec * vec;
 
-            REQUIRE(cos_vec == Approx(res.second));
+            REQUIRE(cos_vec == Approx(res.second).epsilon(TOLERANCE));
 
-            REQUIRE(sampled_vec.Length() == Approx(1.f));
+            REQUIRE(sampled_vec.Length() == Approx(1.f).epsilon(TOLERANCE));
             REQUIRE(0.f <= cos_vec);
             REQUIRE(cos_vec <= 1.f);
         }
@@ -46,6 +50,6 @@ TEST_CASE("Test Triangle sampling", "[sampling]")
         bool intersect = intersect_ray_triangle(
             Ray{Vec{0, 0, 0}, sample.Normalize()}, triangle, r, s, t);
         REQUIRE(intersect);
-        REQUIRE(length == Approx(r));
+        REQUIRE(length == Approx(r).epsilon(TOLERANCE));
     }
 }

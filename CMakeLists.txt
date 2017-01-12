@@ -18,12 +18,14 @@ endif(COVERAGE)
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/vendor)
 add_subdirectory(${EXT_PROJECTS_DIR}/assimp)
 add_subdirectory(${EXT_PROJECTS_DIR}/docopt)
+add_subdirectory(${EXT_PROJECTS_DIR}/openmesh)
 add_subdirectory(${EXT_PROJECTS_DIR}/threadpool)
 
 include_directories(
 	${assimp_INCLUDE_DIR}
 	${docopt_INCLUDE_DIR}
 	${threadpool_INCLUDE_DIR}
+	${openmesh_INCLUDE_DIR}
 )
 
 # Common sources and executables
@@ -63,9 +65,12 @@ target_link_libraries(pathtracer
 )
 
 add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:common>)
-add_dependencies(radiosity docopt threadpool)
+add_dependencies(radiosity docopt openmesh threadpool)
 target_link_libraries(radiosity
-	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
+	Threads::Threads
+	${assimp_LIBRARIES}
+	${docopt_LIBRARIES}
+	${openmesh_LIBRARIES}
 )
 
 # Add tests

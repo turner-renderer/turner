@@ -1,14 +1,18 @@
 #pragma once
 
-#include "image.h"
+#include "stats.h"
 #include "triangle.h"
 #include "types.h"
-#include "stats.h"
 
 #include <assimp/scene.h>
 
-#include <ostream>
 #include <iomanip>
+#include <ostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+// LCOV_EXCL_START
 
 inline std::ostream& operator<<(std::ostream& os, const aiVector3D& v) {
     return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -19,14 +23,19 @@ inline std::ostream& operator<<(std::ostream& os, const aiColor3D& c) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, const aiColor4D& c) {
-    return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ", " << c.a << ")";
+    return os << "Color(" << c.r << ", " << c.g << ", " << c.b << ", " << c.a
+              << ")";
 }
 
 inline std::ostream& operator<<(std::ostream& os, const aiMatrix4x4& mat) {
-    os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << " " << mat.a4 << "]\n";
-    os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << " " << mat.b4 << "]\n";
-    os << "[" << mat.c1 << " " << mat.c2 << " " << mat.c3 << " " << mat.c4 << "]\n";
-    os << "[" << mat.d1 << " " << mat.d2 << " " << mat.d3 << " " << mat.d4 << "]";
+    os << "[" << mat.a1 << " " << mat.a2 << " " << mat.a3 << " " << mat.a4
+       << "]\n";
+    os << "[" << mat.b1 << " " << mat.b2 << " " << mat.b3 << " " << mat.b4
+       << "]\n";
+    os << "[" << mat.c1 << " " << mat.c2 << " " << mat.c3 << " " << mat.c4
+       << "]\n";
+    os << "[" << mat.d1 << " " << mat.d2 << " " << mat.d3 << " " << mat.d4
+       << "]";
     return os;
 }
 
@@ -43,10 +52,8 @@ inline std::ostream& operator<<(std::ostream& os, const aiString& str) {
 
 inline std::ostream& operator<<(std::ostream& os, const Triangle& tri) {
     return os << "Triangle("
-        << "vertices=[" << tri.vertices[0] << " "
-                        << tri.vertices[1] << " "
-                        << tri.vertices[2]
-        << "])";
+              << "vertices=[" << tri.vertices[0] << " " << tri.vertices[1]
+              << " " << tri.vertices[2] << "])";
 }
 
 inline std::ostream& operator<<(std::ostream& os, const aiNode& node) {
@@ -76,63 +83,78 @@ inline std::ostream& operator<<(std::ostream& os, const aiMesh& mesh) {
     return os;
 }
 
-
 inline std::ostream& operator<<(std::ostream& os, const aiRay& ray) {
     return os << ray.pos << " + t * " << ray.dir;
 }
 
-
 inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
     return os << "Camera("
-        << "mAspect=" << cam.mAspect << " "
-        << "mClipPlaneFar=" << cam.mClipPlaneFar << " "
-        << "mClipPlaneNear=" << cam.mClipPlaneNear << " "
-        << "mHorizontalFOV=" << cam.mHorizontalFOV << " "
-        << "mLookAt=" << cam.mLookAt << " "
-        << "mPosition=" << cam.mPosition << " "
-        << "mUp=" << cam.mUp << ")";
+              << "mAspect=" << cam.mAspect << " "
+              << "mClipPlaneFar=" << cam.mClipPlaneFar << " "
+              << "mClipPlaneNear=" << cam.mClipPlaneNear << " "
+              << "mHorizontalFOV=" << cam.mHorizontalFOV << " "
+              << "mLookAt=" << cam.mLookAt << " "
+              << "mPosition=" << cam.mPosition << " "
+              << "mUp=" << cam.mUp << ")";
 }
-
-/**
- * Output image in PBM format.
- *
- * Cf. https://en.wikipedia.org/wiki/Netpbm_format#PPM_example.
- */
-inline std::ostream& operator<<(std::ostream& os, const Image& img) {
-    os << "P3" << std::endl;
-    os << img.width << " " << img.height << std::endl;
-    os << 255 << std::endl;
-    int i = 0;
-    for (auto color : img) {
-        if (i++ % img.width == 0) {
-            os << std::endl;
-        }
-
-        os << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.r * color.a)) << " "
-           << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.g * color.a)) << " "
-           << std::setfill(' ') << std::setw(3)
-           << static_cast<int>(clamp(255 * color.b * color.a)) << " ";
-    }
-
-    return os;
-}
-
 
 inline std::ostream& operator<<(std::ostream& os, const Box& box) {
     return os << "Box[" << box.min << ", " << box.max << "]";
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
-    return os
-        << "Triangles      : " << stats.num_triangles << std::endl
-        << "Kd-Tree Height : " << stats.kdtree_height << std::endl
-        << "Rays           : " << stats.num_rays << std::endl
-        << "Rays (primary) : " << stats.num_prim_rays << std::endl
-        << "Rays/sec       : "
-        << 1000 * stats.num_rays / stats.runtime_ms << std::endl
-        << "Loading time   : " << 1.0 * stats.loading_time_ms / 1000 << " sec"
-            << std::endl
-        << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
+    return os << "Triangles      : " << stats.num_triangles << std::endl
+              << "Kd-Tree Height : " << stats.kdtree_height << std::endl
+              << "Rays           : " << stats.num_rays << std::endl
+              << "Rays (primary) : " << stats.num_prim_rays << std::endl
+              << "Rays/sec       : "
+              << (stats.runtime_ms ? 1000 * stats.num_rays / stats.runtime_ms
+                                   : 0)
+              << std::endl
+              << "Loading time   : " << 1.0 * stats.loading_time_ms / 1000
+              << " sec" << std::endl
+              << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
 }
+
+template <typename X, typename Y>
+std::ostream& operator<<(std::ostream& os, const std::pair<X, Y>& val) {
+    return os << "{" << val.first << ", " << val.second << "}";
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& c) {
+    os << "{";
+    for (const auto& x : c) {
+        os << x << ", ";
+    }
+    if (!c.empty()) {
+        os << "\b\b";
+    }
+    return os << "}";
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& c) {
+    os << "{";
+    for (const auto& x : c) {
+        os << x << ", ";
+    }
+    if (!c.empty()) {
+        os << "\b\b";
+    }
+    return os << "}";
+}
+
+template <typename K, typename T>
+std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, T>& c) {
+    os << "{";
+    for (const auto& kv : c) {
+        os << std::endl << "  " << kv.first << ": " << kv.second;
+    }
+    if (!c.empty()) {
+        os << "\b\b" << std::endl;
+    }
+    return os << "}";
+}
+
+// LCOV_EXCL_END
