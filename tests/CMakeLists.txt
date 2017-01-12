@@ -11,7 +11,6 @@ set(TESTS
     test_clipping
     test_config
     test_effects
-    test_gauss_seidel
     test_intersection
     test_kdtree
     test_lambertian

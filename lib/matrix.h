@@ -6,7 +6,6 @@
 #include <vector>
 
 namespace math {
-
 template <typename Number> class Matrix {
 public:
     Matrix(size_t rows, size_t cols)

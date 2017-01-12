@@ -1,7 +1,6 @@
 #include "lib/radiosity.h"
 #include "lib/algorithm.h"
 #include "lib/effects.h"
-#include "lib/gauss_seidel.h"
 #include "lib/hierarchical.h"
 #include "lib/lambertian.h"
 #include "lib/matrix.h"
