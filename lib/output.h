@@ -8,6 +8,9 @@
 
 #include <iomanip>
 #include <ostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 // LCOV_EXCL_START
 
@@ -104,11 +107,54 @@ inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
               << "Kd-Tree Height : " << stats.kdtree_height << std::endl
               << "Rays           : " << stats.num_rays << std::endl
               << "Rays (primary) : " << stats.num_prim_rays << std::endl
-              << "Rays/sec       : " << 1000 * stats.num_rays / stats.runtime_ms
+              << "Rays/sec       : "
+              << (stats.runtime_ms ? 1000 * stats.num_rays / stats.runtime_ms
+                                   : 0)
               << std::endl
               << "Loading time   : " << 1.0 * stats.loading_time_ms / 1000
               << " sec" << std::endl
               << "Rendering time : " << 1.0 * stats.runtime_ms / 1000 << " sec";
+}
+
+template <typename X, typename Y>
+std::ostream& operator<<(std::ostream& os, const std::pair<X, Y>& val) {
+    return os << "{" << val.first << ", " << val.second << "}";
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& c) {
+    os << "{";
+    for (const auto& x : c) {
+        os << x << ", ";
+    }
+    if (!c.empty()) {
+        os << "\b\b";
+    }
+    return os << "}";
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& c) {
+    os << "{";
+    for (const auto& x : c) {
+        os << x << ", ";
+    }
+    if (!c.empty()) {
+        os << "\b\b";
+    }
+    return os << "}";
+}
+
+template <typename K, typename T>
+std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, T>& c) {
+    os << "{";
+    for (const auto& kv : c) {
+        os << std::endl << "  " << kv.first << ": " << kv.second;
+    }
+    if (!c.empty()) {
+        os << "\b\b" << std::endl;
+    }
+    return os << "}";
 }
 
 // LCOV_EXCL_END

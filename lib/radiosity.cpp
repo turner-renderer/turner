@@ -18,15 +18,18 @@
 #include "radiosity.h"
 #include "sampling.h"
 
-float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
-                  const KDTree::TriangleId to_id, const size_t num_samples) {
+float form_factor(const KDTree& tree, const Vec& from_pos, const Vec& from_u,
+                  const Vec& from_v, const Vec& from_normal, const Vec& to_pos,
+                  const Vec& to_u, const Vec& to_v, const Vec& to_normal,
+                  const float to_area, const KDTree::TriangleId to_id,
+                  const size_t num_samples) {
     float result = 0;
     for (size_t i = 0; i < num_samples; ++i) {
-        auto p1 = sampling::triangle(from);
-        auto p2 = sampling::triangle(to);
+        auto p1 = sampling::triangle(from_pos, from_u, from_v);
+        auto p2 = sampling::triangle(to_pos, to_u, to_v);
 
         Vec v = p2 - p1;
-        if (tree.intersect(Ray{p1 + EPS * from.normal, v}) != to_id) {
+        if (tree.intersect(Ray{p1 + EPS * from_normal, v}) != to_id) {
             continue;
         }
 
@@ -37,22 +40,29 @@ float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
 
         float length = sqrt(square_length);
 
-        float cos_theta1 = v * from.normal / length;
+        float cos_theta1 = v * from_normal / length;
         if (cos_theta1 <= 0) {
             continue;
         }
 
-        float cos_theta2 = (-v) * to.normal / length;
+        float cos_theta2 = (-v) * to_normal / length;
         if (cos_theta2 <= 0) {
             continue;
         }
 
         float G = cos_theta1 * cos_theta2 /
-                  (M_PI * square_length + to.area() / num_samples);
+                  (M_PI * square_length + to_area / num_samples);
         result += G;
     }
 
-    return result * to.area() / num_samples;
+    return result * to_area / num_samples;
+}
+
+float form_factor(const KDTree& tree, const Triangle& from, const Triangle& to,
+                  const KDTree::TriangleId to_id, const size_t num_samples) {
+    return form_factor(tree, from.vertices[0], from.u, from.v, from.normal,
+                       to.vertices[0], to.u, to.v, to.normal, to.area(), to_id,
+                       num_samples);
 }
 
 float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
