@@ -1,37 +1,35 @@
-#include "trace.h"
+#include "lib/effects.h"
 #include "lib/output.h"
 #include "lib/progress_bar.h"
-#include "lib/raster.h"
 #include "lib/range.h"
+#include "lib/raster.h"
 #include "lib/runtime.h"
-#include "lib/triangle.h"
 #include "lib/stats.h"
+#include "lib/triangle.h"
 #include "lib/xorshift.h"
-#include "lib/effects.h"
+#include "trace.h"
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-#include <docopt/docopt.h>
 #include <ThreadPool.h>
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/scene.h>       // Output data structure
+#include <docopt/docopt.h>
 
+#include <iostream>
+#include <map>
 #include <math.h>
 #include <vector>
-#include <map>
-#include <iostream>
-
 
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
-    for (auto node : make_range(
-            scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
-    {
+    for (auto node : make_range(scene->mRootNode->mChildren,
+                                scene->mRootNode->mNumChildren)) {
         if (node->mNumMeshes == 0) {
             continue;
         }
 
         const auto& T = node->mTransformation;
-        const aiMatrix3x3 Tp(T);  // trafo without translation
+        const aiMatrix3x3 Tp(T); // trafo without translation
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
@@ -48,25 +46,20 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(Triangle{
-                    // vertices
-                    {{
-                        T * mesh.mVertices[face.mIndices[0]],
-                        T * mesh.mVertices[face.mIndices[1]],
-                        T * mesh.mVertices[face.mIndices[2]]
-                    }},
-                    // normals
-                    {{
-                        Tp * mesh.mNormals[face.mIndices[0]],
-                        Tp * mesh.mNormals[face.mIndices[1]],
-                        Tp * mesh.mNormals[face.mIndices[2]]
-                    }},
-                    ambient,
-                    diffuse,
-                    emissive,
-                    reflective,
-                    reflectivity
-                });
+                triangles.push_back(
+                    Triangle{// vertices
+                             {{T * mesh.mVertices[face.mIndices[0]],
+                               T * mesh.mVertices[face.mIndices[1]],
+                               T * mesh.mVertices[face.mIndices[2]]}},
+                             // normals
+                             {{Tp * mesh.mNormals[face.mIndices[0]],
+                               Tp * mesh.mNormals[face.mIndices[1]],
+                               Tp * mesh.mNormals[face.mIndices[2]]}},
+                             ambient,
+                             diffuse,
+                             emissive,
+                             reflective,
+                             reflectivity});
             }
         }
     }
@@ -74,7 +67,7 @@ Triangles triangles_from_scene(const aiScene* scene) {
 }
 
 static const char USAGE[] =
-R"(Usage: raytracer <filename> [options]
+    R"(Usage: raytracer <filename> [options]
 
 Options:
   -w --width=<px>                   Width of the image [default: 640].
@@ -97,34 +90,30 @@ Options:
   --exposure=<float>                Exposure [default: 1].
 )";
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const* argv[]) {
     // parameters
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
 
-    const Configuration conf { args["--max-depth"].asLong()
-                             , std::stof(args["--shadow"].asString())
-                             , args["--pixel-samples"].asLong()
-                             , args["--monte-carlo-samples"].asLong()
-                             , args["--threads"].asLong()
-                             , args["--background"].asString()
-                             , std::stof(args["--inverse-gamma"].asString())
-                             , args["--no-gamma-correction"].asBool()
-                             , std::stof(args["--max-visibility"].asString())
-                             , std::stof(args["--exposure"].asString())
-                             };
+    const Configuration conf{args["--max-depth"].asLong(),
+                             std::stof(args["--shadow"].asString()),
+                             args["--pixel-samples"].asLong(),
+                             args["--monte-carlo-samples"].asLong(),
+                             args["--threads"].asLong(),
+                             args["--background"].asString(),
+                             std::stof(args["--inverse-gamma"].asString()),
+                             args["--no-gamma-correction"].asBool(),
+                             std::stof(args["--max-visibility"].asString()),
+                             std::stof(args["--exposure"].asString())};
 
     // import scene
     std::cerr << "Loading scene..." << std::endl;
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(
-        args["<filename>"].asString().c_str(),
-        aiProcess_CalcTangentSpace       |
-        aiProcess_Triangulate            |
-        aiProcess_JoinIdenticalVertices  |
-        aiProcess_GenNormals             |
-        aiProcess_SortByPType);
+    const aiScene* scene =
+        importer.ReadFile(args["<filename>"].asString().c_str(),
+                          aiProcess_CalcTangentSpace | aiProcess_Triangulate |
+                              aiProcess_JoinIdenticalVertices |
+                              aiProcess_GenNormals | aiProcess_SortByPType);
 
     if (!scene) {
         std::cout << importer.GetErrorString() << std::endl;
@@ -132,7 +121,7 @@ int main(int argc, char const *argv[])
     }
 
     // setup camera
-    assert(scene->mNumCameras == 1);  // we can deal only with a single camera
+    assert(scene->mNumCameras == 1); // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
     if (args["--aspect"]) {
         sceneCam.mAspect = std::stof(args["--aspect"].asString());
@@ -148,21 +137,16 @@ int main(int argc, char const *argv[])
     // we can deal only with one single or no light at all
     assert(scene->mNumLights == 0 || scene->mNumLights == 1);
     std::vector<Light> lights;
-    if(scene->mNumLights == 1) {
+    if (scene->mNumLights == 1) {
         auto& rawLight = *scene->mLights[0];
 
         auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
         assert(lightNode != nullptr);
         const auto& LT = lightNode->mTransformation;
         lights.push_back(
-            { LT * aiVector3D()
-            , aiColor4D
-                { rawLight.mColorDiffuse.r
-                , rawLight.mColorDiffuse.g
-                , rawLight.mColorDiffuse.b
-                , 1
-                }
-            });
+            {LT * aiVector3D(),
+             aiColor4D{rawLight.mColorDiffuse.r, rawLight.mColorDiffuse.g,
+                       rawLight.mColorDiffuse.b, 1}});
     }
 
     // load triangles from the scene into a kd-tree
@@ -192,9 +176,8 @@ int main(int argc, char const *argv[])
         std::vector<std::future<void>> tasks;
 
         for (int y = 0; y < height; ++y) {
-            tasks.emplace_back(pool.enqueue([
-                    &image, &cam, &tree, &lights, width, height, y, &conf]()
-            {
+            tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
+                                             width, height, y, &conf]() {
                 float dx, dy;
                 xorshift64star<float> gen(42);
 
@@ -208,10 +191,9 @@ int main(int argc, char const *argv[])
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                            lights, 0, conf);
+                                             lights, 0, conf);
                     }
-                    image(x, y) /=
-                        static_cast<float>(conf.num_pixel_samples);
+                    image(x, y) /= static_cast<float>(conf.num_pixel_samples);
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -225,7 +207,7 @@ int main(int argc, char const *argv[])
 
         long completed = 0;
         auto progress_bar = ProgressBar(std::cerr, "Rendering", tasks.size());
-        for (auto& task: tasks) {
+        for (auto& task : tasks) {
             task.get();
             completed += 1;
             progress_bar.update(completed);

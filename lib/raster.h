@@ -3,8 +3,8 @@
 
 #include <assert.h>
 #include <cmath>
-#include <ostream>
 #include <iomanip>
+#include <ostream>
 #include <vector>
 
 /**

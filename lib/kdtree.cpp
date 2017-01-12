@@ -11,7 +11,6 @@ namespace {
 static constexpr int COST_TRAVERSAL = 15;
 static constexpr int COST_INTERSECTION = 20;
 
-
 // Cost function bias
 float lambda(size_t num_ltris, size_t num_rtris) {
     if (num_ltris == 0 || num_rtris == 0) {
@@ -31,12 +30,12 @@ float lambda(size_t num_ltris, size_t num_rtris) {
  * Return:
  *   cost to split the box
  */
-float cost(
-    float larea_ratio, float rarea_ratio, size_t num_ltris, size_t num_rtris)
-{
+float cost(float larea_ratio, float rarea_ratio, size_t num_ltris,
+           size_t num_rtris) {
     return lambda(num_ltris, num_rtris) *
-        (COST_TRAVERSAL + COST_INTERSECTION *
-            (larea_ratio * num_ltris + rarea_ratio * num_rtris));
+           (COST_TRAVERSAL +
+            COST_INTERSECTION *
+                (larea_ratio * num_ltris + rarea_ratio * num_rtris));
 }
 
 enum class Dir { LEFT, RIGHT };
@@ -55,22 +54,19 @@ enum class Dir { LEFT, RIGHT };
  *   cost to split the box + wether the planar triangles should be appended to
  *   the lhs or rhs of the box
  */
-std::pair<float /*cost*/, Dir> surface_area_heuristics(
-    Axis ax, float pos, const Box& box,
-    size_t num_ltris, size_t num_rtris, size_t num_ptris)
-{
+std::pair<float /*cost*/, Dir>
+surface_area_heuristics(Axis ax, float pos, const Box& box, size_t num_ltris,
+                        size_t num_rtris, size_t num_ptris) {
     Box lbox, rbox;
     std::tie(lbox, rbox) = box.split(ax, pos);
     float area = box.surface_area();
-    float larea_ratio = lbox.surface_area()/area;
-    float rarea_ratio = rbox.surface_area()/area;
+    float larea_ratio = lbox.surface_area() / area;
+    float rarea_ratio = rbox.surface_area() / area;
 
-    auto left_planar_cost = cost(
-        larea_ratio, rarea_ratio,
-        num_ltris + num_ptris, num_rtris);
-    auto right_planar_cost = cost(
-        larea_ratio, rarea_ratio,
-        num_ltris, num_ptris + num_rtris);
+    auto left_planar_cost =
+        cost(larea_ratio, rarea_ratio, num_ltris + num_ptris, num_rtris);
+    auto right_planar_cost =
+        cost(larea_ratio, rarea_ratio, num_ltris, num_ptris + num_rtris);
 
     if (left_planar_cost < right_planar_cost) {
         return {left_planar_cost, Dir::LEFT};
@@ -78,12 +74,9 @@ std::pair<float /*cost*/, Dir> surface_area_heuristics(
         return {right_planar_cost, Dir::RIGHT};
     }
 }
-}  // namespace anonymous
+} // namespace anonymous
 
-
-KDTree::KDTree(Triangles tris)
-    : tris_(std::move(tris))
-{
+KDTree::KDTree(Triangles tris) : tris_(std::move(tris)) {
     assert(tris_.size() > 0);
     assert(tris_.size() <= Node::MAX_ID);
 
@@ -114,7 +107,8 @@ KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
     }
 
     float min_cost;
-    Axis plane_ax; float plane_pos;  // plane
+    Axis plane_ax;
+    float plane_pos; // plane
     TriangleIds ltris, rtris;
     std::tie(min_cost, plane_ax, plane_pos, ltris, rtris) =
         find_plane_and_classify(tris, box);
@@ -122,9 +116,8 @@ KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
     // automatic termination
     // remove lambda factor from cost again, otherwise we may stuck in an
     // empty space split forever
-    if (COST_INTERSECTION * tris.size()
-        * lambda(ltris.size(), rtris.size()) < min_cost)
-    {
+    if (COST_INTERSECTION * tris.size() * lambda(ltris.size(), rtris.size()) <
+        min_cost) {
         return new Node(tris);
     }
 
@@ -143,11 +136,9 @@ KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
     return new Node(plane_ax, plane_pos, left, right);
 }
 
-std::tuple<
-    float /*cost*/, Axis /* plane axis */, float /* plane pos */,
-    KDTree::TriangleIds /*left*/, KDTree::TriangleIds /*right*/>
-KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
-{
+std::tuple<float /*cost*/, Axis /* plane axis */, float /* plane pos */,
+           KDTree::TriangleIds /*left*/, KDTree::TriangleIds /*right*/>
+KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
     // The box should have some surface, otherwise the surface area heuristics
     // does not make any sense.
     assert(box.surface_area() != 0);
@@ -182,16 +173,13 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
         for (auto ax : AXES) {
             auto& events = event_lists[static_cast<int>(ax)];
             if (clipped_box.is_planar(ax)) {
-                events.emplace_back(
-                    Event{id, clipped_box.min[ax], clipped_box.min[ax],
-                    PLANAR});
+                events.emplace_back(Event{id, clipped_box.min[ax],
+                                          clipped_box.min[ax], PLANAR});
             } else {
-                events.emplace_back(
-                    Event{id, clipped_box.min[ax], clipped_box.max[ax],
-                    STARTING});
-                events.emplace_back(
-                    Event{id, clipped_box.max[ax], clipped_box.min[ax],
-                    ENDING});
+                events.emplace_back(Event{id, clipped_box.min[ax],
+                                          clipped_box.max[ax], STARTING});
+                events.emplace_back(Event{id, clipped_box.max[ax],
+                                          clipped_box.min[ax], ENDING});
             }
         }
     }
@@ -214,14 +202,14 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
     for (auto ax : AXES) {
         auto& events = event_lists[static_cast<int>(ax)];
         std::sort(events.begin(), events.end(),
-            [](const Event& e1, const Event& e2) {
-                return e1.point < e2.point ||
-                    (e1.point == e2.point && e1.type < e2.type);
-            });
+                  [](const Event& e1, const Event& e2) {
+                      return e1.point < e2.point ||
+                             (e1.point == e2.point && e1.type < e2.type);
+                  });
 
         size_t num_ltris = 0, num_ptris = 0, num_rtris = num_tris;
 
-        for (size_t i = 0; i < events.size(); ) {
+        for (size_t i = 0; i < events.size();) {
             auto& event = events[i];
 
             auto p = event.point;
@@ -230,20 +218,17 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
             int point_planar = 0;
 
             while (i < events.size() && events[i].point == p &&
-                events[i].type == ENDING)
-            {
+                   events[i].type == ENDING) {
                 point_ending += 1;
                 i += 1;
             }
             while (i < events.size() && events[i].point == p &&
-                events[i].type == PLANAR)
-            {
+                   events[i].type == PLANAR) {
                 point_planar += 1;
                 i += 1;
             }
             while (i < events.size() && events[i].point == p &&
-                events[i].type == STARTING)
-            {
+                   events[i].type == STARTING) {
                 point_starting += 1;
                 i += 1;
             }
@@ -281,9 +266,7 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
     const auto& events = event_lists[static_cast<int>(min_plane_ax)];
     for (const auto& event : events) {
         if (event.point < min_plane_pos) {
-            if (event.type == ENDING ||
-                event.type == PLANAR)
-            {
+            if (event.type == ENDING || event.type == PLANAR) {
                 ltris.push_back(event.id);
             } else if (min_plane_pos < event.point_aux) {
                 // STARTING before and ENDING after min_plane
@@ -307,14 +290,12 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const
         }
     }
 
-    assert(min_ltris + (min_side == Dir::LEFT ? min_ptris : 0)
-        == ltris.size());
-    assert(min_rtris + (min_side == Dir::RIGHT ? min_ptris : 0)
-        == rtris.size());
+    assert(min_ltris + (min_side == Dir::LEFT ? min_ptris : 0) == ltris.size());
+    assert(min_rtris + (min_side == Dir::RIGHT ? min_ptris : 0) ==
+           rtris.size());
 
-    return std::make_tuple(
-        min_cost, min_plane_ax, min_plane_pos,
-        std::move(ltris), std::move(rtris));
+    return std::make_tuple(min_cost, min_plane_ax, min_plane_pos,
+                           std::move(ltris), std::move(rtris));
 }
 
 namespace {
@@ -339,8 +320,8 @@ Vec fix_direction(const Ray& ray) {
 /**
  *
  */
-const KDTree::OptionalId
-KDTree::intersect(const Ray& ray, float& r, float& a, float& b) const {
+const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
+                                           float& b) const {
     // A trick to make the traversal robust.
     // Cf. [HH11], p. 5, comment about dir classification and robustness.
     const Ray fixed_ray(ray.pos, fix_direction(ray));
@@ -388,9 +369,8 @@ KDTree::intersect(const Ray& ray, float& r, float& a, float& b) const {
 
         assert(node->is_leaf());
         float next_r, next_a, next_b;
-        auto next = intersect(
-            node->triangle_ids(), node->num_tris(), ray,
-            next_r, next_a, next_b);
+        auto next = intersect(node->triangle_ids(), node->num_tris(), ray,
+                              next_r, next_a, next_b);
         if (next && next_r < r) {
             res = next;
             r = next_r;
@@ -402,11 +382,10 @@ KDTree::intersect(const Ray& ray, float& r, float& a, float& b) const {
     return res;
 }
 
-
-const KDTree::OptionalId KDTree::intersect(
-    const KDTree::TriangleId* ids, uint32_t num_tris,
-    const Ray& ray, float& min_r, float& min_s, float& min_t) const
-{
+const KDTree::OptionalId KDTree::intersect(const KDTree::TriangleId* ids,
+                                           uint32_t num_tris, const Ray& ray,
+                                           float& min_r, float& min_s,
+                                           float& min_t) const {
     min_r = std::numeric_limits<float>::max();
     OptionalId res;
     float r, s, t;

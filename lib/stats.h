@@ -2,7 +2,6 @@
 
 #include <atomic>
 
-
 class Stats {
 public:
     static Stats& instance() {
@@ -12,8 +11,8 @@ public:
 
     size_t num_triangles;
     size_t kdtree_height;
-    std::atomic<size_t> num_rays;       // all rays
-    std::atomic<size_t> num_prim_rays;  // primary rays
+    std::atomic<size_t> num_rays;      // all rays
+    std::atomic<size_t> num_prim_rays; // primary rays
     size_t runtime_ms;
     size_t loading_time_ms;
 
