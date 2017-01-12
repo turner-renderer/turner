@@ -1,5 +1,8 @@
 #pragma once
 
+#include "algorithm.h"
+#include "kdtree.h"
+#include "mesh.h"
 #include "output.h"
 #include "progress_bar.h"
 #include "radiosity.h"
@@ -11,34 +14,7 @@
 #include <sstream>
 #include <stack>
 
-inline std::array<Triangle, 4> subdivide4(const Triangle& tri) {
-    const auto& a = tri.vertices[0];
-    const auto& b = tri.vertices[1];
-    const auto& c = tri.vertices[2];
-
-    const auto& na = tri.normals[0];
-    const auto& nb = tri.normals[1];
-    const auto& nc = tri.normals[2];
-
-    auto ma = (b + c) / 2.f;
-    auto mb = (a + c) / 2.f;
-    auto mc = (a + b) / 2.f;
-
-    auto nma = tri.interpolate_normal(0.f, 0.5f, 0.5f);
-    auto nmb = tri.interpolate_normal(0.5f, 0.f, 0.5f);
-    auto nmc = tri.interpolate_normal(0.5f, 0.5f, 0.f);
-
-    auto copy_tri = [&tri](const Vec& a, const Vec& b, const Vec& c,
-                           const Vec& na, const Vec& nb, const Vec& nc) {
-        return Triangle{{a, b, c},       {na, nb, nc}, tri.ambient,
-                        tri.diffuse,     tri.emissive, tri.reflective,
-                        tri.reflectivity};
-    };
-
-    return {
-        copy_tri(a, mc, mb, na, nmc, nmb), copy_tri(mc, b, ma, nmc, nb, nma),
-        copy_tri(mb, ma, c, nmb, nma, nc), copy_tri(mb, mc, ma, nmb, nmc, nma)};
-};
+#define UNUSED(x) (void)(x)
 
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
@@ -53,7 +29,7 @@ class HierarchicalRadiosity {
      * p gathers radiosity from q, In particular, `form_factor` is F_pq.
      */
     struct Linknode {
-        Quadnode* q; // shooting node
+        Quadnode* q;       // shooting node
         float form_factor; // form factor F_pq, where p is the owner node
     };
 
@@ -66,16 +42,15 @@ class HierarchicalRadiosity {
         }
 
         TriangleId root_tri_id; // original parent triangle from scene
-        TriangleId tri_id;      // underlying triangle (if this quadnode
-                                // represents a root node, then this is equal
-                                // to root_tri_id)
+        RadiosityMesh::FaceHandle face;
+        std::array<RadiosityMesh::VertexHandle, 3> vs; // triangle vertex ids
+
         float area;
 
         Color rad_gather; // gathering radiosity
         Color rad_shoot;  // shooting radiosity
-        // TODO: Remove, since the data is already in the triangle
-        Color emission; // light emission
-        Color rho;      // reflectivity (diffuse color)
+        Color emission;   // light emission
+        Color rho;        // reflectivity (diffuse color)
 
         Quadnode* parent = nullptr;
         std::array<std::unique_ptr<Quadnode>, 4> children;
@@ -84,9 +59,14 @@ class HierarchicalRadiosity {
 
 public:
     HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
-            size_t max_iterations, float BF_eps)
-        : tree_(&tree), F_eps_(F_eps), A_eps_(A_eps), BF_eps_(BF_eps),
-          max_iterations_(max_iterations){};
+                          float BF_eps, size_t max_iterations)
+        : tree_(&tree)
+        , F_eps_(F_eps)
+        , A_eps_(A_eps)
+        , BF_eps_(BF_eps)
+        , max_iterations_(max_iterations){};
+
+    const RadiosityMesh& mesh() const { return mesh_; }
 
     Image visualize_links(const Camera& cam, Image&& image) const {
         auto draw_pixel = [&image](int x, int y) {
@@ -103,25 +83,28 @@ public:
         for (const auto& root : nodes_) {
             stack.push(&root);
             while (!stack.empty()) {
-                auto p = stack.top();
+                const auto& p = *stack.top();
                 stack.pop();
 
                 nodes_counter += 1;
 
-                if (!p->gathering_from.empty()) {
-                    auto to = cam.cam2raster(get_triangle(*p).midpoint(),
-                                             image.width(), image.height());
-                    for (const auto& link : p->gathering_from) {
-                        auto from =
-                            cam.cam2raster(get_triangle(*link.q).midpoint(),
-                                           image.width(), image.height());
+                if (!p.gathering_from.empty()) {
+                    auto p_midpoint =
+                        convert_to_vec(triangle_midpoint(mesh_, p.vs));
+                    auto to = cam.cam2raster(p_midpoint, image.width(),
+                                             image.height());
+                    for (const auto& link : p.gathering_from) {
+                        auto q_midpoint = convert_to_vec(
+                            triangle_midpoint(mesh_, link.q->vs));
+                        auto from = cam.cam2raster(q_midpoint, image.width(),
+                                                   image.height());
                         bresenham(from.x, from.y, to.x, to.y, draw_pixel);
                     }
                     links_counter += 1;
                 }
 
-                if (!p->is_leaf()) {
-                    for (const auto& child : p->children) {
+                if (!p.is_leaf()) {
+                    for (const auto& child : p.children) {
                         stack.push(child.get());
                     }
                 }
@@ -134,24 +117,17 @@ public:
         return image;
     }
 
-    std::string get_id(const Quadnode* p) {
-        std::stringstream os;
-        if (!is_root(*p)) {
-            os << static_cast<size_t>(p->tri_id) << " (" << p->root_tri_id
-               << ")";
-        } else {
-            os << p->root_tri_id;
-        }
-        return os.str();
-    }
+    void compute() {
+        mesh_ = build_mesh(tree_->triangles());
 
-    auto compute() {
         // Create quad nodes
         for (size_t i = 0; i < tree_->num_triangles(); ++i) {
             nodes_.emplace_back();
 
             nodes_.back().root_tri_id = i;
-            nodes_.back().tri_id = i;
+            nodes_.back().face = RadiosityMesh::FaceHandle(i);
+            nodes_.back().vs =
+                triangle_vertices(mesh_, RadiosityMesh::FaceHandle(i));
             const auto& tri = (*tree_)[i];
             nodes_.back().area = tri.area();
             nodes_.back().rad_gather = Color(); // black
@@ -161,9 +137,10 @@ public:
         }
 
         // Refine nodes
-        auto progress_bar = ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
+        auto progress_bar =
+            ProgressBar(std::cerr, "Refine Nodes", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
-            auto&p = nodes_[n];
+            auto& p = nodes_[n];
             for (auto& q : nodes_) {
                 if (p.root_tri_id == q.root_tri_id) {
                     continue;
@@ -171,7 +148,7 @@ public:
                 refine(p, q);
             }
 
-            progress_bar.update(n+1);
+            progress_bar.update(n + 1);
         }
         std::cerr << std::endl;
 
@@ -179,81 +156,115 @@ public:
         bool done = false;
         while (!done) {
             solve_system();
-
             done = !refine_links();
         }
 
-        // Return leaves
-        std::pair<std::vector<Triangle>, std::vector<Color /*rad*/>> out;
+        // store radiosity in mesh
+        store_radiosity_at_triangles();
+        std::cerr << "Triangulating T-vertices." << std::endl;
+        triangulate_t_vertices();
+        store_radiosity_at_vertices();
+    }
+
+    // TODO: Use mesh directly
+    auto triangles() const {
+        std::vector<Triangle> triangles;
+        for (const auto face : mesh_.faces()) {
+            const auto& vs = triangle_vertices(mesh_, face);
+            // copy triangle with minimal information
+            triangles.emplace_back(
+                std::array<Vec, 3>{convert_to_vec(mesh_.point(vs[0])),
+                                   convert_to_vec(mesh_.point(vs[1])),
+                                   convert_to_vec(mesh_.point(vs[2]))});
+        }
+        return triangles;
+    }
+
+    void store_radiosity_at_triangles() {
+        auto rad = FaceRadiosityHandleProperty::createIfNotExists(
+            mesh_, "face_radiosity");
+
         std::stack<const Quadnode*> stack;
 
         // dfs for each node
         for (const auto& root : nodes_) {
             stack.push(&root);
-
-            std::cerr << "Root " << root.root_tri_id << std::endl;
-
             while (!stack.empty()) {
-                auto p = stack.top();
+                const auto& p = *stack.top();
                 stack.pop();
 
-                std::cerr << "Quadnode " << get_id(p) << std::endl;
-                std::cerr << "  Triangle: A = " << get_triangle(*p).area()
-                          << std::endl;
-                std::cerr << "  " << p->gathering_from.size() << " Links "
-                          << std::endl;
-                for (const auto& link : p->gathering_from) {
-                    std::cerr << "    <- " << get_id(link.q)
-                              << " with F = " << link.form_factor << std::endl;
-                }
-
-                std::cerr << get_id(p) << " : " << p->emission << std::endl;
-
-                if (p->is_leaf()) {
-                    out.first.emplace_back(get_triangle(*p));
-                    out.second.emplace_back(p->rad_shoot);
-                    out.second.back().a = 1; // TODO
+                if (p.is_leaf()) {
+                    rad[p.face] = p.rad_shoot;
+                    rad[p.face].a = 1; // TODO
                 } else {
-                    for (const auto& child : p->children) {
+                    for (const auto& child : p.children) {
                         stack.push(child.get());
                     }
                 }
             }
         }
-        return out;
+    }
+
+    void store_radiosity_at_vertices() {
+        auto vrad = VertexRadiosityHandleProperty::createIfNotExists(
+            mesh_, "vertex_radiosity");
+        FaceRadiosityHandle frad;
+        auto exists = mesh_.get_property_handle(frad, "face_radiosity");
+        assert(exists);
+        UNUSED(exists);
+
+        for (const auto v : mesh_.vertices()) {
+            Color& avg = vrad[v];
+            avg = Color(0, 0, 0, 1);
+
+            size_t n = 0;
+            for (const auto f : mesh_.vf_range(v)) {
+                avg += mesh_.property(frad, f);
+                n++;
+            }
+            avg /= n;
+        }
+    }
+
+    void triangulate_t_vertices() {
+        auto rad = FaceRadiosityHandleProperty::createIfNotExists(
+            mesh_, "face_radiosity");
+
+        size_t n_faces = mesh_.n_faces();
+        for (size_t i = 0; i < n_faces; ++i) {
+            auto face = RadiosityMesh::FaceHandle(i);
+            size_t n = mesh_.n_faces();
+            ::triangulate_t_vertices(mesh_, face); // no-op if nothing to do
+
+            if (n < mesh_.n_faces()) {
+                // copy radiosity
+                const auto& face_rad = rad[face];
+                for (; n < mesh_.n_faces(); ++n) {
+                    auto new_face = RadiosityMesh::FaceHandle(n);
+                    rad[new_face] = face_rad;
+                }
+            }
+        }
     }
 
 private:
-
-    TriangleId next_triangle_id() const {
-        return tree_->num_triangles() + subdivided_tris_.size();
-    }
-
-    bool is_root(const Quadnode& p) const {
-        return p.tri_id < tree_->num_triangles();
-    }
-
-    const Triangle& get_triangle(const Quadnode& p) const {
-        if (is_root(p)) {
-            return (*tree_)[p.root_tri_id];
-        }
-        return subdivided_tris_[p.tri_id - tree_->num_triangles()];
-    }
-
     float estimate_form_factor(const Quadnode& p, const Quadnode& q) const {
-        const Triangle& tri_p = get_triangle(p);
-        const Triangle& tri_q = get_triangle(q);
-
-        const Vec p_midpoint = tri_p.midpoint();
-        const Vec q_midpoint = tri_q.midpoint();
+        const auto p_midpoint = triangle_midpoint(mesh_, p.vs);
+        const auto p_normal = triangle_normal(mesh_, p.vs);
+        const auto q_midpoint = triangle_midpoint(mesh_, q.vs);
 
         const float cos_theta =
-            tri_p.normal * (q_midpoint - p_midpoint).Normalize();
+            p_normal | (q_midpoint - p_midpoint).normalize();
+        assert(!std::isnan(cos_theta));
         if (cos_theta < 0) {
             return 0;
         }
 
-        const float omega_q = solid_angle(p_midpoint, tri_q);
+        const auto& q_a = mesh_.point(q.vs[0]);
+        const auto& q_b = mesh_.point(q.vs[1]);
+        const auto& q_c = mesh_.point(q.vs[2]);
+        const float omega_q = solid_angle(p_midpoint, q_a, q_b, q_c);
+
         const float factor = cos_theta * omega_q / M_PI;
         return factor;
     }
@@ -268,9 +279,8 @@ private:
             return false;
         }
 
-        const auto& child_tris = subdivide4(get_triangle(p));
+        auto faces = subdivide4(mesh_, p.face);
         for (size_t i = 0; i < 4; ++i) {
-            const auto& tri = child_tris[i];
             auto& qnode = p.children[i];
 
             // create a new quanode
@@ -281,11 +291,9 @@ private:
             qnode->emission = p.emission;
             qnode->area = p_area_4;
             qnode->rho = p.rho;
-            qnode->tri_id = next_triangle_id();
+            qnode->face = faces[i];
+            qnode->vs = triangle_vertices(mesh_, faces[i]);
             qnode->root_tri_id = p.root_tri_id;
-
-            // add a new subdivided traingle
-            subdivided_tris_.emplace_back(tri);
         }
 
         return true;
@@ -297,10 +305,25 @@ private:
      * @param q shooting node
      */
     void link(Quadnode& p, Quadnode& q) {
-        const Triangle& tri_p = get_triangle(p);
-        const Triangle& tri_q = get_triangle(q);
-        float F_pq = form_factor(*tree_, tri_p, tri_q, q.root_tri_id);
-        // assert(0 <= F_pq && F_pq < 1); // TODO: not true now
+        const auto& p_a = mesh_.point(p.vs[0]);
+        const auto& p_b = mesh_.point(p.vs[1]);
+        const auto& p_c = mesh_.point(p.vs[2]);
+        const auto& q_a = mesh_.point(q.vs[0]);
+        const auto& q_b = mesh_.point(q.vs[1]);
+        const auto& q_c = mesh_.point(q.vs[2]);
+
+        const auto p_pos = convert_to_vec(p_a);
+        const auto p_u = convert_to_vec(p_b - p_a);
+        const auto p_v = convert_to_vec(p_c - p_a);
+        const auto p_normal = (p_u ^ p_v).Normalize();
+        const auto q_pos = convert_to_vec(q_a);
+        const auto q_u = convert_to_vec(q_b - q_a);
+        const auto q_v = convert_to_vec(q_c - q_a);
+        const auto q_normal = (q_u ^ q_v).Normalize();
+
+        float F_pq = form_factor(*tree_, p_pos, p_u, p_v, p_normal, q_pos, q_u,
+                                 q_v, q_normal, q.area, q.root_tri_id);
+        assert(0 <= F_pq && F_pq < 1);
 
         p.gathering_from.emplace_back();
         auto& link = p.gathering_from.back();
@@ -349,7 +372,8 @@ private:
 
     void solve_system() {
         size_t iteration = max_iterations_;
-        auto progress_bar = ProgressBar(std::cerr, "Solving System", max_iterations_);
+        auto progress_bar =
+            ProgressBar(std::cerr, "Solving System", max_iterations_);
         while (iteration--) // TODO: need a better convergence criteria
         {
             for (auto& p : nodes_) {
@@ -370,11 +394,12 @@ private:
      */
     bool refine_links() {
         bool refined = false;
-        auto progress_bar = ProgressBar(std::cerr, "Refining Links", nodes_.size());
+        auto progress_bar =
+            ProgressBar(std::cerr, "Refining Links", nodes_.size());
         for (size_t n = 0; n < nodes_.size(); ++n) {
             refined |= refine_links(nodes_[n]);
 
-            progress_bar.update(n+1);
+            progress_bar.update(n + 1);
         }
         std::cerr << std::endl;
 
@@ -390,7 +415,7 @@ private:
 
         // Process all child nodes first.
         if (!p.is_leaf()) {
-            for (auto& child: p.children) {
+            for (auto& child : p.children) {
                 refined |= refine_links(*child.get());
             }
         }
@@ -423,18 +448,14 @@ private:
      * @return true if a link has been refined.
      */
     bool refine_link(Quadnode& p, Linknode& link_node) {
-
         // Shooter node p
         Quadnode& q = *link_node.q;
 
-        const Triangle& tri_p = get_triangle(p);
-        const Triangle& tri_q = get_triangle(q);
-
-        auto oracle = q.rad_shoot * tri_q.area() * link_node.form_factor;
+        auto oracle = q.rad_shoot * q.area * link_node.form_factor;
         if (oracle.r > BF_eps_ || oracle.g > BF_eps_ || oracle.b > BF_eps_) {
 
             float F_pq = link_node.form_factor;
-            float F_qp = F_pq * tri_p.area() / tri_q.area();
+            float F_qp = F_pq * p.area / q.area;
 
             // Decide which side to subdivide. See refine()
             if (F_pq < F_qp) {
@@ -499,9 +520,16 @@ private:
         return p.rad_shoot;
     }
 
+    // TODO: reconsider design s.t. we can avoid conversion
+    // TODO: profile how much time we actually spend here!
+    static Vec convert_to_vec(const RadiosityMesh::Point& pt) {
+        return Vec{pt[0], pt[1], pt[2]};
+    };
+
 private:
     std::vector<Quadnode> nodes_;
-    Triangles subdivided_tris_;
+    Triangles subdivided_tris_; // TODO: Remove
+    RadiosityMesh mesh_;
 
     const KDTree* tree_;
     float F_eps_;

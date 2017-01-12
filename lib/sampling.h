@@ -34,17 +34,28 @@ inline std::pair<Vec, float> hemisphere() {
 /**
  * Sample a point on the triangle.
  *
- * return point in world space.
+ * @param  pos position of a corner of the triangle
+ * @param  u   a side starting at pos
+ * @param  v   a side (different from u) starting at pos
+ * @return     point in world space
  */
-inline Vec triangle(const Triangle& triangle) {
+inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
     while (true) {
         float r1 = detail::uniform();
         float r2 = detail::uniform();
 
         if ((r1 + r2) <= 1.f) {
-            return triangle.vertices[0] + r1 * triangle.u + r2 * triangle.v;
+            return pos + r1 * u + r2 * v;
         }
     }
 }
 
+/**
+ * Sample a point on the triangle.
+ *
+ * return point in world space.
+ */
+inline Vec triangle(const Triangle& tri) {
+    return triangle(tri.vertices[0], tri.u, tri.v);
+}
 } // namespace sampling
