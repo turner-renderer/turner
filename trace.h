@@ -3,8 +3,8 @@
 #include "lib/kdtree.h"
 #include "lib/types.h"
 
-#include <vector>
 #include <sstream>
+#include <vector>
 
 using Tree = KDTree;
 
@@ -44,7 +44,6 @@ public:
     }
 
 private:
-
     void check() {
         assert(0 < max_depth);
         assert(0 <= shadow_intensity && shadow_intensity <= 1);
@@ -56,7 +55,6 @@ private:
     }
 
 public:
-
     int max_depth;
     float shadow_intensity;
     int num_pixel_samples;
@@ -67,12 +65,13 @@ public:
     Color bg_color;
     float max_visibility;
     float exposure;
+
+    float rad_gouraud_enabled = false;
 };
 
-Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles_tree, const std::vector<Light>& lights,
-        int depth, const Configuration& conf);
+Color trace(const Vec& origin, const Vec& dir, const Tree& triangles_tree,
+            const std::vector<Light>& lights, int depth,
+            const Configuration& conf);
 
-Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles_tree, const std::vector<Color>& radiosity,
-        const Configuration& conf);
+Color trace(const Vec& origin, const Vec& dir, const Tree& triangles_tree,
+            const std::vector<Color>& radiosity, const Configuration& conf);

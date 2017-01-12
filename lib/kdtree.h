@@ -200,6 +200,7 @@ public:
     size_t height() const { return root_->height(); }
     size_t size() const { return root_->size(); }
     size_t num_triangles() const { return tris_.size(); }
+    const Triangles& triangles() const { return tris_; }
     const Triangle& operator[](const TriangleId id) const {
         return tris_[id];
     }
