@@ -31,7 +31,7 @@ Color exposure(const Color& c, float value) {
  * @param  inverse_gamma 1.f/gamma factor [default: gamma correction]
  * @return               light with applied gamma
  */
-float gamma(float light, float inverse_gamma = 1/2.2f) {
+float gamma(float light, float inverse_gamma = 1 / 2.2f) {
     return powf(light, inverse_gamma);
 }
 
@@ -41,7 +41,7 @@ float gamma(float light, float inverse_gamma = 1/2.2f) {
  * @param  inverse_gamma 1.f/gamma factor [default: gamma correction]
  * @return               color with applied gamma
  */
-Color gamma(Color c, float inverse_gamma = 1/2.2f) {
+Color gamma(Color c, float inverse_gamma = 1 / 2.2f) {
     return {gamma(c.r, inverse_gamma), gamma(c.g, inverse_gamma),
             gamma(c.b, inverse_gamma), c.a};
 }

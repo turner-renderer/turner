@@ -14,18 +14,15 @@ inline constexpr uint64_t bitmask(int bits) {
     return (bitmask(bits - 1) << 1) + 1;
 }
 
-
 /**
  * Random number generator.
  */
-template<typename T>
-class xorshift64star;
+template <typename T> class xorshift64star;
 
 /**
  * Specialization for random numbers in range of uint64_t.
  */
-template<>
-class xorshift64star<uint64_t> {
+template <> class xorshift64star<uint64_t> {
 public:
     constexpr explicit xorshift64star(uint64_t seed) : seed_(seed) {
         assert(seed != 0);
@@ -49,8 +46,7 @@ private:
  * Random numbers generator in [0, 1) with number of type T, where T is a
  * floating point type.
  */
-template<typename T>
-class xorshift64star {
+template <typename T> class xorshift64star {
 public:
     constexpr explicit xorshift64star(uint64_t seed) : gen_(seed) {
         assert(seed != 0);
@@ -64,7 +60,7 @@ public:
     static constexpr uint64_t MANTISSA_MASK = bitmask(DIGITS);
 
     static_assert(std::is_floating_point<T>::value,
-        "T expected to be a floating point type");
+                  "T expected to be a floating point type");
     static_assert(DIGITS <= 64, "T is too big");
 
 private:

@@ -14,9 +14,8 @@
  * Return:
  *   true, if the segment intersects the plane, otherwise false
  */
-inline bool intersect_segment_plane(
-    const Vec& a, const Vec& b, const Vec& n, float d, float& t)
-{
+inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
+                                    float d, float& t) {
     auto ab = b - a;
     t = (d - n * a) / (n * ab);
     return 0.f <= t && t <= 1.f;
@@ -61,8 +60,7 @@ inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
  *   true, if the ray intersects the triangle, otherwise false
  */
 inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
-    float& r, float& s, float& t)
-{
+                                   float& r, float& s, float& t) {
     r = intersect_ray_plane(ray, tri.vertices[0], tri.normal);
     if (r < 0) {
         return false;
@@ -73,8 +71,8 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
 
     // precompute scalar products
     // other values are precomputed in triangle on construction
-    auto wv = w*tri.v;
-    auto wu = w*tri.u;
+    auto wv = w * tri.v;
+    auto wu = w * tri.u;
 
     s = (tri.uv * wv - tri.vv * wu) / tri.denom;
     if (s < 0) {
@@ -103,9 +101,8 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  *
  * Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
  */
-inline bool intersect_ray_box(
-    const Ray& ray, const Box& box, float& tmin, float& tmax)
-{
+inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
+                              float& tmax) {
     float tx1 = (box.min.x - ray.pos.x) * ray.invdir.x;
     float tx2 = (box.max.x - ray.pos.x) * ray.invdir.x;
 
@@ -132,7 +129,6 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
     return intersect_ray_box(ray, box, tmin, tmax);
 }
 
-
 /**
  * Test plane ABBB intersection
  *
@@ -147,16 +143,13 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
     auto center = (box.max + box.min) * 0.5f;
     auto extents = box.max - center;
 
-    float r =
-        extents.x * std::abs(n.x) +
-        extents.y * std::abs(n.y) +
-        extents.z * std::abs(n.z);
+    float r = extents.x * std::abs(n.x) + extents.y * std::abs(n.y) +
+              extents.z * std::abs(n.z);
 
     float dist = n * center - d;
 
     return std::abs(dist) <= r;
 }
-
 
 /**
  * Test triangle AABB intersection
@@ -178,9 +171,9 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     auto v2 = tri.vertices[2] - center;
 
     // edges of the triangle
-    auto f0 = tri.u;   // = v1 - v0;
+    auto f0 = tri.u; // = v1 - v0;
     auto f1 = v2 - v1;
-    auto f2 = -tri.v;  // = v0 - v2;
+    auto f2 = -tri.v; // = v0 - v2;
 
     //
     // case 3
@@ -189,20 +182,19 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     float p0, p1, p2, r;
 
     // a00 = (0,−f0z,f0y)
-    p0 = v0.z*v1.y - v0.y*v1.z;
+    p0 = v0.z * v1.y - v0.y * v1.z;
     // p0 = v0.z*f0.y - v0.y*f0.z;
     // p1 = v1.z*f0.y - v1.y*f0.z;
-    p2 = v2.z*f0.y - v2.y*f0.z;
+    p2 = v2.z * f0.y - v2.y * f0.z;
     r = e1 * std::abs(f0.z) + e2 * std::abs(f0.y);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
         return false;
     }
 
-
     // a01 = (0,−f1z,f1y)
-    p0 = v0.z*f1.y - v0.y*f1.z;
+    p0 = v0.z * f1.y - v0.y * f1.z;
     // p1 = v1.z*f1.y - v1.z*f1.z;
-    p2 = v2.z*f1.y - v2.y*f1.z;
+    p2 = v2.z * f1.y - v2.y * f1.z;
     // p2 = v1.z*v2.y - v1.y*v2.z;
     r = e1 * std::abs(f1.z) + e2 * std::abs(f1.y);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
@@ -211,8 +203,8 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
 
     // a02 = (0,−f2z,f2y)
     // p0 = v0.y*v2.z - v0.z*v2.y;
-    p0 = v0.z*f2.y - v0.y*f2.z;
-    p1 = v1.z*f2.y - v1.y*f2.z;
+    p0 = v0.z * f2.y - v0.y * f2.z;
+    p1 = v1.z * f2.y - v1.y * f2.z;
     // p2 = v2.z*f2.y - v2.y*f2.z;
     r = e1 * std::abs(f2.z) + e2 * std::abs(f2.y);
     if (std::max(-std::max(p0, p1), std::min(p0, p1)) > r) {
@@ -220,26 +212,26 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     }
 
     // a10 = (f0z,0,−f0x)
-    p0 = v0.x*v1.z - v0.z*v1.x;
+    p0 = v0.x * v1.z - v0.z * v1.x;
     // p1 = v0.x*f0.z - v0.z*f0.x;
-    p2 = v2.x*f0.z - v2.z*f0.x;
+    p2 = v2.x * f0.z - v2.z * f0.x;
     r = e0 * std::abs(f0.z) + e2 * std::abs(f0.x);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
         return false;
     }
 
     // a11 = (f1z,0,−f1x)
-    p0 = v0.x*f1.z - v0.z*f1.x;
+    p0 = v0.x * f1.z - v0.z * f1.x;
     // p1 = v1.x*f1.z - v1.z*f1.x;
-    p2 = v2.x*f1.z - v2.z*f1.x;
+    p2 = v2.x * f1.z - v2.z * f1.x;
     r = e0 * std::abs(f1.z) + e2 * std::abs(f1.x);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
         return false;
     }
 
     // a12 = (f2z,0,−f2x)
-    p0 = v0.x*f2.z - v0.z*f2.x;
-    p1 = v1.x*f2.z - v1.z*f2.x;
+    p0 = v0.x * f2.z - v0.z * f2.x;
+    p1 = v1.x * f2.z - v1.z * f2.x;
     // p2 = v2.x*f2.z - v2.z*f2.x;
     r = e0 * std::abs(f2.z) + e2 * std::abs(f2.x);
     if (std::max(-std::max(p0, p1), std::min(p0, p1)) > r) {
@@ -247,26 +239,26 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     }
 
     // a20 = (−f0y,f0x,0)
-    p0 = v0.y*f0.x - v0.x*f0.y;
+    p0 = v0.y * f0.x - v0.x * f0.y;
     // p1 = v1.y*f0.x - v1.x*f0.y;
-    p2 = v2.y*f0.x - v2.x*f0.y;
+    p2 = v2.y * f0.x - v2.x * f0.y;
     r = e0 * std::abs(f0.y) + e1 * std::abs(f0.x);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
         return false;
     }
 
     // a21 = (−f1y,f1x,0)
-    p0 = v0.y*f1.x - v0.x*f1.y;
+    p0 = v0.y * f1.x - v0.x * f1.y;
     // p1 = v1.y*f1.x - v1.x*f1.y;
-    p2 = v2.y*f1.x - v2.x*f1.y;
+    p2 = v2.y * f1.x - v2.x * f1.y;
     r = e0 * std::abs(f1.y) + e1 * std::abs(f1.x);
     if (std::max(-std::max(p0, p2), std::min(p0, p2)) > r) {
         return false;
     }
 
     // a22 = (−f2y,f2x,0)
-    p0 = v0.y*f2.x - v0.x*f2.y;
-    p1 = v1.y*f2.x - v1.x*f2.y;
+    p0 = v0.y * f2.x - v0.x * f2.y;
+    p1 = v1.y * f2.x - v1.x * f2.y;
     // p2 = v2.y*f2.x - v2.x*f2.y;
     r = e0 * std::abs(f2.y) + e1 * std::abs(f2.x);
     if (std::max(-std::max(p0, p1), std::min(p0, p1)) > r) {

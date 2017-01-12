@@ -1,22 +1,21 @@
-#include "trace.h"
-#include "lib/raster.h"
-#include "lib/stats.h"
 #include "lib/intersection.h"
 #include "lib/lambertian.h"
+#include "lib/raster.h"
+#include "lib/stats.h"
 #include "lib/triangle.h"
+#include "trace.h"
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/scene.h>       // Output data structure
 
+#include <iostream>
 #include <math.h>
 #include <vector>
-#include <iostream>
 
-Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles, const std::vector<Light>& /* lights */,
-        int /* depth */, const Configuration& conf)
-{
+Color trace(const Vec& origin, const Vec& dir, const Tree& triangles,
+            const std::vector<Light>& /* lights */, int /* depth */,
+            const Configuration& conf) {
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
