@@ -43,8 +43,6 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
         return conf.bg_color;
     }
 
-    assert(false);
-
     return radiosity[triangle_id];
 }
 
