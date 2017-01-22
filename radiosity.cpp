@@ -223,14 +223,12 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
         tasks.emplace_back(
             pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
                 for (size_t x = 0; x < image.width(); ++x) {
-                    for (int i = 0; i < 1; ++i) { // TODO
-                        auto cam_dir = cam.raster2cam(
-                            aiVector2D(x, y), image.width(), image.height());
+                    auto cam_dir = cam.raster2cam(
+                        aiVector2D(x, y), image.width(), image.height());
 
-                        Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                                             radiosity, conf);
-                    }
+                    Stats::instance().num_prim_rays += 1;
+                    image(x, y) +=
+                        trace(cam.mPosition, cam_dir, tree, radiosity, conf);
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -275,26 +273,24 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
                                          &vrad, y, &conf]() {
             for (size_t x = 0; x < image.width(); ++x) {
-                for (int i = 0; i < 1; ++i) { // TODO
-                    auto cam_dir = cam.raster2cam(
-                        aiVector2D(x, y), image.width(), image.height());
+                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
+                                              image.height());
 
-                    Stats::instance().num_prim_rays += 1;
+                Stats::instance().num_prim_rays += 1;
 
-                    if (!conf.gouraud_enabled) {
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree, mesh,
-                                             frad, conf);
-                    } else {
-                        image(x, y) += trace_gouraud(cam.mPosition, cam_dir,
-                                                     tree, mesh, vrad, conf);
-                    }
+                if (!conf.gouraud_enabled) {
+                    image(x, y) +=
+                        trace(cam.mPosition, cam_dir, tree, mesh, frad, conf);
+                } else {
+                    image(x, y) += trace_gouraud(cam.mPosition, cam_dir, tree,
+                                                 mesh, vrad, conf);
+                }
 
-                    image(x, y) = exposure(image(x, y), conf.exposure);
+                image(x, y) = exposure(image(x, y), conf.exposure);
 
-                    // gamma correction
-                    if (conf.gamma_correction_enabled) {
-                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
-                    }
+                // gamma correction
+                if (conf.gamma_correction_enabled) {
+                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                 }
             }
         }));
