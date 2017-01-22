@@ -1,9 +1,7 @@
 #include "radiosity.h"
 #include "config.h"
-#include "lib/algorithm.h"
 #include "lib/effects.h"
 #include "lib/hierarchical.h"
-#include "lib/lambertian.h"
 #include "lib/matrix.h"
 #include "lib/mesh.h"
 #include "lib/output.h"
@@ -12,7 +10,6 @@
 #include "lib/range.h"
 #include "lib/raster.h"
 #include "lib/runtime.h"
-#include "lib/sampling.h"
 #include "lib/stats.h"
 #include "lib/triangle.h"
 #include "lib/xorshift.h"
@@ -25,11 +22,9 @@
 #include <docopt/docopt.h>
 
 #include <array>
-#include <chrono>
 #include <iostream>
 #include <map>
 #include <math.h>
-#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -464,8 +459,6 @@ Image render_radiosity_mesh(const RadiosityMesh& mesh, const Camera& cam,
 int main(int argc, char const* argv[]) {
     RadiosityConfig conf = RadiosityConfig::from_docopt(
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity"));
-
-    std::cerr << conf.exposure << std::endl;
 
     // import scene
     Assimp::Importer importer;

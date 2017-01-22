@@ -1,6 +1,5 @@
 #include "pathtracer.h"
 #include "lib/lambertian.h"
-#include "lib/output.h"
 #include "lib/sampling.h"
 #include "lib/stats.h"
 #include "trace.h"
