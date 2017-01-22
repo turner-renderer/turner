@@ -1,3 +1,4 @@
+#include "pathtracer.h"
 #include "lib/lambertian.h"
 #include "lib/output.h"
 #include "lib/sampling.h"
@@ -11,10 +12,10 @@
  * equation, thefore it is not guaranteed that the calculated color values are
  * less than 1. E.g. an approximation of value 1 may be greater than 1.
  */
-Color trace(const Vec& origin, const Vec& dir, const Tree& triangles,
+Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
             const std::vector<Light>& lights, int depth,
-            const Configuration& conf) {
-    if (depth > conf.max_depth) {
+            const TracerConfig& conf) {
+    if (depth > conf.max_recursion_depth) {
         return {};
     }
 
