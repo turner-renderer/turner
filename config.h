@@ -145,10 +145,12 @@ struct RadiosityConfig : public Config {
     enum Mode { EXACT, HIERARCHICAL } mode;
 
     // radiosity parameters
-    float F_eps = 0.04;
-    float BF_eps = 1e-6;
+    float F_eps = 0.04;  // form factor epsilon
+    float BF_eps = 1e-6; // shoot radiosity epsilon
+    // max number of allowed subdivision of a trinagle
     size_t max_subdivisions = 3;
-    size_t max_iterations = 3;
+    size_t max_iterations = 3; // max number of iterations in push-pull solver
+    // minimal area of a triangle (no subdivision if the triangle area is less)
     float min_area = 1. / pow(4, max_subdivisions);
 
     // flags
