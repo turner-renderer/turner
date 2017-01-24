@@ -20,6 +20,8 @@
 #include <math.h>
 #include <vector>
 
+using Tree = KDTree;
+
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
     for (auto node : make_range(scene->mRootNode->mChildren,
@@ -66,54 +68,22 @@ Triangles triangles_from_scene(const aiScene* scene) {
     return triangles;
 }
 
-static const char USAGE[] =
-    R"(Usage: raytracer <filename> [options]
-
-Options:
-  -w --width=<px>                   Width of the image [default: 640].
-  -a --aspect=<num>                 Aspect ratio of the image. If the model has
-                                    specified the aspect ratio, it will be
-                                    used. Otherwise default value is 1.
-  -d --max-depth=<int>              Maximum recursion depth for raytracing
-                                    [default: 3].
-  --shadow=<float>                  Intensity of shadow [default: 0.5].
-  --background=<3x float>           Background color [default: 0 0 0].
-  -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
-  -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
-                                    Used only in pathtracer.
-  -t --threads=<int>                Number of threads [default: 1].
-  --inverse-gamma=<float>           Inverse of gamma for gamma correction
-                                    [default: 0.454545].
-  --no-gamma-correction             Disables gamma correction.
-  --max-visibility=<float>          Any object farther away is dark. [default: 2.0]
-                                    Used only in raycaster.
-  --exposure=<float>                Exposure [default: 1].
-)";
+// Defined in the file with the trace implementation for the corresponding
+// renderer.
+extern const char* USAGE;
 
 int main(int argc, char const* argv[]) {
-    // parameters
     std::map<std::string, docopt::value> args =
-        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
-
-    const Configuration conf{args["--max-depth"].asLong(),
-                             std::stof(args["--shadow"].asString()),
-                             args["--pixel-samples"].asLong(),
-                             args["--monte-carlo-samples"].asLong(),
-                             args["--threads"].asLong(),
-                             args["--background"].asString(),
-                             std::stof(args["--inverse-gamma"].asString()),
-                             args["--no-gamma-correction"].asBool(),
-                             std::stof(args["--max-visibility"].asString()),
-                             std::stof(args["--exposure"].asString())};
+        docopt::docopt(USAGE, {argv + 1, argv + argc});
+    TracerConfig conf = TracerConfig::from_docopt(args);
 
     // import scene
     std::cerr << "Loading scene..." << std::endl;
     Assimp::Importer importer;
-    const aiScene* scene =
-        importer.ReadFile(args["<filename>"].asString().c_str(),
-                          aiProcess_CalcTangentSpace | aiProcess_Triangulate |
-                              aiProcess_JoinIdenticalVertices |
-                              aiProcess_GenNormals | aiProcess_SortByPType);
+    const aiScene* scene = importer.ReadFile(
+        conf.filename, aiProcess_CalcTangentSpace | aiProcess_Triangulate |
+                           aiProcess_JoinIdenticalVertices |
+                           aiProcess_GenNormals | aiProcess_SortByPType);
 
     if (!scene) {
         std::cout << importer.GetErrorString() << std::endl;
@@ -123,11 +93,10 @@ int main(int argc, char const* argv[]) {
     // setup camera
     assert(scene->mNumCameras == 1); // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
-    if (args["--aspect"]) {
-        sceneCam.mAspect = std::stof(args["--aspect"].asString());
-        assert(sceneCam.mAspect > 0);
+    if (sceneCam.mAspect > 0) {
+        conf.aspect = sceneCam.mAspect;
     } else if (sceneCam.mAspect == 0) {
-        sceneCam.mAspect = 1.f;
+        sceneCam.mAspect = conf.aspect;
     }
     auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
     assert(camNode != nullptr);
@@ -162,8 +131,7 @@ int main(int argc, char const* argv[]) {
     // Raytracer
     //
 
-    int width = args["--width"].asLong();
-    assert(width > 0);
+    int width = conf.width;
     int height = width / cam.mAspect;
 
     Image image(width, height);

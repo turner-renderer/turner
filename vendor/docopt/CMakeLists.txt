@@ -7,7 +7,7 @@ ExternalProject_Add(
     docopt
     PREFIX ${CMAKE_BINARY_DIR}/vendor/docopt
     GIT_REPOSITORY https://github.com/docopt/docopt.cpp.git
-    GIT_TAG a4177cc
+    GIT_TAG 1811022
     CMAKE_ARGS
     	-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
     	-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -19,6 +19,6 @@ ExternalProject_Get_Property(docopt install_dir)
 set(docopt_INCLUDE_DIR ${install_dir}/include
 	CACHE INTERNAL "Path to include folder for Docopt"
 )
-set(docopt_LIBRARIES ${install_dir}/lib/libdocopt_s.a
+set(docopt_LIBRARIES ${install_dir}/lib/libdocopt.a
 	CACHE INTERNAL "Path to libraries for Docopt"
 )
