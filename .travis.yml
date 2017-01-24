@@ -1,4 +1,5 @@
 sudo: required
+language: generic
 
 services:
   - docker
@@ -11,4 +12,7 @@ before_install:
   - docker pull boxdot/alpine-clang
 
 script:
-  - docker run -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang ./scripts/build-and-test.sh
+  - docker run -t -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang scripts/build-and-test.sh
+
+after_success:
+  - docker run -t -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang scripts/collect-coverage.sh
