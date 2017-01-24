@@ -1,11 +1,12 @@
 #!/bin/sh
-# set -ex
+set -ex
 
 mkdir -p build
 cd build
 cmake .. \
 	-DCMAKE_C_COMPILER=clang \
 	-DCMAKE_CXX_COMPILER=clang++ \
-	-DCMAKE_EXE_LINKER_FLAGS="-lc -lc++ -lc++abi -lunwind"
+	-DCMAKE_EXE_LINKER_FLAGS="-lc -lc++ -lc++abi -lunwind" \
+	-DCOVERAGE=1
 make
 make test
