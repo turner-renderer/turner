@@ -1,35 +1,14 @@
-language: cpp
+sudo: required
+
+services:
+  - docker
 
 cache:
   directories:
     - build/vendor
 
-compiler: clang
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.6
-      - george-edison55-precise-backports
-    packages:
-      - clang-3.6
-      - cmake
-      - cmake-data
-env:
-  - COMPILER=clang++-3.6
-
 before_install:
-  - pip install --user urllib3[secure] cpp-coveralls
-  # Work around https://github.com/eddyxu/cpp-coveralls/issues/108 by manually
-  # installing the pyOpenSSL module and injecting it into urllib3 as per
-  # https://urllib3.readthedocs.io/en/latest/user-guide.html#ssl-py2
-  - sed -i -e '/^import sys$/a import urllib3.contrib.pyopenssl\nurllib3.contrib.pyopenssl.inject_into_urllib3()' `which coveralls`
+  - docker pull boxdot/alpine-clang
 
 script:
-  - mkdir -p build && cd build
-  - cmake .. -DCMAKE_CXX_COMPILER=$COMPILER -DCOVERAGE=1
-  - make
-  - make test
-
-after_success:
-  - coveralls -r .. -b . --exclude build/vendor --exclude tests --gcov-options '\-lp'
+  - docker run -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang ./scripts/build-and-test.sh
