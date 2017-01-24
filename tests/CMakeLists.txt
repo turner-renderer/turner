@@ -30,5 +30,6 @@ foreach (TEST_NAME ${TESTS})
     add_test(${TEST_NAME} ${TEST_NAME})
 endforeach ()
 
+target_link_libraries(test_config ${docopt_LIBRARIES})
 target_link_libraries(test_mesh ${openmesh_LIBRARIES})
 target_link_libraries(test_radiosity ${openmesh_LIBRARIES})

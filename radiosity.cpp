@@ -1,16 +1,15 @@
-#include "lib/radiosity.h"
-#include "lib/algorithm.h"
+#include "radiosity.h"
+#include "config.h"
 #include "lib/effects.h"
 #include "lib/hierarchical.h"
-#include "lib/lambertian.h"
 #include "lib/matrix.h"
 #include "lib/mesh.h"
 #include "lib/output.h"
 #include "lib/progress_bar.h"
+#include "lib/radiosity.h"
 #include "lib/range.h"
 #include "lib/raster.h"
 #include "lib/runtime.h"
-#include "lib/sampling.h"
 #include "lib/stats.h"
 #include "lib/triangle.h"
 #include "lib/xorshift.h"
@@ -23,16 +22,14 @@
 #include <docopt/docopt.h>
 
 #include <array>
-#include <chrono>
 #include <iostream>
 #include <map>
 #include <math.h>
-#include <stack>
 #include <unordered_set>
 #include <vector>
 
-Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
-            const std::vector<Color>& radiosity, const Configuration& conf) {
+Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
+            const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
@@ -46,9 +43,9 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
     return radiosity[triangle_id];
 }
 
-Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
+Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
             const RadiosityMesh& mesh, const FaceRadiosityHandle& rad,
-            const Configuration& conf) {
+            const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
@@ -63,10 +60,10 @@ Color trace(const Vec& origin, const Vec& dir, const Tree& tree,
     return mesh.property(rad, face);
 }
 
-Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
+Color trace_gouraud(const Vec& origin, const Vec& dir, const KDTree& tree,
                     const RadiosityMesh& mesh,
                     const VertexRadiosityHandle& vrad,
-                    const Configuration& conf) {
+                    const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
@@ -95,7 +92,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const Tree& tree,
     return rad;
 }
 
-std::vector<Color> compute_radiosity(const Tree& tree) {
+std::vector<Color> compute_radiosity(const KDTree& tree) {
     using MatrixF = math::Matrix<float>;
     using VectorF = math::Vector<float>;
     size_t num_triangles = tree.num_triangles();
@@ -212,8 +209,9 @@ Triangles triangles_from_scene(const aiScene* scene) {
     return triangles;
 }
 
-Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
-              const std::vector<Color>& radiosity, Image&& image) {
+Image raycast(const KDTree& tree, const RadiosityConfig& conf,
+              const Camera& cam, const std::vector<Color>& radiosity,
+              Image&& image) {
     Runtime rt(Stats::instance().runtime_ms);
 
     std::cerr << "Rendering          ";
@@ -225,14 +223,12 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
         tasks.emplace_back(
             pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
                 for (size_t x = 0; x < image.width(); ++x) {
-                    for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                        auto cam_dir = cam.raster2cam(
-                            aiVector2D(x, y), image.width(), image.height());
+                    auto cam_dir = cam.raster2cam(
+                        aiVector2D(x, y), image.width(), image.height());
 
-                        Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                                             radiosity, conf);
-                    }
+                    Stats::instance().num_prim_rays += 1;
+                    image(x, y) +=
+                        trace(cam.mPosition, cam_dir, tree, radiosity, conf);
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -256,8 +252,8 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     return image;
 }
 
-Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
-              const RadiosityMesh& mesh, Image&& image) {
+Image raycast(const KDTree& tree, const RadiosityConfig& conf,
+              const Camera& cam, const RadiosityMesh& mesh, Image&& image) {
     Runtime rt(Stats::instance().runtime_ms);
 
     std::cerr << "Rendering          ";
@@ -277,26 +273,24 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
                                          &vrad, y, &conf]() {
             for (size_t x = 0; x < image.width(); ++x) {
-                for (int i = 0; i < conf.num_pixel_samples; ++i) {
-                    auto cam_dir = cam.raster2cam(
-                        aiVector2D(x, y), image.width(), image.height());
+                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
+                                              image.height());
 
-                    Stats::instance().num_prim_rays += 1;
+                Stats::instance().num_prim_rays += 1;
 
-                    if (!conf.rad_gouraud_enabled) {
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree, mesh,
-                                             frad, conf);
-                    } else {
-                        image(x, y) += trace_gouraud(cam.mPosition, cam_dir,
-                                                     tree, mesh, vrad, conf);
-                    }
+                if (!conf.gouraud_enabled) {
+                    image(x, y) +=
+                        trace(cam.mPosition, cam_dir, tree, mesh, frad, conf);
+                } else {
+                    image(x, y) += trace_gouraud(cam.mPosition, cam_dir, tree,
+                                                 mesh, vrad, conf);
+                }
 
-                    image(x, y) = exposure(image(x, y), conf.exposure);
+                image(x, y) = exposure(image(x, y), conf.exposure);
 
-                    // gamma correction
-                    if (conf.gamma_correction_enabled) {
-                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
-                    }
+                // gamma correction
+                if (conf.gamma_correction_enabled) {
+                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                 }
             }
         }));
@@ -321,7 +315,7 @@ Image raycast(const KDTree& tree, const Configuration& conf, const Camera& cam,
     return image;
 }
 
-Image render_feature_lines(const KDTree& tree, const Configuration& conf,
+Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                            const Camera& cam, Image&& image) {
     // Render feature lines after
     // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
@@ -458,56 +452,14 @@ Image render_radiosity_mesh(const RadiosityMesh& mesh, const Camera& cam,
     return image;
 }
 
-static const char USAGE[] =
-    R"(Usage: radiosity (direct|hierarchical) <filename> [options]
-
-Options:
-  -w --width=<px>                   Width of the image [default: 640].
-  -a --aspect=<num>                 Aspect ratio of the image. If the model has
-                                    specified the aspect ratio, it will be
-                                    used. Otherwise default value is 1.
-  --background=<3x float>           Background color [default: 0 0 0].
-  -t --threads=<int>                Number of threads [default: 1].
-  --inverse-gamma=<float>           Inverse of gamma for gamma correction
-                                    [default: 0.454545].
-  --no-gamma-correction             Disables gamma correction.
-  -e --exposure=<float>             Exposure of the image [default: 1.0].
-  --rad-simple-mesh                 Render mesh without depth overlapping.
-  --rad-features-mesh               Render mesh of features.
-  --rad-links                       Render hierarchical radiosity links.
-  --rad-exact                       Render hierarchical mesh with exact
-                                    radiosity solution.
-  --gouraud                         Enable gouraud shading [default: false].
-  --form-factor-eps=<float>         Link when form factor estimate is below
-                                    [default: 0.04].
-                                    Hierarchical radiosity only.
-  --rad-shoot-eps=<float>           Refine link when shooting radiosity times
-                                    form factor is too high [default: 1e-6].
-  --max-subdivisions=<int>          Maximum number of subdivisions for smallest
-                                    triangle [default: 3].
-  --max-iterations=<int>            Maximum iterations to solve system
-                                    [default: 1000].
-)";
-
 int main(int argc, char const* argv[]) {
-    // parameters
-    std::map<std::string, docopt::value> args =
-        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity");
-
-    Configuration conf{1, 0, 1, 0 // unused configuration arguments
-                       ,
-                       args["--threads"].asLong(),
-                       args["--background"].asString(),
-                       std::stof(args["--inverse-gamma"].asString()),
-                       args["--no-gamma-correction"].asBool(), 1,
-                       std::stof(args["--exposure"].asString())};
-
-    conf.rad_gouraud_enabled = args["--gouraud"].asBool();
+    RadiosityConfig conf = RadiosityConfig::from_docopt(
+        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity"));
 
     // import scene
     Assimp::Importer importer;
     const aiScene* scene =
-        importer.ReadFile(args["<filename>"].asString().c_str(),
+        importer.ReadFile(conf.filename.c_str(),
                           aiProcess_CalcTangentSpace | aiProcess_Triangulate |
                               aiProcess_JoinIdenticalVertices |
                               aiProcess_GenNormals | aiProcess_SortByPType);
@@ -520,11 +472,10 @@ int main(int argc, char const* argv[]) {
     // setup camera
     assert(scene->mNumCameras == 1); // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
-    if (args["--aspect"]) {
-        sceneCam.mAspect = std::stof(args["--aspect"].asString());
-        assert(sceneCam.mAspect > 0);
-    } else if (sceneCam.mAspect == 0) {
-        sceneCam.mAspect = 1.f;
+    if (sceneCam.mAspect == 0) {
+        sceneCam.mAspect = conf.aspect;
+    } else {
+        conf.aspect = sceneCam.mAspect;
     }
     auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
     assert(camNode != nullptr);
@@ -536,7 +487,7 @@ int main(int argc, char const* argv[]) {
     KDTree tree(std::move(triangles));
 
     // Image
-    int width = args["--width"].asLong();
+    int width = conf.width;
     assert(width > 0);
     int height = width / cam.mAspect;
     Image image(width, height);
@@ -544,33 +495,26 @@ int main(int argc, char const* argv[]) {
     // Compute radiosity
     std::vector<Color> radiosity;
 
-    if (args["direct"].asBool()) {
+    // TODO: split in functions
+    if (conf.mode == RadiosityConfig::EXACT) {
         radiosity = compute_radiosity(tree);
         image = raycast(tree, conf, cam, radiosity, std::move(image));
-        if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
+        if (conf.mesh == RadiosityConfig::SIMPLE_MESH) {
             image = render_mesh(tree.triangles(), cam, std::move(image));
-        } else {
+        } else if (conf.mesh == RadiosityConfig::FEATURE_MESH) {
             image = render_feature_lines(tree, conf, cam, std::move(image));
         }
-    } else if (args["hierarchical"].asBool()) {
-        // compute minimal area
-        int max_subdivisions = args["--max-subdivisions"].asLong();
-        float min_area = ::min(tree.triangles().begin(), tree.triangles().end(),
-                               [](const Triangle& tri) { return tri.area(); });
-        min_area /= pow(4, max_subdivisions);
-        std::cerr << "Minimal area: " << min_area << std::endl;
+    } else if (conf.mode == RadiosityConfig::HIERARCHICAL) {
+        conf.min_area = ::min(tree.triangles().begin(), tree.triangles().end(),
+                              [](const Triangle& tri) { return tri.area(); });
+        conf.min_area /= pow(4, conf.max_subdivisions);
+        std::cerr << "Minimal area: " << conf.min_area << std::endl;
+        std::cerr << "Form factor epsilon: " << conf.F_eps << std::endl;
+        std::cerr << "Maximum iterations: " << conf.max_iterations << std::endl;
+        std::cerr << "Shooting radiosity epsilon: " << conf.BF_eps << std::endl;
 
-        float F_eps = std::stof(args["--form-factor-eps"].asString());
-        std::cerr << "Form factor epsilon: " << F_eps << std::endl;
-
-        size_t max_iterations = args["--max-iterations"].asLong();
-        std::cerr << "Maximum iterations: " << max_iterations << std::endl;
-
-        float BF_eps = std::stof(args["--rad-shoot-eps"].asString());
-        std::cerr << "Shooting radiosity epsilon: " << BF_eps << std::endl;
-
-        HierarchicalRadiosity model(tree, F_eps, min_area, BF_eps,
-                                    max_iterations);
+        HierarchicalRadiosity model(tree, conf.F_eps, conf.min_area,
+                                    conf.BF_eps, conf.max_iterations);
         try {
             model.compute();
         } catch (std::runtime_error e) {
@@ -584,7 +528,7 @@ int main(int argc, char const* argv[]) {
         Stats::instance().num_triangles = refined_tree.num_triangles();
         Stats::instance().kdtree_height = refined_tree.height();
 
-        if (args["--rad-exact"] && args["--rad-exact"].asBool()) {
+        if (conf.exact_hierarchical_enabled) {
             radiosity = compute_radiosity(refined_tree);
             image =
                 raycast(refined_tree, conf, cam, radiosity, std::move(image));
@@ -593,21 +537,15 @@ int main(int argc, char const* argv[]) {
                             std::move(image));
         }
 
-        if (args["--rad-simple-mesh"] && args["--rad-simple-mesh"].asBool()) {
-            image =
-                render_mesh(refined_tree.triangles(), cam, std::move(image));
-        } else if (args["--rad-features-mesh"] &&
-                   args["--rad-features-mesh"].asBool()) {
-            image =
-                render_feature_lines(refined_tree, conf, cam, std::move(image));
+        if (conf.mesh == RadiosityConfig::SIMPLE_MESH) {
+            image = render_mesh(tree.triangles(), cam, std::move(image));
+        } else if (conf.mesh == RadiosityConfig::FEATURE_MESH) {
+            image = render_feature_lines(tree, conf, cam, std::move(image));
         }
 
-        if (args["--rad-links"] && args["--rad-links"].asBool()) {
+        if (conf.links_enabled) {
             image = model.visualize_links(cam, std::move(image));
         }
-    } else {
-        assert(!"parsed arguments");
-        throw std::logic_error("parsed arguments");
     }
 
     // output stats

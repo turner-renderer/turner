@@ -1,13 +1,14 @@
+#include "raytracer.h"
 #include "lib/lambertian.h"
 #include "lib/stats.h"
 #include "trace.h"
 
-Color trace(const Vec& origin, const Vec& dir, const Tree& triangles_tree,
+Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
             const std::vector<Light>& lights, int depth,
-            const Configuration& conf) {
+            const TracerConfig& conf) {
     Stats::instance().num_rays += 1;
 
-    if (depth > conf.max_depth) {
+    if (depth > conf.max_recursion_depth) {
         return {};
     }
 
