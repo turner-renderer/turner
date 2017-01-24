@@ -1,3 +1,5 @@
+# Apply formatting with:
+# clang-format -i *.cpp *.h lib/*.h lib/*.cpp tests/*.cpp
 ---
 BasedOnStyle: LLVM
 IndentWidth: 4
