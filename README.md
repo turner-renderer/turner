@@ -1,5 +1,4 @@
-
-# Renderer [![Build Status](https://travis-ci.org/jeschkies/renderer.svg?branch=master)](https://travis-ci.org/jeschkies/renderer) [![Coverage Status](https://coveralls.io/repos/github/jeschkies/renderer/badge.svg?branch=master)](https://coveralls.io/github/jeschkies/renderer?branch=master)
+# Turner [![Build Status](https://travis-ci.org/turner-renderer/turner.svg?branch=master)](https://travis-ci.org/turner-renderer/turner) [![Coverage Status](https://coveralls.io/repos/github/turner-renderer/turner/badge.svg?branch=master)](https://coveralls.io/github/turner-renderer/turner?branch=master)
 
 Prototype implementations of unbiased renderers.
 
