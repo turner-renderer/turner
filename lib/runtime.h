@@ -9,15 +9,14 @@
 class Runtime {
 public:
     Runtime() {}
-    explicit Runtime(size_t& result_ms)
-        : result_ms_(&result_ms)
-        {}
+    explicit Runtime(size_t& result_ms) : result_ms_(&result_ms) {}
 
     // return runtime in ms
     size_t operator()() const {
         auto now = std::chrono::steady_clock::now();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - started_).count();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(now -
+                                                                     started_)
+            .count();
     }
 
     ~Runtime() {

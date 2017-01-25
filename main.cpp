@@ -1,37 +1,37 @@
-#include "trace.h"
+#include "lib/effects.h"
 #include "lib/output.h"
 #include "lib/progress_bar.h"
-#include "lib/raster.h"
 #include "lib/range.h"
+#include "lib/raster.h"
 #include "lib/runtime.h"
-#include "lib/triangle.h"
 #include "lib/stats.h"
+#include "lib/triangle.h"
 #include "lib/xorshift.h"
-#include "lib/effects.h"
+#include "trace.h"
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
-#include <docopt/docopt.h>
 #include <ThreadPool.h>
+#include <assimp/Importer.hpp>  // C++ importer interface
+#include <assimp/postprocess.h> // Post processing flags
+#include <assimp/scene.h>       // Output data structure
+#include <docopt/docopt.h>
 
+#include <iostream>
+#include <map>
 #include <math.h>
 #include <vector>
-#include <map>
-#include <iostream>
 
+using Tree = KDTree;
 
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
-    for (auto node : make_range(
-            scene->mRootNode->mChildren, scene->mRootNode->mNumChildren))
-    {
+    for (auto node : make_range(scene->mRootNode->mChildren,
+                                scene->mRootNode->mNumChildren)) {
         if (node->mNumMeshes == 0) {
             continue;
         }
 
         const auto& T = node->mTransformation;
-        const aiMatrix3x3 Tp(T);  // trafo without translation
+        const aiMatrix3x3 Tp(T); // trafo without translation
 
         for (auto mesh_index : make_range(node->mMeshes, node->mNumMeshes)) {
             const auto& mesh = *scene->mMeshes[mesh_index];
@@ -48,83 +48,42 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(Triangle{
-                    // vertices
-                    {{
-                        T * mesh.mVertices[face.mIndices[0]],
-                        T * mesh.mVertices[face.mIndices[1]],
-                        T * mesh.mVertices[face.mIndices[2]]
-                    }},
-                    // normals
-                    {{
-                        Tp * mesh.mNormals[face.mIndices[0]],
-                        Tp * mesh.mNormals[face.mIndices[1]],
-                        Tp * mesh.mNormals[face.mIndices[2]]
-                    }},
-                    ambient,
-                    diffuse,
-                    emissive,
-                    reflective,
-                    reflectivity
-                });
+                triangles.push_back(
+                    Triangle{// vertices
+                             {{T * mesh.mVertices[face.mIndices[0]],
+                               T * mesh.mVertices[face.mIndices[1]],
+                               T * mesh.mVertices[face.mIndices[2]]}},
+                             // normals
+                             {{Tp * mesh.mNormals[face.mIndices[0]],
+                               Tp * mesh.mNormals[face.mIndices[1]],
+                               Tp * mesh.mNormals[face.mIndices[2]]}},
+                             ambient,
+                             diffuse,
+                             emissive,
+                             reflective,
+                             reflectivity});
             }
         }
     }
     return triangles;
 }
 
-static const char USAGE[] =
-R"(Usage: raytracer <filename> [options]
+// Defined in the file with the trace implementation for the corresponding
+// renderer.
+extern const char* USAGE;
 
-Options:
-  -w --width=<px>                   Width of the image [default: 640].
-  -a --aspect=<num>                 Aspect ratio of the image. If the model has
-                                    specified the aspect ratio, it will be
-                                    used. Otherwise default value is 1.
-  -d --max-depth=<int>              Maximum recursion depth for raytracing
-                                    [default: 3].
-  --shadow=<float>                  Intensity of shadow [default: 0.5].
-  --background=<3x float>           Background color [default: 0 0 0].
-  -p --pixel-samples=<int>          Number of samples per pixel [default: 1].
-  -m --monte-carlo-samples=<int>    Monto Carlo samples per ray [default: 8].
-                                    Used only in pathtracer.
-  -t --threads=<int>                Number of threads [default: 1].
-  --inverse-gamma=<float>           Inverse of gamma for gamma correction
-                                    [default: 0.454545].
-  --no-gamma-correction             Disables gamma correction.
-  --max-visibility=<float>          Any object farther away is dark. [default: 2.0]
-                                    Used only in raycaster.
-  --exposure=<float>                Exposure [default: 1].
-)";
-
-int main(int argc, char const *argv[])
-{
-    // parameters
+int main(int argc, char const* argv[]) {
     std::map<std::string, docopt::value> args =
-        docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "raytracer 0.2");
-
-    const Configuration conf { args["--max-depth"].asLong()
-                             , std::stof(args["--shadow"].asString())
-                             , args["--pixel-samples"].asLong()
-                             , args["--monte-carlo-samples"].asLong()
-                             , args["--threads"].asLong()
-                             , args["--background"].asString()
-                             , std::stof(args["--inverse-gamma"].asString())
-                             , args["--no-gamma-correction"].asBool()
-                             , std::stof(args["--max-visibility"].asString())
-                             , std::stof(args["--exposure"].asString())
-                             };
+        docopt::docopt(USAGE, {argv + 1, argv + argc});
+    TracerConfig conf = TracerConfig::from_docopt(args);
 
     // import scene
     std::cerr << "Loading scene..." << std::endl;
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
-        args["<filename>"].asString().c_str(),
-        aiProcess_CalcTangentSpace       |
-        aiProcess_Triangulate            |
-        aiProcess_JoinIdenticalVertices  |
-        aiProcess_GenNormals             |
-        aiProcess_SortByPType);
+        conf.filename, aiProcess_CalcTangentSpace | aiProcess_Triangulate |
+                           aiProcess_JoinIdenticalVertices |
+                           aiProcess_GenNormals | aiProcess_SortByPType);
 
     if (!scene) {
         std::cout << importer.GetErrorString() << std::endl;
@@ -132,13 +91,12 @@ int main(int argc, char const *argv[])
     }
 
     // setup camera
-    assert(scene->mNumCameras == 1);  // we can deal only with a single camera
+    assert(scene->mNumCameras == 1); // we can deal only with a single camera
     auto& sceneCam = *scene->mCameras[0];
-    if (args["--aspect"]) {
-        sceneCam.mAspect = std::stof(args["--aspect"].asString());
-        assert(sceneCam.mAspect > 0);
+    if (sceneCam.mAspect > 0) {
+        conf.aspect = sceneCam.mAspect;
     } else if (sceneCam.mAspect == 0) {
-        sceneCam.mAspect = 1.f;
+        sceneCam.mAspect = conf.aspect;
     }
     auto* camNode = scene->mRootNode->FindNode(sceneCam.mName);
     assert(camNode != nullptr);
@@ -148,21 +106,16 @@ int main(int argc, char const *argv[])
     // we can deal only with one single or no light at all
     assert(scene->mNumLights == 0 || scene->mNumLights == 1);
     std::vector<Light> lights;
-    if(scene->mNumLights == 1) {
+    if (scene->mNumLights == 1) {
         auto& rawLight = *scene->mLights[0];
 
         auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
         assert(lightNode != nullptr);
         const auto& LT = lightNode->mTransformation;
         lights.push_back(
-            { LT * aiVector3D()
-            , aiColor4D
-                { rawLight.mColorDiffuse.r
-                , rawLight.mColorDiffuse.g
-                , rawLight.mColorDiffuse.b
-                , 1
-                }
-            });
+            {LT * aiVector3D(),
+             aiColor4D{rawLight.mColorDiffuse.r, rawLight.mColorDiffuse.g,
+                       rawLight.mColorDiffuse.b, 1}});
     }
 
     // load triangles from the scene into a kd-tree
@@ -178,8 +131,7 @@ int main(int argc, char const *argv[])
     // Raytracer
     //
 
-    int width = args["--width"].asLong();
-    assert(width > 0);
+    int width = conf.width;
     int height = width / cam.mAspect;
 
     Image image(width, height);
@@ -192,9 +144,8 @@ int main(int argc, char const *argv[])
         std::vector<std::future<void>> tasks;
 
         for (int y = 0; y < height; ++y) {
-            tasks.emplace_back(pool.enqueue([
-                    &image, &cam, &tree, &lights, width, height, y, &conf]()
-            {
+            tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
+                                             width, height, y, &conf]() {
                 float dx, dy;
                 xorshift64star<float> gen(42);
 
@@ -208,10 +159,9 @@ int main(int argc, char const *argv[])
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                            lights, 0, conf);
+                                             lights, 0, conf);
                     }
-                    image(x, y) /=
-                        static_cast<float>(conf.num_pixel_samples);
+                    image(x, y) /= static_cast<float>(conf.num_pixel_samples);
 
                     image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -225,7 +175,7 @@ int main(int argc, char const *argv[])
 
         long completed = 0;
         auto progress_bar = ProgressBar(std::cerr, "Rendering", tasks.size());
-        for (auto& task: tasks) {
+        for (auto& task : tasks) {
             task.get();
             completed += 1;
             progress_bar.update(completed);

@@ -12,7 +12,9 @@
  *               0 << value - white
  * @return 		 light with applied explosure
  */
-float exposure(float light, float value) { return 1 - expf(-light * value); }
+inline float exposure(float light, float value) {
+    return 1 - expf(-light * value);
+}
 
 /**
  * Apply explosure to the rgb channels of the given color.
@@ -20,7 +22,7 @@ float exposure(float light, float value) { return 1 - expf(-light * value); }
  * @param  value explosure (cf. overloaded explosure function)
  * @return       color with applied explosure
  */
-Color exposure(const Color& c, float value) {
+inline Color exposure(const Color& c, float value) {
     return {exposure(c.r, value), exposure(c.g, value), exposure(c.b, value),
             c.a};
 }
@@ -31,7 +33,7 @@ Color exposure(const Color& c, float value) {
  * @param  inverse_gamma 1.f/gamma factor [default: gamma correction]
  * @return               light with applied gamma
  */
-float gamma(float light, float inverse_gamma = 1/2.2f) {
+inline float gamma(float light, float inverse_gamma = 1 / 2.2f) {
     return powf(light, inverse_gamma);
 }
 
@@ -41,7 +43,7 @@ float gamma(float light, float inverse_gamma = 1/2.2f) {
  * @param  inverse_gamma 1.f/gamma factor [default: gamma correction]
  * @return               color with applied gamma
  */
-Color gamma(Color c, float inverse_gamma = 1/2.2f) {
+inline Color gamma(Color c, float inverse_gamma = 1 / 2.2f) {
     return {gamma(c.r, inverse_gamma), gamma(c.g, inverse_gamma),
             gamma(c.b, inverse_gamma), c.a};
 }
