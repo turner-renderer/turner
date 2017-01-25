@@ -1,8 +1,8 @@
 #pragma once
 
-#include "types.h"
-#include "triangle.h"
 #include "intersection.h"
+#include "triangle.h"
+#include "types.h"
 
 #include "output.h"
 
@@ -14,13 +14,13 @@
 namespace detail {
 using OutCode = int;
 
-static constexpr int INSIDE = 0;   // 000000
-static constexpr int   LEFT = 1;   // 000001
-static constexpr int  RIGHT = 2;   // 000010
-static constexpr int BOTTOM = 4;   // 000100
-static constexpr int    TOP = 8;   // 001000
-static constexpr int  FRONT = 16;  // 010000
-static constexpr int   BACK = 32;  // 100000
+static constexpr int INSIDE = 0; // 000000
+static constexpr int LEFT = 1;   // 000001
+static constexpr int RIGHT = 2;  // 000010
+static constexpr int BOTTOM = 4; // 000100
+static constexpr int TOP = 8;    // 001000
+static constexpr int FRONT = 16; // 010000
+static constexpr int BACK = 32;  // 100000
 
 inline OutCode compute_outcode(const Vec& v, const Box& box) {
     OutCode code = INSIDE;
@@ -115,16 +115,13 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
     return true;
 }
 
-enum class PointPlanePos {
-    ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE
-};
+enum class PointPlanePos { ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE };
 
 /**
  * Classify point to the thick plane given by equation `n * x = d`.
  */
-inline PointPlanePos classify_point_to_plane(
-    const Vec& pt, const Vec& n, float d)
-{
+inline PointPlanePos classify_point_to_plane(const Vec& pt, const Vec& n,
+                                             float d) {
     float dist = n * pt - d;
     if (dist > EPS) {
         return PointPlanePos::IN_FRONT_OF_PLANE;
@@ -137,8 +134,8 @@ inline PointPlanePos classify_point_to_plane(
 /**
  * Sutherland-Hodgman polygon clipping at a (thick) plane.
  */
-inline std::vector<Vec>
-clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
+inline std::vector<Vec> clip_polygon_at_plane(const std::vector<Vec>& poly,
+                                              const Vec& n, float d) {
     assert(poly.size() > 1);
 
     std::vector<Vec> points;
@@ -159,9 +156,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 assert(intersects);
 
                 Vec pt(a + t * (b - a));
-                assert(
-                    classify_point_to_plane(pt, n, d)
-                    == PointPlanePos::ON_PLANE);
+                assert(classify_point_to_plane(pt, n, d) ==
+                       PointPlanePos::ON_PLANE);
                 points.emplace_back(pt);
             }
             points.emplace_back(b);
@@ -174,9 +170,8 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
                 UNUSED(intersects);
 
                 Vec pt(a + t * (b - a));
-                assert(
-                    classify_point_to_plane(pt, n, d)
-                    == PointPlanePos::ON_PLANE);
+                assert(classify_point_to_plane(pt, n, d) ==
+                       PointPlanePos::ON_PLANE);
                 points.emplace_back(pt);
             }
             // a is behind plane or on plane
@@ -191,7 +186,6 @@ clip_polygon_at_plane(const std::vector<Vec>& poly, const Vec& n, float d) {
 
     return points;
 }
-
 
 /**
  * Clip triangle `tri` at AABB `box`.
@@ -219,10 +213,8 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     }
 
     // compute min and max coordinates
-    Box res
-        { std::numeric_limits<float>::max()
-        , std::numeric_limits<float>::lowest()
-        };
+    Box res{std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::lowest()};
     for (auto ax : AXES) {
         for (const auto& pt : points) {
             if (pt[ax] < res.min[ax]) {

@@ -1,8 +1,8 @@
-#include "trace.h"
+#include "pathtracer.h"
 #include "lib/lambertian.h"
 #include "lib/sampling.h"
 #include "lib/stats.h"
-#include "lib/output.h"
+#include "trace.h"
 
 /**
  * Return color of the object hit by (origin, dir) ray.
@@ -11,11 +11,10 @@
  * equation, thefore it is not guaranteed that the calculated color values are
  * less than 1. E.g. an approximation of value 1 may be greater than 1.
  */
-Color trace(const Vec& origin, const Vec& dir,
-        const Tree& triangles, const std::vector<Light>& lights,
-        int depth, const Configuration& conf)
-{
-    if (depth > conf.max_depth) {
+Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
+            const std::vector<Light>& lights, int depth,
+            const TracerConfig& conf) {
+    if (depth > conf.max_recursion_depth) {
         return {};
     }
 
@@ -23,8 +22,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id = triangles.intersect(
-        Ray(origin, dir), dist_to_triangle, s, t);
+    auto triangle_id =
+        triangles.intersect(Ray(origin, dir), dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -48,8 +47,8 @@ Color trace(const Vec& origin, const Vec& dir,
         auto light_dir = (light.position - p).Normalize();
         float dist_to_light = (light.position - p2).Length();
         float dist_to_next_triangle;
-        auto has_shadow = triangles.intersect(
-            aiRay(p2, light_dir), dist_to_next_triangle, s, t);
+        auto has_shadow = triangles.intersect(aiRay(p2, light_dir),
+                                              dist_to_next_triangle, s, t);
 
         // Do we get direct light?
         if (!has_shadow || dist_to_next_triangle > dist_to_light) {
@@ -69,13 +68,13 @@ Color trace(const Vec& origin, const Vec& dir,
     aiMatrix3x3 mTrafo;
     aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, normal, mTrafo);
 
-    for(int run = 0; run < conf.num_monte_carlo_samples; run++) {
+    for (int run = 0; run < conf.num_monte_carlo_samples; run++) {
         auto dir_theta = sampling::hemisphere();
         auto dir = mTrafo * dir_theta.first;
         auto cos_theta = dir_theta.second;
 
-        const auto indirect_light = trace(
-            p2, dir, triangles, lights, depth + 1, conf);
+        const auto indirect_light =
+            trace(p2, dir, triangles, lights, depth + 1, conf);
 
         // lambertian
         indirect_lightning += cos_theta * indirect_light;
@@ -94,7 +93,6 @@ Color trace(const Vec& origin, const Vec& dir,
     // N - number of samples
     // ρ - material color
     //
-    return triangle.diffuse * (
-        direct_lightning * static_cast<float>(M_1_PI) +
-        indirect_lightning * 2.f);
+    return triangle.diffuse * (direct_lightning * static_cast<float>(M_1_PI) +
+                               indirect_lightning * 2.f);
 }

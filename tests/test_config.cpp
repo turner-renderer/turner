@@ -1,60 +1,194 @@
+#include "../config.h"
+
 #include <catch.hpp>
-#include "../trace.h"
+#include <docopt/docopt.h>
 
-SCENARIO("Create config from options", "[config]") {
+namespace raycaster {
+#include "../raycaster.h"
+}
+namespace raytracer {
+#include "../raytracer.h"
+}
+namespace pathtracer {
+#include "../pathtracer.h"
+}
+namespace radiosity {
+#include "../radiosity.h"
+}
 
-    GIVEN("A a max depth") {
-        long max_depth = 2;
+void test_common_config(const char* usage) {
+    const char* argv[] = {"./exec",      "-w",
+                          "100",         "-a",
+                          "0.5",         "--background",
+                          "0.5 0.5 0.5", "-t",
+                          "2",           "--inverse-gamma",
+                          "1",           "--no-gamma-correction",
+                          "--exposure",  "1.5",
+                          "file"};
 
-    GIVEN("A shadow intensity") {
-        float shadow_intensity = 1.0f;
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(usage, {argv + 1, argv + 15});
+    Config conf = Config::from_docopt(args);
 
-    GIVEN("A number of pixel samples") {
-        long num_pixel_samples = 128;
+    REQUIRE(conf.width == 100);
+    REQUIRE(conf.aspect == 0.5);
+    REQUIRE(conf.bg_color == Color(0.5, 0.5, 0.5, 1));
+    REQUIRE(conf.num_threads == 2);
+    REQUIRE(conf.inverse_gamma == 1);
+    REQUIRE(conf.gamma_correction_enabled == false);
+    REQUIRE(conf.exposure == 1.5);
+    REQUIRE(conf.filename == "file");
+}
 
-    GIVEN("A number of monte carlo samples") {
-        long num_monte_carlo_samples = 2;
+TEST_CASE("Create config from raycaster USAGE", "[config]") {
+    test_common_config(raycaster::USAGE);
 
-    GIVEN("A number of threads") {
-        long num_threads = 4;
+    const char* argv[] = {"./exec", "--max-visibility", "4.5", "file"};
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(raycaster::USAGE, {argv + 1, argv + 4});
+    auto conf = TracerConfig::from_docopt(args);
 
-    GIVEN("A background color") {
-        std::string bg_color = "0 0.3 1.0";
+    REQUIRE(conf.max_visibility == 4.5);
+}
 
-    GIVEN("An inverse of gamma") {
-        float inv_gamma = 1.f/2.2f;
+TEST_CASE("Create config from raytracer USAGE", "[config]") {
+    test_common_config(raytracer::USAGE);
 
-    GIVEN("A gamma correction flag") {
-        bool no_gamma = false;
+    const char* argv[] = {"./exec", "-d", "42", "--shadow", "0.7", "file"};
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(raytracer::USAGE, {argv + 1, argv + 6});
+    auto conf = TracerConfig::from_docopt(args);
 
-    GIVEN("A maximum visibility") {
-        float max_visibility = 3.f;
+    REQUIRE(conf.max_recursion_depth == 42);
+    REQUIRE(conf.shadow_intensity == 0.7f);
+}
 
-    GIVEN("An exposure value") {
-        float exposure = 1.f;
+TEST_CASE("Create config from pathtracer USAGE", "[config]") {
+    test_common_config(pathtracer::USAGE);
 
-    WHEN("the configuration is created") {
-        Configuration config { max_depth
-                             , shadow_intensity
-                             , num_pixel_samples
-                             , num_monte_carlo_samples
-                             , num_threads
-                             , bg_color
-                             , inv_gamma
-                             , no_gamma
-                             , max_visibility
-                             , exposure
-                             };
+    const char* argv[] = {"./exec", "-d", "42", "-p", "42", "-m", "42", "file"};
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(pathtracer::USAGE, {argv + 1, argv + 8});
+    auto conf = TracerConfig::from_docopt(args);
 
-    THEN("the configuration holds all variables") {
-        REQUIRE(config.max_depth == 2);
-        REQUIRE(config.shadow_intensity == 1.f);
-        REQUIRE(config.num_pixel_samples == 128);
-        REQUIRE(config.num_monte_carlo_samples == 2);
-        REQUIRE(config.num_threads == 4);
-        REQUIRE(config.gamma_correction_enabled == true);
-        REQUIRE(config.bg_color == Color(0.f, 0.3f, 1.f, 1.f));
-        REQUIRE(config.max_visibility == 3.f);
-        REQUIRE(config.exposure == 1.f);
-    }}}}}}}}}}}}
+    REQUIRE(conf.max_recursion_depth == 42);
+    REQUIRE(conf.num_pixel_samples == 42);
+    REQUIRE(conf.num_monte_carlo_samples == 42);
+}
+
+TEST_CASE("Create common config from radiosity USAGE", "[config]") {
+    const char* argv[] = {"./exec",
+                          "exact",
+                          "-w",
+                          "100",
+                          "-a",
+                          "0.5",
+                          "--background",
+                          "0.5 0.5 0.5",
+                          "-t",
+                          "2",
+                          "--inverse-gamma",
+                          "1",
+                          "--no-gamma-correction",
+                          "--exposure",
+                          "1.5",
+                          "file"};
+
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(radiosity::USAGE, {argv + 1, argv + 16});
+    Config conf = Config::from_docopt(args);
+
+    REQUIRE(conf.width == 100);
+    REQUIRE(conf.aspect == 0.5);
+    REQUIRE(conf.bg_color == Color(0.5, 0.5, 0.5, 1));
+    REQUIRE(conf.num_threads == 2);
+    REQUIRE(conf.inverse_gamma == 1);
+    REQUIRE(conf.gamma_correction_enabled == false);
+    REQUIRE(conf.exposure == 1.5);
+    REQUIRE(conf.filename == "file");
+}
+
+TEST_CASE("Create config from radiosity USAGE", "[config]") {
+    const char* argv[] = {"./exec",
+                          "exact",
+                          "--form-factor-eps",
+                          "0.1",
+                          "--rad-shoot-eps",
+                          "0.1",
+                          "--max-subdivisions",
+                          "42",
+                          "--max-iterations",
+                          "42",
+                          "file"};
+
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(radiosity::USAGE, {argv + 1, argv + 11});
+    auto conf = RadiosityConfig::from_docopt(args);
+
+    REQUIRE(conf.mode == RadiosityConfig::EXACT);
+    REQUIRE(conf.F_eps == 0.1f);
+    REQUIRE(conf.BF_eps == 0.1f);
+    REQUIRE(conf.max_subdivisions == 42);
+    REQUIRE(conf.max_iterations == 42);
+
+    // test standard values of flags
+    REQUIRE(!conf.gouraud_enabled);
+    REQUIRE(conf.mesh == RadiosityConfig::NO_MESH);
+    REQUIRE(!conf.links_enabled);
+    REQUIRE(!conf.exact_hierarchical_enabled);
+}
+
+TEST_CASE("Test mode in radiosity USAGE", "[config]") {
+    {
+        const char* argv[] = {"./exec", "exact", "file"};
+
+        std::map<std::string, docopt::value> args =
+            docopt::docopt(radiosity::USAGE, {argv + 1, argv + 3});
+        auto conf = RadiosityConfig::from_docopt(args);
+
+        REQUIRE(conf.mode == RadiosityConfig::EXACT);
+    }
+    {
+        const char* argv[] = {"./exec", "hierarchical", "file"};
+
+        std::map<std::string, docopt::value> args =
+            docopt::docopt(radiosity::USAGE, {argv + 1, argv + 3});
+        auto conf = RadiosityConfig::from_docopt(args);
+
+        REQUIRE(conf.mode == RadiosityConfig::HIERARCHICAL);
+    }
+}
+
+TEST_CASE("Test mesh flag in radiosity USAGE", "[config]") {
+    {
+        const char* argv[] = {"./exec", "hierarchical", "--mesh=simple",
+                              "file"};
+        std::map<std::string, docopt::value> args =
+            docopt::docopt(radiosity::USAGE, {argv + 1, argv + 4});
+        auto conf = RadiosityConfig::from_docopt(args);
+
+        REQUIRE(conf.mesh == RadiosityConfig::SIMPLE_MESH);
+    }
+    {
+        const char* argv[] = {"./exec", "hierarchical", "--mesh=feature",
+                              "file"};
+        std::map<std::string, docopt::value> args =
+            docopt::docopt(radiosity::USAGE, {argv + 1, argv + 4});
+        auto conf = RadiosityConfig::from_docopt(args);
+
+        REQUIRE(conf.mesh == RadiosityConfig::FEATURE_MESH);
+    }
+}
+
+TEST_CASE("Test flags in radiosity USAGE", "[config]") {
+    const char* argv[] = {"./exec",  "hierarchical", "-g",
+                          "--links", "--exact",      "file"};
+
+    std::map<std::string, docopt::value> args =
+        docopt::docopt(radiosity::USAGE, {argv + 1, argv + 6});
+    auto conf = RadiosityConfig::from_docopt(args);
+
+    REQUIRE(conf.gouraud_enabled);
+    REQUIRE(conf.links_enabled);
+    REQUIRE(conf.exact_hierarchical_enabled);
 }
