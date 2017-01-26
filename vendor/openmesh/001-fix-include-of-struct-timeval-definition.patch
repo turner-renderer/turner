@@ -1,0 +1,12 @@
+diff --git a/src/OpenMesh/Tools/Utils/conio.cc b/src/OpenMesh/Tools/Utils/conio.cc
+index 3a7c04e..b592515 100644
+--- a/src/OpenMesh/Tools/Utils/conio.cc
++++ b/src/OpenMesh/Tools/Utils/conio.cc
+@@ -91,6 +91,7 @@ int getche() { return ::getche(); }
+ #endif
+ #include <termios.h>   /* tcsetattr()    */
+ #include <sys/ioctl.h> /* ioctl()        */
++#include <sys/time.h>  /* struct timeval */
+ 
+ namespace OpenMesh {
+ namespace Utils {

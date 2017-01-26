@@ -10,7 +10,7 @@ option(COVERAGE "Generate coverage data" OFF)
 if(COVERAGE)
     add_compile_options(-O0 -g)
     add_compile_options(-fprofile-arcs -ftest-coverage)
-    set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} --coverage)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif(COVERAGE)
 
 # Add external projects
