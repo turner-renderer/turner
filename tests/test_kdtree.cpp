@@ -62,7 +62,7 @@ TEST_CASE("Four separated triangles test", "[kdtree]") {
 
 TEST_CASE("KDTree stress test", "[kdtree]") {
     static constexpr size_t TRIANGLES_COUNT = 100;
-    static constexpr size_t RAYS_COUNT = 340;
+    static constexpr size_t RAYS_PER_LINE = 500;
 
     std::cerr << "\n== Stress test ==" << std::endl;
 
@@ -100,12 +100,12 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
 
     const Vec origin{0, 0, 1000};
     float x = -10.f, y = -10.f;
-    const float step_x = 20.f / 640;
-    const float step_y = 20.f / 640;
+    const float step_x = 20.f / RAYS_PER_LINE;
+    const float step_y = 20.f / RAYS_PER_LINE;
     {
         Runtime runtime(runtime_ms);
-        for (size_t i = 0; i < RAYS_COUNT; ++i, x += step_x) {
-            for (size_t j = 0; j < RAYS_COUNT; ++j, y += step_y) {
+        for (size_t i = 0; i < RAYS_PER_LINE; ++i, x += step_x) {
+            for (size_t j = 0; j < RAYS_PER_LINE; ++j, y += step_y) {
                 float r, s, t;
                 Ray ray{origin, (Vec{x, y, 0}) - origin};
                 if (tree.intersect(ray, r, s, t)) {
@@ -117,9 +117,9 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
     }
 
     std::cerr << "Runtime  : " << runtime_ms << "ms" << std::endl;
-    std::cerr << "# Rays   : " << RAYS_COUNT * RAYS_COUNT << std::endl;
+    std::cerr << "# Rays   : " << RAYS_PER_LINE * RAYS_PER_LINE << std::endl;
     std::cerr << "# Hits   : " << num_hits << std::endl;
-    std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
+    std::cerr << "Rays/sec : " << 1000. * RAYS_PER_LINE / runtime_ms << std::endl;
     std::cerr << std::endl;
 }
 

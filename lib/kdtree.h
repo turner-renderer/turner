@@ -26,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <stack>
 
 namespace detail {
 
@@ -234,6 +235,12 @@ private:
     std::unique_ptr<Node> root_;
     Triangles tris_;
     Box box_;
+
+    // Used in intersection calculation. Declared here to avoid memory
+    // allocation inside the function.
+    //
+    // TODO: avoid mutable
+    mutable std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack_;
 };
 
 // custom hash for OptionalId
