@@ -28,6 +28,7 @@ auto num_vertices(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face) {
     size_t N = 0;
     for (auto v : mesh.fv_range(face)) {
         N++;
+        UNUSED(v);
     }
     return N;
 }
@@ -146,8 +147,6 @@ TEST_CASE("Complex square subdivide4", "[subdivide4]") {
     auto mab = (a + b) / 2;
     auto mbc = (b + c) / 2;
     auto mac = (a + c) / 2;
-    auto mbd = (b + d) / 2;
-    auto mcd = (c + d) / 2;
 
     auto faces = subdivide4(mesh, face_2);
     for (auto f : faces) {

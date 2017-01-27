@@ -13,8 +13,6 @@
 #include <sstream>
 #include <stack>
 
-#define UNUSED(x) (void)(x)
-
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
