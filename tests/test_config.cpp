@@ -120,10 +120,6 @@ TEST_CASE("Create common config from radiosity USAGE", "[config]") {
     REQUIRE(conf.gamma_correction_enabled == false);
     REQUIRE(conf.exposure == 1.5);
     REQUIRE(conf.filename == "file");
-
-    std::ostringstream os;
-    os << conf;
-    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Create config from radiosity USAGE", "[config]") {
@@ -154,6 +150,10 @@ TEST_CASE("Create config from radiosity USAGE", "[config]") {
     REQUIRE(conf.mesh == RadiosityConfig::NO_MESH);
     REQUIRE(!conf.links_enabled);
     REQUIRE(!conf.exact_hierarchical_enabled);
+
+    std::ostringstream os;
+    os << conf;
+    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Test mode in radiosity USAGE", "[config]") {
