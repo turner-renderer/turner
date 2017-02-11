@@ -16,4 +16,4 @@ script:
 
 after_success:
   - docker run -t -v $(pwd):/root/renderer -w /root/renderer -e "TRAVIS_JOB_ID=$TRAVIS_JOB_ID" boxdot/alpine-clang scripts/collect-coverage.sh
-  - docker run -t -v $(pwd):/root/renderer -e "B2_APP_KEY=${B2_APP_KEY}" -e "B2_ACCOUNT_ID=${B2_ACCOUNT_ID}" -w /root/renderer boxdot/alpine-clang scripts/render-samples.sh scenes/cornell_box.blend output $TRAVIS_COMMIT
+  - docker run -t -v $(pwd):/root/renderer -e "B2_APP_KEY=${B2_APP_KEY}" -e "B2_ACCOUNT_ID=${B2_ACCOUNT_ID}" -e "GITHUB_USER=${GITHUB_USER}" -e "GITHUB_TOKEN=${GITHUB_TOKEN}" -w /root/renderer boxdot/alpine-clang scripts/render-samples.sh scenes/cornell_box.blend output $TRAVIS_COMMIT $TRAVIS_PULL_REQUEST
