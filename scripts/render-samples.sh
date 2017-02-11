@@ -35,8 +35,10 @@ if [ -n "$B2_APP_KEY" ] && [ -n "$B2_ACCOUNT_ID" ]; then
       image_name=$(echo $file | cut -d- -f2-)
       body="${body} <img src=\\\"${image_url:1}\\\" width=\\\"100\\\">"
   done
-  curl -u "$GITHUB_USER:$GITHUB_TOKEN" \
-       -H "Accept: application/vnd.github.black-cat-preview+json" \
-       -d "{ \"body\":\"${body}\", \"event\":\"COMMENT\" }" \
-       https://api.github.com/repos/turner-renderer/turner/pulls/${pr}/reviews
+  if [ $pr -ne "false" ]; then
+    curl -u "$GITHUB_USER:$GITHUB_TOKEN" \
+         -H "Accept: application/vnd.github.black-cat-preview+json" \
+         -d "{ \"body\":\"${body}\", \"event\":\"COMMENT\" }" \
+         https://api.github.com/repos/turner-renderer/turner/pulls/${pr}/reviews
+  fi
 fi
