@@ -2,8 +2,6 @@
 
 Prototype implementations of unbiased renderers.
 
-![Produced by our simple raytracer](scenes/colored_cube.png)
-
 ## Build
 
 ```
@@ -22,7 +20,7 @@ make test       # optional: run tests
 
 ### Raycasting
 
-[![Cornell box rendered by our simple raycaster](scenes/cornell_raycast_small.png)](scenes/cornell_raycast.png)
+[![Cornell box rendered by our simple raycaster](https://f001.backblazeb2.com/file/turner/cornell_raycast.png)](https://f001.backblazeb2.com/file/turner/cornell_raycast.png)
 
 Generated with:
 ```(bash)
@@ -35,7 +33,7 @@ is no real lighting.
 
 ### Raytracing
 
-[![Cornell box rendered by our raytracer](scenes/cornell_raytrace_small.png)](scenes/cornell_raytrace.png)
+[![Cornell box rendered by our raytracer](https://f001.backblazeb2.com/file/turner/cornell_raytrace.png)](https://f001.backblazeb2.com/file/turner/cornell_raytrace.png)
 
 Generated with:
 ```(bash)
@@ -48,7 +46,7 @@ Resizing the image is a simple antialiasing method.
 
 ## Pathtracing
 
-[![Cornell box rendered by our pathtracer](scenes/cornell_box_pathtrace_300_4_128.png)](scenes/cornell_box_pathtrace_3480_4_128.png)
+[![Cornell box rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)
 
 Generated with:
 ```(bash)
@@ -58,7 +56,7 @@ convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
 
 Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
 
-[![Stanford dragon rendered by our pathtracer](scenes/stanford_dragon_small.png)](scenes/stanford_dragon.png)
+[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
 
 Generated with:
 ```(bash)
@@ -66,7 +64,7 @@ Generated with:
 convert stanford_dragon.pbm stanford_dragon.png
 ```
 
-It took roughly 26 hours to render.
+It took roughly 26 hours to render. The Blender file can be found [here](https://f001.backblazeb2.com/b2api/v1/b2_download_file_by_id?fileId=4_zb374779d699429f35cae071c_f1050377135d1e264_d20170211_m230826_c001_v0001036_t0059).
 
 ## Model
 
