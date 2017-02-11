@@ -2,7 +2,7 @@
 set -e
 
 if [ $(uname) = "Linux" ]; then
-  apk add --no-cache py2-pip imagemagick
+  apk add --no-cache --no-progress py2-pip imagemagick
   pip install b2
 fi
 
@@ -25,10 +25,11 @@ build/radiosity exact -e10 $scene \
 build/radiosity hierarchical --gouraud --max-subdivisions=1 -e10 $scene \
 	| convert - $output/${commit_hash}-${filename}-rad-hierarchical.png
 
-# Upload images
+# Upload images and comment on PR
 if [ -n "$B2_APP_KEY" ] && [ -n "$B2_ACCOUNT_ID" ]; then
-  b2 authorize-account $B2_ACCOUNT_ID $B2_APP_KEY
-  for file in $(ls "$output" | grep "${commit_hash}.*png"); do
-      b2 upload-file turner $output/$file $file
-  done
+  if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+    scripts/upload-and-comment.py -c $commit_hash -pr $TRAVIS_PULL_REQUEST $output
+  else
+    scripts/upload-and-comment.py -c $commit_hash $output
+  fi
 fi
