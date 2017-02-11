@@ -2,7 +2,7 @@
 set -e
 
 if [ $(uname) = "Linux" ]; then
-  apk add --no-cache py2-pip imagemagick
+  apk add --no-cache --no-progress py2-pip imagemagick
   pip install b2
 fi
 
