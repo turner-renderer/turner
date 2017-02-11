@@ -15,22 +15,25 @@ def upload_images(bucket, image_files):
     """
     for image_file in image_files:
         target_name = os.path.basename(image_file)
+        print "Uploading", target_name
         file_info = bucket.upload_local_file(image_file, target_name)
         yield file_info.as_dict()
 
 
-def comment(b2_api, file_ids, pr):
+def comment(b2_api, file_ids, pr, commit):
     """
     Posts a review comment on pull request.
 
     :param b2_api B2 api object
     :param file_ids Identifies image files on B2
     :param pr Identifies pull request
+    :param commit Identifies images
     """
     image_urls = (
         b2_api.get_download_url_for_fileid(file_id) for file_id in file_ids)
     body = ' '.join(
         ['<img src="{}" width="100">'.format(url) for url in image_urls])
+    body += "\nCommit: {}".format(commit)
 
     url = (
         "https://api.github.com/repos/turner-renderer/turner/pulls/{}/reviews"
@@ -67,7 +70,10 @@ def upload_and_comment(commit, pr, folder, bucket_name="turner"):
     # Comment on PR
     if pr is not None:
         file_ids = (info['fileId'] for info in file_infos)
-        comment(b2_api, file_ids, pr)
+        comment(b2_api, file_ids, pr, commit)
+    else:
+        # Run generator
+        list(file_infos)
 
 
 if __name__ == "__main__":
