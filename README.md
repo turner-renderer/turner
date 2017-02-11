@@ -21,7 +21,7 @@ Render
 ```
 
 The renderers output the image as [PBM](https://en.wikipedia.org/wiki/Netpbm_format#PBM_example)
-to stdout. It can be easily convert with [ImageMagick](https://www.imagemagick.org/script/index.php).
+to stdout. It can be easily converted with [ImageMagick](https://www.imagemagick.org/script/index.php).
 
 ```bash
 convert cornell_box.pbm cornell_box.png
