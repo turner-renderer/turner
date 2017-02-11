@@ -455,7 +455,6 @@ Image render_radiosity_mesh(const RadiosityMesh& mesh, const Camera& cam,
 int main(int argc, char const* argv[]) {
     RadiosityConfig conf = RadiosityConfig::from_docopt(
         docopt::docopt(USAGE, {argv + 1, argv + argc}, true, "radiosity"));
-
     // import scene
     Assimp::Importer importer;
     const aiScene* scene =
@@ -497,6 +496,11 @@ int main(int argc, char const* argv[]) {
 
     // TODO: split in functions
     if (conf.mode == RadiosityConfig::EXACT) {
+        if (conf.verbose) {
+            std::cerr << "Mode: exact" << std::endl;
+            std::cerr << conf << std::endl;
+        }
+
         radiosity = compute_radiosity(tree);
         image = raycast(tree, conf, cam, radiosity, std::move(image));
         if (conf.mesh == RadiosityConfig::SIMPLE_MESH) {
@@ -508,10 +512,17 @@ int main(int argc, char const* argv[]) {
         conf.min_area = ::min(tree.triangles().begin(), tree.triangles().end(),
                               [](const Triangle& tri) { return tri.area(); });
         conf.min_area /= pow(4, conf.max_subdivisions);
-        std::cerr << "Minimal area: " << conf.min_area << std::endl;
-        std::cerr << "Form factor epsilon: " << conf.F_eps << std::endl;
-        std::cerr << "Maximum iterations: " << conf.max_iterations << std::endl;
-        std::cerr << "Shooting radiosity epsilon: " << conf.BF_eps << std::endl;
+        if (conf.verbose) {
+            std::cerr << "Mode: hierarchical" << std::endl;
+            std::cerr << conf << std::endl;
+        } else {
+            std::cerr << "Minimal area: " << conf.min_area << std::endl;
+            std::cerr << "Form factor epsilon: " << conf.F_eps << std::endl;
+            std::cerr << "Maximum iterations: " << conf.max_iterations
+                      << std::endl;
+            std::cerr << "Shooting radiosity epsilon: " << conf.BF_eps
+                      << std::endl;
+        }
 
         HierarchicalRadiosity model(tree, conf.F_eps, conf.min_area,
                                     conf.BF_eps, conf.max_iterations);

@@ -16,6 +16,7 @@ struct Config {
     size_t width = 640;
 
     // common options
+    bool verbose = false;
     size_t num_threads = 1;
     float inverse_gamma = 0.454545;
     float exposure = 1;
@@ -62,6 +63,7 @@ struct Config {
     from_docopt(const std::map<std::string, docopt::value>& args) {
         Config conf;
 
+        conf.verbose = args.at("--verbose").asBool();
         conf.width = args.at("--width").asLong();
         if (args.at("--aspect")) {
             conf.aspect = std::stof(args.at("--aspect").asString());
@@ -80,6 +82,20 @@ struct Config {
         return conf;
     }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Config& conf) {
+    os << "Filename: " << conf.filename << std::endl;
+    os << "Aspect ratio: " << conf.aspect << std::endl;
+    os << "Image width: " << conf.width << std::endl;
+    os << std::endl;
+    os << "Common parameters:" << std::endl;
+    os << "  Number of threads: " << conf.num_threads << std::endl;
+    os << "  Inverse gamma: " << conf.inverse_gamma << std::endl;
+    os << "  Exposure: " << conf.exposure << std::endl;
+    os << "  Background color: " << conf.exposure << std::endl;
+    os << "  Gamma correction enabled: " << conf.gamma_correction_enabled;
+    return os;
+}
 
 /**
  * Configuration of raycaster, raytracer and pathtracer.
@@ -136,6 +152,18 @@ struct TracerConfig : public Config {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const TracerConfig& conf) {
+    os << static_cast<Config>(conf) << std::endl;
+    os << std::endl;
+    os << "Tracer parameters (not all applicable):" << std::endl;
+    os << "  Max recursion depth: " << conf.max_recursion_depth << std::endl;
+    os << "  Max visibility: " << conf.max_visibility << std::endl;
+    os << "  Shadow intensity: " << conf.shadow_intensity << std::endl;
+    os << "  Number of pixel samples: " << conf.num_pixel_samples << std::endl;
+    os << "  Number of Monte-Carlo samples: " << conf.num_monte_carlo_samples;
+    return os;
+}
+
 /**
  * Radiosity configuration.
  */
@@ -156,7 +184,6 @@ struct RadiosityConfig : public Config {
     // flags
     bool gouraud_enabled = false;
     enum Mesh { NO_MESH, SIMPLE_MESH, FEATURE_MESH } mesh = NO_MESH;
-    bool features_mesh_enabled = false;
     bool links_enabled = false;
     bool exact_hierarchical_enabled = false;
 
@@ -216,3 +243,27 @@ struct RadiosityConfig : public Config {
         return conf;
     }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const RadiosityConfig& conf) {
+    os << static_cast<Config>(conf) << std::endl;
+    os << std::endl;
+    os << "Radiosity parameters:" << std::endl;
+    os << "  F_eps (form factor epsilon): " << conf.F_eps << std::endl;
+    os << "  BF_eps (shoot radiosity epsilon): " << conf.BF_eps << std::endl;
+    os << "  Max subdivisions: " << conf.max_subdivisions << std::endl;
+    os << "  Max iterations: " << conf.max_iterations << std::endl;
+    os << "  Min area: " << conf.min_area << std::endl;
+    os << std::endl;
+    os << "Radiosity flags:" << std::endl;
+    os << "  Gouraud shading enabled: " << conf.gouraud_enabled << std::endl;
+    os << "  Render mesh: " << (conf.mesh == RadiosityConfig::NO_MESH
+                                    ? "no"
+                                    : conf.mesh == RadiosityConfig::SIMPLE_MESH
+                                          ? "simple"
+                                          : "features")
+       << std::endl;
+    os << "  Render links between patches: " << conf.links_enabled << std::endl;
+    os << "  Compute hierarchical radiosity exactly: "
+       << conf.exact_hierarchical_enabled;
+    return os;
+}

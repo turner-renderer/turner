@@ -3,6 +3,8 @@
 #include <catch.hpp>
 #include <docopt/docopt.h>
 
+#include <sstream>
+
 namespace raycaster {
 #include "../raycaster.h"
 }
@@ -49,6 +51,10 @@ TEST_CASE("Create config from raycaster USAGE", "[config]") {
     auto conf = TracerConfig::from_docopt(args);
 
     REQUIRE(conf.max_visibility == 4.5);
+
+    std::ostringstream os;
+    os << conf;
+    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Create config from raytracer USAGE", "[config]") {
@@ -61,6 +67,10 @@ TEST_CASE("Create config from raytracer USAGE", "[config]") {
 
     REQUIRE(conf.max_recursion_depth == 42);
     REQUIRE(conf.shadow_intensity == 0.7f);
+
+    std::ostringstream os;
+    os << conf;
+    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Create config from pathtracer USAGE", "[config]") {
@@ -74,6 +84,10 @@ TEST_CASE("Create config from pathtracer USAGE", "[config]") {
     REQUIRE(conf.max_recursion_depth == 42);
     REQUIRE(conf.num_pixel_samples == 42);
     REQUIRE(conf.num_monte_carlo_samples == 42);
+
+    std::ostringstream os;
+    os << conf;
+    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Create common config from radiosity USAGE", "[config]") {
@@ -106,6 +120,10 @@ TEST_CASE("Create common config from radiosity USAGE", "[config]") {
     REQUIRE(conf.gamma_correction_enabled == false);
     REQUIRE(conf.exposure == 1.5);
     REQUIRE(conf.filename == "file");
+
+    std::ostringstream os;
+    os << conf;
+    REQUIRE(os.str().size() > 0);
 }
 
 TEST_CASE("Create config from radiosity USAGE", "[config]") {

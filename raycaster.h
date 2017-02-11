@@ -15,6 +15,7 @@ Options:
                              [default: 0.454545].
   --no-gamma-correction      Disables gamma correction.
   --exposure=<float>         Exposure [default: 1].
+  -v --verbose               Verbose output.
 
 Raycaster options:
   --max-visibility=<float>   Any object farther away is dark [default: 2.0].

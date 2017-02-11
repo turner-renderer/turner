@@ -15,6 +15,7 @@ Options:
                             [default: 0.454545].
   --no-gamma-correction     Disables gamma correction.
   --exposure=<float>        Exposure [default: 1].
+  -v --verbose              Verbose output.
 
 Raytracer options:
   -d --max-depth=<int>      Maximum recursion depth for raytracing [default: 3].
