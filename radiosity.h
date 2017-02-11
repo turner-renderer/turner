@@ -15,6 +15,7 @@ Options:
                                 [default: 0.454545].
   --no-gamma-correction         Disables gamma correction.
   -e --exposure=<float>         Exposure of the image [default: 1.0].
+  -v --verbose                  Verbose output.
 
 Hierarchical radiosity options:
   --form-factor-eps=<float>     Link when form factor estimate is below
