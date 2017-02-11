@@ -192,11 +192,13 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
 
     // sweep for min_cost
     float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax;
+    Axis min_plane_ax = Axis::X;
     float min_plane_pos = 0;
     Dir min_side = Dir::LEFT;
     // we also store those for asserts below
-    size_t min_ltris, min_rtris, min_ptris;
+    size_t min_ltris = 0;
+    size_t min_rtris = 0;
+    size_t min_ptris = 0;
     UNUSED(min_ptris);
 
     for (auto ax : AXES) {
@@ -331,15 +333,17 @@ const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
         return OptionalId{};
     }
 
-    std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
-    stack.emplace(root_.get(), tenter, texit);
+    // Note: No need to clear, since when we leave this function, the stack is
+    // always empty.
+    assert(stack_.empty());
+    stack_.emplace(root_.get(), tenter, texit);
 
     Node* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();
-    while (!stack.empty()) {
-        std::tie(node, tenter, texit) = stack.top();
-        stack.pop();
+    while (!stack_.empty()) {
+        std::tie(node, tenter, texit) = stack_.top();
+        stack_.pop();
 
         while (node->is_inner()) {
             int ax = static_cast<int>(node->split_axis());
@@ -361,7 +365,7 @@ const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
             } else if (t < tenter) {
                 node = far;
             } else {
-                stack.emplace(far, t, texit);
+                stack_.emplace(far, t, texit);
                 node = near;
                 texit = t;
             }

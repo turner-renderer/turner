@@ -7,23 +7,19 @@
 #include <iostream>
 #include <unordered_set>
 
-
-TEST_CASE("Trivial smoke test", "[kdtree]")
-{
+TEST_CASE("Trivial smoke test", "[kdtree]") {
     auto tri = random_triangle();
     KDTree kdtree({tri});
 }
 
-TEST_CASE("Smoke test", "[kdtree]")
-{
+TEST_CASE("Smoke test", "[kdtree]") {
     auto a = test_triangle({-1, -1, 0}, {1, -1, 0}, {1, 1, 0});
     auto b = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 2, 0});
     KDTree tree(Triangles{a, b});
     REQUIRE(tree.height() == 0);
 }
 
-TEST_CASE("Four separated triangles test", "[kdtree]")
-{
+TEST_CASE("Four separated triangles test", "[kdtree]") {
     auto a = test_triangle({0, 0, 1}, {0, 1, 1}, {1, 0, 1});
     auto b = test_triangle({2, 0, 1}, {3, 0, 1}, {3, 1, 1});
     auto c = test_triangle({0, 2, 1}, {0, 3, 1}, {1, 3, 1});
@@ -64,17 +60,15 @@ TEST_CASE("Four separated triangles test", "[kdtree]")
     REQUIRE(t == 0.5f);
 }
 
-
-TEST_CASE("KDTree stress test", "[kdtree]")
-{
+TEST_CASE("KDTree stress test", "[kdtree]") {
     static constexpr size_t TRIANGLES_COUNT = 100;
-    static constexpr size_t RAYS_COUNT = 3400;
+    static constexpr size_t RAYS_PER_LINE = 500;
 
     std::cerr << "\n== Stress test ==" << std::endl;
 
     std::cerr << "Generating " << TRIANGLES_COUNT << " triangles" << std::endl;
     Triangles triangles;
-
+    triangles.reserve(TRIANGLES_COUNT);
     static std::default_random_engine gen;
     static std::uniform_real_distribution<float> rnd(-0.3f, 0.3f);
     for (size_t i = 0; i < TRIANGLES_COUNT; ++i) {
@@ -86,25 +80,15 @@ TEST_CASE("KDTree stress test", "[kdtree]")
         triangles.push_back(tri);
     }
 
-    std::cerr << "Generating " << RAYS_COUNT*RAYS_COUNT << " rays."
-        << std::endl;
-    std::vector<Ray> rays;
-    Vec origin{0, 0, 1000};
-
-    float x = -10.f, y = -10.f;
-    float step_x = 20.f / 640;
-    float step_y = 20.f / 640;
-
-    for (size_t i = 0; i < RAYS_COUNT; ++i, x += step_x) {
-        for (size_t j = 0; j < RAYS_COUNT; ++j, y += step_y) {
-            rays.emplace_back(origin, (Vec{x, y, 0}) - origin);
-        }
-    }
-
-    std::cerr << "Building a fast kd-tree of "
-        << TRIANGLES_COUNT << " triangles" << std::endl;
+    std::cerr << "Building a fast kd-tree of " << TRIANGLES_COUNT
+              << " triangles" << std::endl;
     std::cerr << "Node size (bytes): " << KDTree::node_size() << std::endl;
-    KDTree tree(triangles);
+    size_t runtime_ms = 0;
+    KDTree tree = ([&] {
+        Runtime runtime(runtime_ms);
+        return KDTree{std::move(triangles)};
+    })();
+    std::cerr << "Runtime : " << runtime_ms << "ms" << std::endl;
     std::cerr << "Height  : " << tree.height() << std::endl;
     std::cerr << "Size    : " << tree.size() << std::endl;
     std::cerr << std::endl;
@@ -112,22 +96,30 @@ TEST_CASE("KDTree stress test", "[kdtree]")
     // test
 
     std::cerr << "Computing ray fast kd tree intersections" << std::endl;
-    size_t hits_fast = 0;
-    size_t runtime_ms = 0;
+    size_t num_hits = 0;
 
+    const Vec origin{0, 0, 1000};
+    float x = -10.f, y = -10.f;
+    const float step_x = 20.f / RAYS_PER_LINE;
+    const float step_y = 20.f / RAYS_PER_LINE;
     {
         Runtime runtime(runtime_ms);
-        for (const auto& ray : rays) {
-            float r, s, t;
-            if (tree.intersect(ray, r, s, t)) {
-                hits_fast += 1;
+        for (size_t i = 0; i < RAYS_PER_LINE; ++i, x += step_x) {
+            for (size_t j = 0; j < RAYS_PER_LINE; ++j, y += step_y) {
+                float r, s, t;
+                Ray ray{origin, (Vec{x, y, 0}) - origin};
+                if (tree.intersect(ray, r, s, t)) {
+                    num_hits += 1;
+                }
             }
+            y = -10.f;
         }
     }
 
     std::cerr << "Runtime  : " << runtime_ms << "ms" << std::endl;
-    std::cerr << "# Hits   : " << hits_fast << std::endl;
-    std::cerr << "Rays/sec : " << 1000. * RAYS_COUNT / runtime_ms << std::endl;
+    std::cerr << "# Rays   : " << RAYS_PER_LINE * RAYS_PER_LINE << std::endl;
+    std::cerr << "# Hits   : " << num_hits << std::endl;
+    std::cerr << "Rays/sec : " << 1000. * RAYS_PER_LINE / runtime_ms << std::endl;
     std::cerr << std::endl;
 }
 
@@ -157,8 +149,7 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
     REQUIRE(tree.size() == 12);
 }
 
-TEST_CASE("All triangles are in the same plane", "[kdtree]")
-{
+TEST_CASE("All triangles are in the same plane", "[kdtree]") {
     for (Axis ax : AXES) {
         Triangles tris;
         for (size_t i = 0; i < 1000; ++i) {
@@ -192,8 +183,7 @@ TEST_CASE("Degenerated triangles test", "[KDTree]") {
     REQUIRE(4 <= tree.size());
 }
 
-TEST_CASE("Intersect coplanar triangles", "[KDTree]")
-{
+TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
     for (auto ax : AXES) {
         Triangles tris;
         for (float pos = 0.f; pos < 10.f; pos += 1.f) {
@@ -213,8 +203,8 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]")
         REQUIRE(static_cast<bool>(triangle_id));
         REQUIRE(static_cast<size_t>(triangle_id) == 0L);
         REQUIRE(static_cast<int>(r) == 100);
-        REQUIRE(is_eps_zero(s - 1.f/3));
-        REQUIRE(is_eps_zero(t - 1.f/3));
+        REQUIRE(is_eps_zero(s - 1.f / 3));
+        REQUIRE(is_eps_zero(t - 1.f / 3));
 
         // ray from positive direction to 0
         origin[ax] = 100;
@@ -223,13 +213,12 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]")
         REQUIRE(static_cast<bool>(triangle_id));
         REQUIRE(static_cast<size_t>(triangle_id) == 9L);
         REQUIRE(static_cast<int>(r) == 91);
-        REQUIRE(is_eps_zero(s - 1.f/3));
-        REQUIRE(is_eps_zero(t - 1.f/3));
+        REQUIRE(is_eps_zero(s - 1.f / 3));
+        REQUIRE(is_eps_zero(t - 1.f / 3));
     }
 }
 
-TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]")
-{
+TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]") {
     std::unordered_set<KDTree::OptionalId> set;
     set.emplace();
     set.emplace();

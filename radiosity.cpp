@@ -262,12 +262,13 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     std::vector<std::future<void>> tasks;
 
     FaceRadiosityHandle frad;
-    bool exists;
+    bool exists = false;
     exists = mesh.get_property_handle(frad, "face_radiosity");
     assert(exists);
     VertexRadiosityHandle vrad;
     exists = mesh.get_property_handle(vrad, "vertex_radiosity");
     assert(exists);
+    UNUSED(exists);
 
     for (size_t y = 0; y < image.height(); ++y) {
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
