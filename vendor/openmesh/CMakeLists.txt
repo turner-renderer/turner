@@ -7,9 +7,11 @@ ExternalProject_Add(
     openmesh
     PREFIX ${CMAKE_BINARY_DIR}/vendor/openmesh
     CMAKE_ARGS
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
         -DBUILD_APPS=OFF
         -DOPENMESH_BUILD_SHARED=OFF
     GIT_REPOSITORY https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
