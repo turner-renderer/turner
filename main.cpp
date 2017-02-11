@@ -76,6 +76,9 @@ int main(int argc, char const* argv[]) {
     std::map<std::string, docopt::value> args =
         docopt::docopt(USAGE, {argv + 1, argv + argc});
     TracerConfig conf = TracerConfig::from_docopt(args);
+    if (conf.verbose) {
+        std::cerr << conf << std::endl;
+    }
 
     // import scene
     std::cerr << "Loading scene..." << std::endl;
