@@ -13,6 +13,7 @@ before_install:
 
 script:
   - docker run -t -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang scripts/build-and-test.sh
+  - docker run -t -v $(pwd):/root/renderer -w /root/renderer boxdot/alpine-clang scripts/render-samples.sh scenes/cornell_box.blend .
 
 after_success:
   - docker run -t -v $(pwd):/root/renderer -w /root/renderer -e "TRAVIS_JOB_ID=$TRAVIS_JOB_ID" boxdot/alpine-clang scripts/collect-coverage.sh
