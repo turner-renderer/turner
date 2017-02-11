@@ -1,10 +1,12 @@
 # Turner [![Build Status](https://travis-ci.org/turner-renderer/turner.svg?branch=master)](https://travis-ci.org/turner-renderer/turner) [![Coverage Status](https://coveralls.io/repos/github/turner-renderer/turner/badge.svg?branch=master)](https://coveralls.io/github/turner-renderer/turner?branch=master)
 
-Prototype implementations of unbiased renderers.
+A Collection of Unbiased Renderers
 
-## Build
+## Get Started
 
-```
+Build
+
+```bash
 mkdir build
 cd build
 cmake ..
@@ -12,11 +14,20 @@ make            # build renderers
 make test       # optional: run tests
 ```
 
-## Next
+Render
 
-* Hierarchical Radiosity Rendering
+```bash
+./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 128 > cornell_box.pbm
+```
 
-## Done
+The renderers output the image as [PBM](https://en.wikipedia.org/wiki/Netpbm_format#PBM_example)
+to stdout. It can be easily convert with [ImageMagick](https://www.imagemagick.org/script/index.php).
+
+```bash
+convert cornell_box.pbm cornell_box.png
+```
+
+## Rendered Images
 
 ### Raycasting
 
@@ -44,7 +55,7 @@ convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 We don't load material information yet. Every surface has the same reflectance.
 Resizing the image is a simple antialiasing method.
 
-## Pathtracing
+### Pathtracing
 
 [![Cornell box rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)
 
@@ -66,7 +77,7 @@ convert stanford_dragon.pbm stanford_dragon.png
 
 It took roughly 26 hours to render. The Blender file can be found [here](https://f001.backblazeb2.com/b2api/v1/b2_download_file_by_id?fileId=4_zb374779d699429f35cae071c_f1050377135d1e264_d20170211_m230826_c001_v0001036_t0059).
 
-## Model
+### Model
 
 The cornell box is modeled in Blender using the specifications on
 http://www.graphics.cornell.edu/online/box/data.html. The camera and distances
