@@ -1,5 +1,5 @@
 #!/bin/sh
-set -ex
+set -e
 
 if [ $(uname) = "Linux" ]; then
   apk add --no-cache py2-pip imagemagick
