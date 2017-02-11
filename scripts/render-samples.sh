@@ -27,7 +27,7 @@ build/radiosity hierarchical --gouraud --max-subdivisions=1 -e10 $scene \
 
 # Upload images and comment on PR
 if [ -n "$B2_APP_KEY" ] && [ -n "$B2_ACCOUNT_ID" ]; then
-  if [ $TRAVIS_PULL_REQUEST -ne "false" ]; then
+  if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
     scripts/upload-and-comment.py -c $commit_hash -pr $TRAVIS_PULL_REQUEST $output
   else
     scripts/upload-and-comment.py -c $commit_hash $output
