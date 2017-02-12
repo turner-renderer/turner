@@ -2,7 +2,7 @@
 
 A Collection of Unbiased Renderers
 
-[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
+[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon_small.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
 
 ## Get Started
 
@@ -43,7 +43,7 @@ to stdout. It can be easily converted with [ImageMagick](https://www.imagemagick
 
 ### Raycasting
 
-[![Cornell box rendered by our simple raycaster](https://f001.backblazeb2.com/file/turner/cornell_raycast.png)](https://f001.backblazeb2.com/file/turner/cornell_raycast.png)
+[![Cornell box rendered by our simple raycaster](https://f001.backblazeb2.com/file/turner/cornell_raycast_small.png)](https://f001.backblazeb2.com/file/turner/cornell_raycast.png)
 
 Generated with:
 ```(bash)
@@ -56,7 +56,7 @@ is no real lighting.
 
 ### Raytracing
 
-[![Cornell box rendered by our raytracer](https://f001.backblazeb2.com/file/turner/cornell_raytrace.png)](https://f001.backblazeb2.com/file/turner/cornell_raytrace.png)
+[![Cornell box rendered by our raytracer](https://f001.backblazeb2.com/file/turner/cornell_raytrace_small.png)](https://f001.backblazeb2.com/file/turner/cornell_raytrace.png)
 
 Generated with:
 ```(bash)
@@ -69,7 +69,7 @@ Resizing the image is a simple antialiasing method.
 
 ### Pathtracing
 
-[![Cornell box rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)
+[![Cornell box rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_small.png)](https://f001.backblazeb2.com/file/turner/cornell_box_pathtrace_3480_4_128.png)
 
 Generated with:
 ```(bash)
@@ -79,7 +79,7 @@ convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
 
 Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
 
-[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
+[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon_small.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
 
 Generated with:
 ```(bash)
