@@ -13,8 +13,6 @@
 #include <sstream>
 #include <stack>
 
-#define UNUSED(x) (void)(x)
-
 // https://graphics.stanford.edu/papers/rad/
 class HierarchicalRadiosity {
     using TriangleId = KDTree::TriangleId;
@@ -60,6 +58,7 @@ public:
     HierarchicalRadiosity(const KDTree& tree, float F_eps, float A_eps,
                           float BF_eps, size_t max_iterations)
         : tree_(&tree)
+        , tree_intersection_(tree)
         , F_eps_(F_eps)
         , A_eps_(A_eps)
         , BF_eps_(BF_eps)
@@ -320,8 +319,9 @@ private:
         const auto q_v = convert_to_vec(q_c - q_a);
         const auto q_normal = (q_u ^ q_v).Normalize();
 
-        float F_pq = form_factor(*tree_, p_pos, p_u, p_v, p_normal, q_pos, q_u,
-                                 q_v, q_normal, q.area, q.root_tri_id);
+        float F_pq =
+            form_factor(tree_intersection_, p_pos, p_u, p_v, p_normal, q_pos,
+                        q_u, q_v, q_normal, q.area, q.root_tri_id);
         assert(0 <= F_pq && F_pq < 1);
 
         p.gathering_from.emplace_back();
@@ -531,6 +531,7 @@ private:
     RadiosityMesh mesh_;
 
     const KDTree* tree_;
+    KDTreeIntersection tree_intersection_;
     float F_eps_;
     float A_eps_;
     float BF_eps_;

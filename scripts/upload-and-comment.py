@@ -15,8 +15,8 @@ def upload_images(bucket, image_files):
     """
     for image_file in image_files:
         target_name = os.path.basename(image_file)
-        print "Uploading", target_name
         file_info = bucket.upload_local_file(image_file, target_name)
+        print "Uploaded", target_name
         yield file_info.as_dict()
 
 

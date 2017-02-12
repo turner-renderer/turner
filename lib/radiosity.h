@@ -53,7 +53,7 @@
  *                     `from` and y is on the triangle `to`.
  * @return             form factor F_ij
  */
-inline float form_factor(const KDTree& tree, const Vec& from_pos,
+inline float form_factor(KDTreeIntersection& tree, const Vec& from_pos,
                          const Vec& from_u, const Vec& from_v,
                          const Vec& from_normal, const Vec& to_pos,
                          const Vec& to_u, const Vec& to_v, const Vec& to_normal,
@@ -97,7 +97,7 @@ inline float form_factor(const KDTree& tree, const Vec& from_pos,
 /*
  * Same as above, with explicitly defined triangles.
  */
-inline float form_factor(const KDTree& tree, const Triangle& from,
+inline float form_factor(KDTreeIntersection& tree, const Triangle& from,
                          const Triangle& to, const KDTree::TriangleId to_id,
                          const size_t num_samples = 128) {
     return form_factor(tree, from.vertices[0], from.u, from.v, from.normal,
@@ -109,7 +109,8 @@ inline float form_factor(const KDTree& tree, const Triangle& from,
  * Same as above, except the triangles are contained in tree and defined by
  * corresponding ids.
  */
-inline float form_factor(const KDTree& tree, const KDTree::TriangleId from_id,
+inline float form_factor(KDTreeIntersection& tree,
+                         const KDTree::TriangleId from_id,
                          const KDTree::TriangleId to_id,
                          const size_t num_samples = 128) {
     assert(from_id != to_id);

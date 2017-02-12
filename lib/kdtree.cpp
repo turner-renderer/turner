@@ -159,6 +159,7 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
         int type;
     };
 
+    // PERF: move out in front of recursion
     std::vector<Event> event_lists[AXES.size()];
 
     // generate events
@@ -192,11 +193,13 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
 
     // sweep for min_cost
     float min_cost = std::numeric_limits<float>::max();
-    Axis min_plane_ax;
+    Axis min_plane_ax = Axis::X;
     float min_plane_pos = 0;
     Dir min_side = Dir::LEFT;
     // we also store those for asserts below
-    size_t min_ltris, min_rtris, min_ptris;
+    size_t min_ltris = 0;
+    size_t min_rtris = 0;
+    size_t min_ptris = 0;
     UNUSED(min_ptris);
 
     for (auto ax : AXES) {
@@ -320,26 +323,28 @@ Vec fix_direction(const Ray& ray) {
 /**
  *
  */
-const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
-                                           float& b) const {
+const KDTree::OptionalId KDTreeIntersection::intersect(const Ray& ray, float& r,
+                                                       float& a, float& b) {
     // A trick to make the traversal robust.
     // Cf. [HH11], p. 5, comment about dir classification and robustness.
     const Ray fixed_ray(ray.pos, fix_direction(ray));
 
     float tenter, texit;
-    if (!intersect_ray_box(fixed_ray, box_, tenter, texit)) {
+    if (!intersect_ray_box(fixed_ray, tree_->box(), tenter, texit)) {
         return OptionalId{};
     }
 
-    std::stack<std::tuple<Node*, float /*tenter*/, float /*texit*/>> stack;
-    stack.emplace(root_.get(), tenter, texit);
+    // Note: No need to clear, since when we leave this function, the stack is
+    // always empty.
+    assert(stack_.empty());
+    stack_.emplace(tree_->root_.get(), tenter, texit);
 
-    Node* node;
+    KDTree::Node* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();
-    while (!stack.empty()) {
-        std::tie(node, tenter, texit) = stack.top();
-        stack.pop();
+    while (!stack_.empty()) {
+        std::tie(node, tenter, texit) = stack_.top();
+        stack_.pop();
 
         while (node->is_inner()) {
             int ax = static_cast<int>(node->split_axis());
@@ -350,8 +355,8 @@ const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
 
             // classify near/far with respect to t:
             // left is near if ray.dir[ax] <= 0, else otherwise
-            Node* near = node->left();
-            Node* far = node->right();
+            KDTree::Node* near = node->left();
+            KDTree::Node* far = node->right();
             if (fixed_ray.dir[ax] <= 0) {
                 std::swap(near, far);
             }
@@ -361,7 +366,7 @@ const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
             } else if (t < tenter) {
                 node = far;
             } else {
-                stack.emplace(far, t, texit);
+                stack_.emplace(far, t, texit);
                 node = near;
                 texit = t;
             }
@@ -382,15 +387,15 @@ const KDTree::OptionalId KDTree::intersect(const Ray& ray, float& r, float& a,
     return res;
 }
 
-const KDTree::OptionalId KDTree::intersect(const KDTree::TriangleId* ids,
-                                           uint32_t num_tris, const Ray& ray,
-                                           float& min_r, float& min_s,
-                                           float& min_t) const {
+const KDTree::OptionalId
+KDTreeIntersection::intersect(const KDTree::TriangleId* ids, uint32_t num_tris,
+                              const Ray& ray, float& min_r, float& min_s,
+                              float& min_t) {
     min_r = std::numeric_limits<float>::max();
     OptionalId res;
     float r, s, t;
     for (uint32_t i = 0; i != num_tris; ++i) {
-        const auto& tri = tris_[ids[i]];
+        const auto& tri = tree_->tris_[ids[i]];
         bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
         if (intersects && r < min_r) {
             min_r = r;

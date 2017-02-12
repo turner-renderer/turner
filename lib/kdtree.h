@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <stack>
 #include <vector>
 
 namespace detail {
@@ -149,10 +150,14 @@ private:
 
 } // namespace detail
 
+class KDTreeIntersection;
+
 class KDTree {
 
     using TriangleIds = detail::TriangleIds;
     using Node = detail::Node;
+
+    friend KDTreeIntersection;
 
 public:
     using TriangleId = detail::TriangleId;
@@ -196,25 +201,11 @@ public:
     size_t size() const { return root_->size(); }
     size_t num_triangles() const { return tris_.size(); }
     const Triangles& triangles() const { return tris_; }
+    const Box& box() const { return box_; }
     const Triangle& operator[](const TriangleId id) const { return tris_[id]; }
     const Triangle& at(const TriangleId id) const { return tris_.at(id); }
 
     static constexpr size_t node_size() { return sizeof(Node); }
-
-    /**
-     * Cf. [HH11], Algorithm 2
-     *
-     * Args:
-     *   r - distance from ray to triangle (if intersection exists)
-     *   a, b - barycentric coordinates of intersection point
-     */
-    const OptionalId intersect(const Ray& ray, float& r, float& a,
-                               float& b) const;
-
-    const OptionalId intersect(const Ray& ray) const {
-        float unused;
-        return intersect(ray, unused, unused, unused);
-    }
 
 private:
     // Helper method for recursive construction
@@ -225,15 +216,54 @@ private:
                TriangleIds /*left*/, TriangleIds /*right*/>
     find_plane_and_classify(const TriangleIds& tris, const Box& box) const;
 
-    // Helper method which intersects a triangle ids array with a ray
-    const OptionalId intersect(const TriangleId* ids, uint32_t num_tris,
-                               const Ray& ray, float& min_r, float& min_s,
-                               float& min_t) const;
-
 private:
     std::unique_ptr<Node> root_;
     Triangles tris_;
     Box box_;
+};
+
+/**
+ * Wraps a KDTree and provides an interface for computing Ray-Triangle
+ * intersection.
+ */
+class KDTreeIntersection {
+public:
+    using OptionalId = KDTree::OptionalId;
+    using TriangleId = KDTree::TriangleId;
+
+    explicit KDTreeIntersection(const KDTree& tree) : tree_(&tree) {}
+
+    const Triangle& operator[](const TriangleId id) const {
+        return (*tree_)[id];
+    }
+    const Triangle& at(const TriangleId id) const { return tree_->at(id); }
+
+    /**
+     * Cf. [HH11], Algorithm 2
+     *
+     * @param  ray     Ray for which the intersection will be computed
+     * @param  r       distance from ray to triangle (if intersection
+     * exists)
+     * @param  a, b    barycentric coordinates of the intersection point
+     * @return         optinal id of the triangle hit by the ray
+     */
+    const OptionalId intersect(const Ray& ray, float& r, float& a, float& b);
+
+    const OptionalId intersect(const Ray& ray) {
+        float unused;
+        return intersect(ray, unused, unused, unused);
+    }
+
+private:
+    // Helper method which intersects a triangle ids array with a ray
+    const OptionalId intersect(const TriangleId* ids, uint32_t num_tris,
+                               const Ray& ray, float& min_r, float& min_s,
+                               float& min_t);
+
+private:
+    const KDTree* tree_;
+    std::stack<std::tuple<KDTree::Node*, float /*tenter*/, float /*texit*/>>
+        stack_;
 };
 
 // custom hash for OptionalId
