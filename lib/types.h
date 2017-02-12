@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <vector>
 
+#define UNUSED(x) (void)(x)
+
 static constexpr float EPS = 0.00001f;
 static constexpr float FLT_MAX = std::numeric_limits<float>::max();
 

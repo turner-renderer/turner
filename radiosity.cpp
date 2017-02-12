@@ -28,14 +28,15 @@
 #include <unordered_set>
 #include <vector>
 
-Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
+Color trace(const Vec& origin, const Vec& dir,
+            KDTreeIntersection& tree_intersection_,
             const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection_.intersect(aiRay{origin, dir},
+                                                    dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -43,15 +44,15 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
     return radiosity[triangle_id];
 }
 
-Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
-            const RadiosityMesh& mesh, const FaceRadiosityHandle& rad,
-            const RadiosityConfig& conf) {
+Color trace(const Vec& origin, const Vec& dir,
+            KDTreeIntersection& tree_intersection, const RadiosityMesh& mesh,
+            const FaceRadiosityHandle& rad, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -60,7 +61,8 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& tree,
     return mesh.property(rad, face);
 }
 
-Color trace_gouraud(const Vec& origin, const Vec& dir, const KDTree& tree,
+Color trace_gouraud(const Vec& origin, const Vec& dir,
+                    KDTreeIntersection& tree_intersection,
                     const RadiosityMesh& mesh,
                     const VertexRadiosityHandle& vrad,
                     const RadiosityConfig& conf) {
@@ -69,7 +71,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const KDTree& tree,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -92,7 +94,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir, const KDTree& tree,
     return rad;
 }
 
-std::vector<Color> compute_radiosity(const KDTree& tree) {
+std::vector<Color> compute_radiosity(KDTree& tree) {
     using MatrixF = math::Matrix<float>;
     using VectorF = math::Vector<float>;
     size_t num_triangles = tree.num_triangles();
@@ -106,13 +108,14 @@ std::vector<Color> compute_radiosity(const KDTree& tree) {
     VectorF E_g(num_triangles);
     VectorF E_b(num_triangles);
 
+    KDTreeIntersection tree_intersection(tree);
     for (size_t i = 0; i < num_triangles; ++i) {
         // construct form factor matrix (F_ij)
         for (size_t j = i; j < num_triangles; ++j) {
             if (i == j) {
                 F(i, i) = 0;
             } else {
-                F(i, j) = form_factor(tree, i, j);
+                F(i, j) = form_factor(tree_intersection, i, j);
                 F(j, i) = tree[i].area() / tree[j].area() * F(i, j);
             }
         }
@@ -218,26 +221,30 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
+    std::vector<KDTreeIntersection> tree_intersections;
+    for (size_t y = 0; y < image.height(); ++y) {
+        tree_intersections.emplace_back(tree);
+    }
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(
-            pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
-                for (size_t x = 0; x < image.width(); ++x) {
-                    auto cam_dir = cam.raster2cam(
-                        aiVector2D(x, y), image.width(), image.height());
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree_intersections,
+                                         &radiosity, y, &conf]() {
+            for (size_t x = 0; x < image.width(); ++x) {
+                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
+                                              image.height());
 
-                    Stats::instance().num_prim_rays += 1;
-                    image(x, y) +=
-                        trace(cam.mPosition, cam_dir, tree, radiosity, conf);
+                Stats::instance().num_prim_rays += 1;
+                image(x, y) += trace(cam.mPosition, cam_dir,
+                                     tree_intersections[y], radiosity, conf);
 
-                    image(x, y) = exposure(image(x, y), conf.exposure);
+                image(x, y) = exposure(image(x, y), conf.exposure);
 
-                    // gamma correction
-                    if (conf.gamma_correction_enabled) {
-                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
-                    }
+                // gamma correction
+                if (conf.gamma_correction_enabled) {
+                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                 }
-            }));
+            }
+        }));
     }
 
     long completed = 0;
@@ -260,18 +267,23 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
+    std::vector<KDTreeIntersection> tree_intersections;
+    for (size_t y = 0; y < image.height(); ++y) {
+        tree_intersections.emplace_back(tree);
+    }
 
     FaceRadiosityHandle frad;
-    bool exists;
+    bool exists = false;
     exists = mesh.get_property_handle(frad, "face_radiosity");
     assert(exists);
     VertexRadiosityHandle vrad;
     exists = mesh.get_property_handle(vrad, "vertex_radiosity");
     assert(exists);
+    UNUSED(exists);
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
-                                         &vrad, y, &conf]() {
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree_intersections,
+                                         &mesh, &frad, &vrad, y, &conf]() {
             for (size_t x = 0; x < image.width(); ++x) {
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
                                               image.height());
@@ -280,10 +292,12 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
 
                 if (!conf.gouraud_enabled) {
                     image(x, y) +=
-                        trace(cam.mPosition, cam_dir, tree, mesh, frad, conf);
+                        trace(cam.mPosition, cam_dir, tree_intersections[y],
+                              mesh, frad, conf);
                 } else {
-                    image(x, y) += trace_gouraud(cam.mPosition, cam_dir, tree,
-                                                 mesh, vrad, conf);
+                    image(x, y) +=
+                        trace_gouraud(cam.mPosition, cam_dir,
+                                      tree_intersections[y], mesh, vrad, conf);
                 }
 
                 image(x, y) = exposure(image(x, y), conf.exposure);
@@ -323,6 +337,10 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> mesh_tasks;
+    std::vector<KDTreeIntersection> tree_intersections;
+    for (size_t y = 0; y < image.height(); ++y) {
+        tree_intersections.emplace_back(tree);
+    }
 
     constexpr float offset = 1.f;
     constexpr std::array<Vec2, 8> offsets = {
@@ -331,8 +349,9 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
         Vec2{0.f, offset / 2},    Vec2{offset / 2, offset},
         Vec2{offset, offset / 2}, Vec2{offset / 2, 0.f}};
     for (size_t y = 0; y < image.height(); ++y) {
-        mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam, &tree, y,
-                                              &conf]() {
+        mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam,
+                                              &tree_intersections, y, &conf]() {
+            auto& tree_intersection = tree_intersections[y];
             for (size_t x = 0; x < image.width(); ++x) {
                 float dist_to_triangle, s, t;
                 std::unordered_set<KDTree::OptionalId> triangle_ids;
@@ -340,8 +359,8 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 // Shoot center ray.
                 auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
                                               image.width(), image.height());
-                auto center_id = tree.intersect(Ray(cam.mPosition, cam_dir),
-                                                dist_to_triangle, s, t);
+                auto center_id = tree_intersection.intersect(
+                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
                 triangle_ids.insert(center_id);
 
                 // Sample disc rays around center.
@@ -350,8 +369,8 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                     cam_dir =
                         cam.raster2cam(aiVector2D(x + offset[0], y + offset[1]),
                                        image.width(), image.height());
-                    auto id = tree.intersect(Ray(cam.mPosition, cam_dir),
-                                             dist_to_triangle, s, t);
+                    auto id = tree_intersection.intersect(
+                        Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
                     triangle_ids.insert(id);
                 }
 

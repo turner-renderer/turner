@@ -11,7 +11,8 @@
  * equation, thefore it is not guaranteed that the calculated color values are
  * less than 1. E.g. an approximation of value 1 may be greater than 1.
  */
-Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
+Color trace(const Vec& origin, const Vec& dir,
+            KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf) {
     if (depth > conf.max_recursion_depth) {
@@ -23,7 +24,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        triangles.intersect(Ray(origin, dir), dist_to_triangle, s, t);
+        tree_intersection.intersect(Ray(origin, dir), dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -31,7 +32,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
     auto p = origin + dist_to_triangle * dir;
 
     // interpolate normal
-    const auto& triangle = triangles[triangle_id];
+    const auto& triangle = tree_intersection[triangle_id];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     auto p2 = p + normal * 0.0001f;
@@ -47,8 +48,8 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
         auto light_dir = (light.position - p).Normalize();
         float dist_to_light = (light.position - p2).Length();
         float dist_to_next_triangle;
-        auto has_shadow = triangles.intersect(aiRay(p2, light_dir),
-                                              dist_to_next_triangle, s, t);
+        auto has_shadow = tree_intersection.intersect(
+            aiRay(p2, light_dir), dist_to_next_triangle, s, t);
 
         // Do we get direct light?
         if (!has_shadow || dist_to_next_triangle > dist_to_light) {
@@ -74,7 +75,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles,
         auto cos_theta = dir_theta.second;
 
         const auto indirect_light =
-            trace(p2, dir, triangles, lights, depth + 1, conf);
+            trace(p2, dir, tree_intersection, lights, depth + 1, conf);
 
         // lambertian
         indirect_lightning += cos_theta * indirect_light;

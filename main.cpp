@@ -20,8 +20,6 @@
 #include <math.h>
 #include <vector>
 
-using Tree = KDTree;
-
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
     for (auto node : make_range(scene->mRootNode->mChildren,
@@ -126,7 +124,7 @@ int main(int argc, char const* argv[]) {
     Runtime loading_time;
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
-    Tree tree(std::move(triangles));
+    KDTree tree(std::move(triangles));
     Stats::instance().loading_time_ms = loading_time();
     Stats::instance().kdtree_height = tree.height();
 
@@ -145,10 +143,15 @@ int main(int argc, char const* argv[]) {
 
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
+        std::vector<KDTreeIntersection> tree_intersections;
+        for (int y = 0; y < height; ++y) {
+            tree_intersections.emplace_back(tree);
+        }
 
         for (int y = 0; y < height; ++y) {
-            tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
-                                             width, height, y, &conf]() {
+            tasks.emplace_back(pool.enqueue([&image, &cam, &tree_intersections,
+                                             &lights, width, height, y,
+                                             &conf]() {
                 float dx, dy;
                 xorshift64star<float> gen(42);
 
@@ -161,8 +164,9 @@ int main(int argc, char const* argv[]) {
                             aiVector2D(x + dx, y + dy), width, height);
 
                         Stats::instance().num_prim_rays += 1;
-                        image(x, y) += trace(cam.mPosition, cam_dir, tree,
-                                             lights, 0, conf);
+                        image(x, y) +=
+                            trace(cam.mPosition, cam_dir, tree_intersections[y],
+                                  lights, 0, conf);
                     }
                     image(x, y) /= static_cast<float>(conf.num_pixel_samples);
 

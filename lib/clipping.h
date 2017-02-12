@@ -6,8 +6,6 @@
 
 #include "output.h"
 
-#define UNUSED(x) (void)(x)
-
 /**
  * Cohen-Sutherland line clipping on AABB in 3d
  */

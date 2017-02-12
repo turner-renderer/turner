@@ -3,7 +3,8 @@
 #include "lib/stats.h"
 #include "trace.h"
 
-Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
+Color trace(const Vec& origin, const Vec& dir,
+            KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf) {
     Stats::instance().num_rays += 1;
@@ -17,7 +18,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        triangles_tree.intersect(aiRay(origin, dir), dist_to_triangle, s, t);
+        tree_intersection.intersect(aiRay(origin, dir), dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -27,7 +28,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
     auto light_dir = (light.position - p).Normalize();
 
     // interpolate normal
-    const auto& triangle = triangles_tree[triangle_id];
+    const auto& triangle = tree_intersection[triangle_id];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light
@@ -43,7 +44,7 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
         auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
-        auto reflected_color = trace(p2, reflected_ray_dir, triangles_tree,
+        auto reflected_color = trace(p2, reflected_ray_dir, tree_intersection,
                                      lights, depth + 1, conf);
 
         color = (1.f - triangle.reflectivity) * direct_lightning +
@@ -55,8 +56,8 @@ Color trace(const Vec& origin, const Vec& dir, const KDTree& triangles_tree,
     light_dir = (light.position - p2).Normalize();
     float dist_to_light = (light.position - p2).Length();
 
-    auto has_shadow = triangles_tree.intersect(aiRay(p2, light_dir),
-                                               dist_to_next_triangle, s, t);
+    auto has_shadow = tree_intersection.intersect(aiRay(p2, light_dir),
+                                                  dist_to_next_triangle, s, t);
 
     if (has_shadow && dist_to_next_triangle < dist_to_light) {
         color -= color * conf.shadow_intensity;
