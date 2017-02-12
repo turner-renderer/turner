@@ -24,6 +24,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <stack>
 #include <vector>
@@ -175,7 +176,7 @@ inline float uint32_to_float(uint32_t val) {
  * The size of the node is 8 bytes. Cf. data_ member for exact memory layout.
  */
 class FlatNode {
-    constexpr static uint32_t MAX_TRIANGLE_ID = 2 ^ 30; // excluding
+    constexpr static uint32_t MAX_TRIANGLE_ID = 1 << 30; // excluding
     constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFFFFFF >> 2;
     constexpr static uint32_t TYPE_MASK = 3;
 
@@ -224,9 +225,8 @@ public:
     // Since right nodes are create after parent nodes, we need a setter to
     // update the index of the right node after creation.
     void set_right(uint32_t value) {
-        data_ = (data_ & 0x0000) |
-                static_cast<uint64_t>(value << 2 |
-                                      static_cast<uint32_t>(split_axis()));
+        data_ = (data_ & 0xFFFFFFFF00000000) | value << 2 |
+                static_cast<uint32_t>(split_axis());
     }
 
     // leaf node attributes
@@ -335,10 +335,15 @@ private:
                TriangleIds /*left*/, TriangleIds /*right*/>
     find_plane_and_classify(const TriangleIds& tris, const Box& box) const;
 
+    void flatten();
+
 private:
     std::unique_ptr<Node> root_;
     Triangles tris_;
     Box box_;
+
+    // TODO: Describe layout
+    std::vector<detail::FlatNode> nodes_; // flatten nodes
 };
 
 /**
@@ -375,13 +380,13 @@ public:
 
 private:
     // Helper method which intersects a triangle ids array with a ray
-    const OptionalId intersect(const TriangleId* ids, uint32_t num_tris,
-                               const Ray& ray, float& min_r, float& min_s,
-                               float& min_t);
+    const OptionalId intersect(uint32_t node_index, const Ray& ray,
+                               float& min_r, float& min_s, float& min_t);
 
 private:
     const KDTree* tree_;
-    std::stack<std::tuple<KDTree::Node*, float /*tenter*/, float /*texit*/>>
+    std::stack<
+        std::tuple<uint32_t /*node index*/, float /*tenter*/, float /*texit*/>>
         stack_;
 };
 

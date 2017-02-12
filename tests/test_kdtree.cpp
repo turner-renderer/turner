@@ -271,43 +271,55 @@ TEST_CASE("Set right of inner FlatNode", "[FlatNode]") {
     {
         detail::FlatNode node(Axis::X, split_pos, 0);
         node.set_right(42);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::X);
+        REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
     {
         detail::FlatNode node(Axis::Y, split_pos, 0);
         node.set_right(42);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::Y);
+        REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
     {
         detail::FlatNode node(Axis::Z, split_pos, 0);
         node.set_right(42);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::Z);
+        REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
 }
 
-TEST_CASE("Leaf FlatNode is constructed correctly", "[FlatNode]") {
-    {
-        detail::FlatNode node;
-        REQUIRE(!node.is_inner());
-        REQUIRE(node.is_leaf());
-        REQUIRE(node.is_empty());
-        REQUIRE(node.is_sentinel());
-    }
-    {
-        detail::FlatNode node(1);
-        REQUIRE(!node.is_inner());
-        REQUIRE(node.is_leaf());
-        REQUIRE(!node.is_empty());
-        REQUIRE(node.is_sentinel());
-        REQUIRE(node.first_triangle_id() == 1);
-    }
-    {
-        detail::FlatNode node(1, 2);
-        REQUIRE(!node.is_inner());
-        REQUIRE(node.is_leaf());
-        REQUIRE(!node.is_empty());
-        REQUIRE(!node.is_sentinel());
-        REQUIRE(node.first_triangle_id() == 1);
-        REQUIRE(node.second_triangle_id() == 2);
-    }
-}
+// TEST_CASE("Leaf FlatNode is constructed correctly", "[FlatNode]") {
+//     {
+//         detail::FlatNode node;
+//         REQUIRE(!node.is_inner());
+//         REQUIRE(node.is_leaf());
+//         REQUIRE(node.is_empty());
+//         REQUIRE(node.is_sentinel());
+//     }
+//     {
+//         detail::FlatNode node(1);
+//         REQUIRE(!node.is_inner());
+//         REQUIRE(node.is_leaf());
+//         REQUIRE(!node.is_empty());
+//         REQUIRE(node.is_sentinel());
+//         REQUIRE(node.first_triangle_id() == 1);
+//     }
+//     {
+//         detail::FlatNode node(1, 2);
+//         REQUIRE(!node.is_inner());
+//         REQUIRE(node.is_leaf());
+//         REQUIRE(!node.is_empty());
+//         REQUIRE(!node.is_sentinel());
+//         REQUIRE(node.first_triangle_id() == 1);
+//         REQUIRE(node.second_triangle_id() == 2);
+//     }
+// }

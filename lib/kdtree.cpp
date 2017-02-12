@@ -89,6 +89,7 @@ KDTree::KDTree(Triangles tris) : tris_(std::move(tris)) {
     }
 
     root_ = std::unique_ptr<Node>(build(std::move(ids), box_));
+    flatten();
 }
 
 KDTree::Node* KDTree::build(KDTree::TriangleIds tris, const Box& box) {
@@ -301,6 +302,82 @@ KDTree::find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
                            std::move(ltris), std::move(rtris));
 }
 
+void KDTree::flatten() {
+    static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
+
+    // auto print = [this] {
+    //     size_t i = 0;
+    //     for (auto it = nodes_.begin(); it != nodes_.end(); ++it, ++i) {
+    //         const auto& node = *it;
+    //         if (node.is_inner()) {
+    //             std::cerr << i << ": InnerNode("
+    //                       << static_cast<int>(node.split_axis()) << ", "
+    //                       << node.split_pos() << ", " << node.right() << ")"
+    //                       << std::endl;
+    //         } else {
+    //             if (node.is_empty()) {
+    //                 std::cerr << i << ": Leaf()" << std::endl;
+    //             } else if (node.is_sentinel()) {
+    //                 std::cerr << i << ": Leaf(" << node.first_triangle_id()
+    //                           << ")" << std::endl;
+    //             } else {
+    //                 std::cerr << i << ": Leaf(" << node.first_triangle_id()
+    //                           << ", " << node.second_triangle_id() << ")"
+    //                           << std::endl;
+    //             }
+    //         }
+    //     }
+    // };
+
+    // do DFS through nodes
+    std::stack<std::pair<Node*, uint32_t /*parent index*/>> stack;
+    stack.emplace(root_.get(), INVALID_INDEX);
+
+    while (!stack.empty()) {
+        const Node& node = *stack.top().first;
+        uint32_t parent_index = stack.top().second;
+        stack.pop();
+
+        uint32_t node_index = nodes_.size();
+        if (parent_index != INVALID_INDEX) {
+            // we are in the right node => update parent's reference
+            nodes_[parent_index].set_right(node_index);
+        }
+
+        if (node.is_inner()) {
+            // set right to invalid, since we don't know the index yet
+            nodes_.emplace_back(node.split_axis(), node.split_pos(),
+                                INVALID_INDEX);
+
+            // Push right first, since we visit left first.
+            stack.emplace(node.right(), node_index);
+            stack.emplace(node.left(), INVALID_INDEX);
+        } else {
+            bool is_odd = true;
+            TriangleId first_id;
+            const TriangleId* triangle_ids = node.triangle_ids();
+            for (size_t i = 0; i < node.num_tris(); ++i) {
+                if (is_odd) {
+                    first_id = triangle_ids[i];
+                } else {
+                    nodes_.emplace_back(first_id, triangle_ids[i]);
+                }
+                is_odd = !is_odd;
+            }
+            // add sentinel
+            if (!is_odd) {
+                nodes_.emplace_back(first_id);
+            } else {
+                nodes_.emplace_back();
+            }
+        }
+    }
+}
+
+//
+// KDTreeIntersection implementation
+//
+
 namespace {
 
 /**
@@ -323,6 +400,75 @@ Vec fix_direction(const Ray& ray) {
 /**
  *
  */
+// const KDTree::OptionalId KDTreeIntersection::intersect(const Ray& ray, float&
+// r,
+//                                                        float& a, float& b) {
+//     // A trick to make the traversal robust.
+//     // Cf. [HH11], p. 5, comment about dir classification and robustness.
+//     const Ray fixed_ray(ray.pos, fix_direction(ray));
+
+//     float tenter, texit;
+//     if (!intersect_ray_box(fixed_ray, tree_->box(), tenter, texit)) {
+//         return OptionalId{};
+//     }
+
+//     // Note: No need to clear, since when we leave this function, the stack
+//     is
+//     // always empty.
+//     assert(stack_.empty());
+//     stack_.emplace(tree_->root_.get(), tenter, texit);
+
+//     KDTree::Node* node;
+//     OptionalId res;
+//     r = std::numeric_limits<float>::max();
+//     while (!stack_.empty()) {
+//         std::tie(node, tenter, texit) = stack_.top();
+//         stack_.pop();
+
+//         while (node->is_inner()) {
+//             int ax = static_cast<int>(node->split_axis());
+//             float split_pos = node->split_pos();
+
+//             // t at split
+//             float t = (split_pos - fixed_ray.pos[ax]) * fixed_ray.invdir[ax];
+
+//             // classify near/far with respect to t:
+//             // left is near if ray.dir[ax] <= 0, else otherwise
+//             KDTree::Node* near = node->left();
+//             KDTree::Node* far = node->right();
+//             if (fixed_ray.dir[ax] <= 0) {
+//                 std::swap(near, far);
+//             }
+
+//             if (texit < t) {
+//                 node = near;
+//             } else if (t < tenter) {
+//                 node = far;
+//             } else {
+//                 stack_.emplace(far, t, texit);
+//                 node = near;
+//                 texit = t;
+//             }
+//         }
+
+//         assert(node->is_leaf());
+//         float next_r, next_a, next_b;
+//         auto next = intersect(node->triangle_ids(), node->num_tris(), ray,
+//                               next_r, next_a, next_b);
+//         if (next && next_r < r) {
+//             res = next;
+//             r = next_r;
+//             a = next_a;
+//             b = next_b;
+//         }
+//     }
+
+//     return res;
+// }
+
+/**
+ *
+ */
 const KDTree::OptionalId KDTreeIntersection::intersect(const Ray& ray, float& r,
                                                        float& a, float& b) {
     // A trick to make the traversal robust.
@@ -337,45 +483,45 @@ const KDTree::OptionalId KDTreeIntersection::intersect(const Ray& ray, float& r,
     // Note: No need to clear, since when we leave this function, the stack is
     // always empty.
     assert(stack_.empty());
-    stack_.emplace(tree_->root_.get(), tenter, texit);
+    stack_.emplace(0, tenter, texit);
 
-    KDTree::Node* node;
+    uint32_t node_index;
     OptionalId res;
     r = std::numeric_limits<float>::max();
     while (!stack_.empty()) {
-        std::tie(node, tenter, texit) = stack_.top();
+        std::tie(node_index, tenter, texit) = stack_.top();
         stack_.pop();
 
-        while (node->is_inner()) {
-            int ax = static_cast<int>(node->split_axis());
-            float split_pos = node->split_pos();
+        while (tree_->nodes_[node_index].is_inner()) {
+            const auto& node = tree_->nodes_[node_index];
+            int ax = static_cast<int>(node.split_axis());
+            float split_pos = node.split_pos();
 
             // t at split
             float t = (split_pos - fixed_ray.pos[ax]) * fixed_ray.invdir[ax];
 
             // classify near/far with respect to t:
             // left is near if ray.dir[ax] <= 0, else otherwise
-            KDTree::Node* near = node->left();
-            KDTree::Node* far = node->right();
+            uint32_t near_index = node_index + 1;
+            uint32_t far_index = node.right();
             if (fixed_ray.dir[ax] <= 0) {
-                std::swap(near, far);
+                std::swap(near_index, far_index);
             }
 
             if (texit < t) {
-                node = near;
+                node_index = near_index;
             } else if (t < tenter) {
-                node = far;
+                node_index = far_index;
             } else {
-                stack_.emplace(far, t, texit);
-                node = near;
+                stack_.emplace(far_index, t, texit);
+                node_index = near_index;
                 texit = t;
             }
         }
 
-        assert(node->is_leaf());
+        assert(tree_->nodes_[node_index].is_leaf());
         float next_r, next_a, next_b;
-        auto next = intersect(node->triangle_ids(), node->num_tris(), ray,
-                              next_r, next_a, next_b);
+        auto next = intersect(node_index, ray, next_r, next_a, next_b);
         if (next && next_r < r) {
             res = next;
             r = next_r;
@@ -387,21 +533,60 @@ const KDTree::OptionalId KDTreeIntersection::intersect(const Ray& ray, float& r,
     return res;
 }
 
+// const KDTree::OptionalId
+// KDTreeIntersection::intersect(const KDTree::TriangleId* ids, uint32_t
+// num_tris,
+//                               const Ray& ray, float& min_r, float& min_s,
+//                               float& min_t) {
+//     min_r = std::numeric_limits<float>::max();
+//     OptionalId res;
+//     float r, s, t;
+//     for (uint32_t i = 0; i != num_tris; ++i) {
+//         const auto& tri = tree_->tris_[ids[i]];
+//         bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
+//         if (intersects && r < min_r) {
+//             min_r = r;
+//             min_s = s;
+//             min_t = t;
+//             res = OptionalId{ids[i]};
+//         }
+//     }
+
+//     return res;
+// }
+
 const KDTree::OptionalId
-KDTreeIntersection::intersect(const KDTree::TriangleId* ids, uint32_t num_tris,
-                              const Ray& ray, float& min_r, float& min_s,
-                              float& min_t) {
+KDTreeIntersection::intersect(uint32_t node_index, const Ray& ray, float& min_r,
+                              float& min_s, float& min_t) {
     min_r = std::numeric_limits<float>::max();
     OptionalId res;
-    float r, s, t;
-    for (uint32_t i = 0; i != num_tris; ++i) {
-        const auto& tri = tree_->tris_[ids[i]];
+
+    auto intersect = [&](uint32_t triangle_id) {
+        const auto& tri = tree_->tris_[triangle_id];
+        float r, s, t;
         bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
         if (intersects && r < min_r) {
             min_r = r;
             min_s = s;
             min_t = t;
-            res = OptionalId{ids[i]};
+            res = OptionalId{triangle_id};
+        }
+    };
+
+    for (;; ++node_index) {
+        const auto& node = tree_->nodes_[node_index];
+        assert(node.is_leaf());
+
+        if (node.is_empty()) {
+            break;
+        } else {
+            intersect(node.first_triangle_id());
+        }
+
+        if (node.is_sentinel()) {
+            break;
+        } else {
+            intersect(node.second_triangle_id());
         }
     }
 
