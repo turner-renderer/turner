@@ -9,17 +9,17 @@ A Collection of Unbiased Renderers
 Build
 
 ```bash
-mkdir build
-cd build
-cmake ..
-make            # build renderers
-make test       # optional: run tests
+> mkdir build
+> cd build
+> cmake ..
+> make            # build renderers
+> make test       # optional: run tests
 ```
 
 Render
 
 ```bash
-› ./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 8 > cornell_box.pbm
+> ./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 8 > cornell_box.pbm
 Loading scene...
 Loading triangles and building kd-tree...
 Rendering           ■■■■■■■■■■■■■■■■■■■■ 100.00%
@@ -36,7 +36,7 @@ The renderers output the image as [PBM](https://en.wikipedia.org/wiki/Netpbm_for
 to stdout. It can be easily converted with [ImageMagick](https://www.imagemagick.org/script/index.php).
 
 ```bash
-convert cornell_box.pbm cornell_box.png
+> convert cornell_box.pbm cornell_box.png
 ```
 
 ## Rendered Images
