@@ -176,7 +176,7 @@ inline float uint32_to_float(uint32_t val) {
  */
 class FlatNode {
     constexpr static uint32_t MAX_TRIANGLE_ID = 2 ^ 30; // excluding
-    constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFF;
+    constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFFFFFF >> 2;
     constexpr static uint32_t TYPE_MASK = 3;
 
 public:
@@ -191,7 +191,7 @@ public:
     // Leaf node containing two ids of triangles (both may be invalid)
     explicit FlatNode(uint32_t triangle_id_a = INVALID_TRIANGLE_ID,
                       uint32_t triangle_id_b = INVALID_TRIANGLE_ID)
-        : data_(static_cast<uint64_t>(triangle_id_a) |
+        : data_(static_cast<uint64_t>(triangle_id_a) << 32 |
                 static_cast<uint64_t>(triangle_id_b << 2 | 3)) {
         assert(triangle_id_a == INVALID_TRIANGLE_ID ||
                triangle_id_a < MAX_TRIANGLE_ID);
@@ -203,6 +203,8 @@ public:
 
     bool is_leaf() const { return (data_ & TYPE_MASK) == 3; }
     bool is_inner() const { return !is_leaf(); }
+
+    // inner node attributes
 
     Axis split_axis() const {
         assert(is_inner());
@@ -217,6 +219,36 @@ public:
     uint32_t right() const {
         assert(is_inner());
         return static_cast<uint32_t>(data_) >> 2;
+    }
+
+    // Since right nodes are create after parent nodes, we need a setter to
+    // update the index of the right node after creation.
+    void set_right(uint32_t value) {
+        data_ = (data_ & 0x0000) |
+                static_cast<uint64_t>(value << 2 |
+                                      static_cast<uint32_t>(split_axis()));
+    }
+
+    // leaf node attributes
+
+    uint32_t first_triangle_id() const {
+        assert(is_leaf());
+        return static_cast<uint32_t>(data_ >> 32);
+    }
+
+    uint32_t second_triangle_id() const {
+        assert(is_leaf());
+        return static_cast<uint32_t>((data_ & 0xFFFFFFFF) >> 2);
+    }
+
+    bool is_sentinel() const {
+        assert(is_leaf());
+        return second_triangle_id() == INVALID_TRIANGLE_ID;
+    }
+
+    bool is_empty() const {
+        assert(is_leaf());
+        return data_ == ~(3ull << 62); // all bits except the highest 2 are set
     }
 
 private:

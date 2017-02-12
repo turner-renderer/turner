@@ -265,3 +265,49 @@ TEST_CASE("Inner FlatNode is constructed correctly", "[FlatNode]") {
         REQUIRE(node.right() == right_index);
     }
 }
+
+TEST_CASE("Set right of inner FlatNode", "[FlatNode]") {
+    float split_pos = 3.1415;
+    {
+        detail::FlatNode node(Axis::X, split_pos, 0);
+        node.set_right(42);
+        REQUIRE(node.right() == 42);
+    }
+    {
+        detail::FlatNode node(Axis::Y, split_pos, 0);
+        node.set_right(42);
+        REQUIRE(node.right() == 42);
+    }
+    {
+        detail::FlatNode node(Axis::Z, split_pos, 0);
+        node.set_right(42);
+        REQUIRE(node.right() == 42);
+    }
+}
+
+TEST_CASE("Leaf FlatNode is constructed correctly", "[FlatNode]") {
+    {
+        detail::FlatNode node;
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(node.is_empty());
+        REQUIRE(node.is_sentinel());
+    }
+    {
+        detail::FlatNode node(1);
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(!node.is_empty());
+        REQUIRE(node.is_sentinel());
+        REQUIRE(node.first_triangle_id() == 1);
+    }
+    {
+        detail::FlatNode node(1, 2);
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(!node.is_empty());
+        REQUIRE(!node.is_sentinel());
+        REQUIRE(node.first_triangle_id() == 1);
+        REQUIRE(node.second_triangle_id() == 2);
+    }
+}
