@@ -29,14 +29,14 @@
 #include <vector>
 
 Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection_,
+            KDTreeIntersection& tree_intersection,
             const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id = tree_intersection_.intersect(aiRay{origin, dir},
-                                                    dist_to_triangle, s, t);
+    auto triangle_id =
+        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -221,30 +221,29 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
-    std::vector<KDTreeIntersection> tree_intersections;
-    for (size_t y = 0; y < image.height(); ++y) {
-        tree_intersections.emplace_back(tree);
-    }
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree_intersections,
-                                         &radiosity, y, &conf]() {
-            for (size_t x = 0; x < image.width(); ++x) {
-                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
-                                              image.height());
+        tasks.emplace_back(
+            pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
+                // TODO: we need only one tree intersection per thread, not task
+                KDTreeIntersection tree_intersection(tree);
 
-                Stats::instance().num_prim_rays += 1;
-                image(x, y) += trace(cam.mPosition, cam_dir,
-                                     tree_intersections[y], radiosity, conf);
+                for (size_t x = 0; x < image.width(); ++x) {
+                    auto cam_dir = cam.raster2cam(
+                        aiVector2D(x, y), image.width(), image.height());
 
-                image(x, y) = exposure(image(x, y), conf.exposure);
+                    Stats::instance().num_prim_rays += 1;
+                    image(x, y) += trace(cam.mPosition, cam_dir,
+                                         tree_intersection, radiosity, conf);
 
-                // gamma correction
-                if (conf.gamma_correction_enabled) {
-                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    image(x, y) = exposure(image(x, y), conf.exposure);
+
+                    // gamma correction
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    }
                 }
-            }
-        }));
+            }));
     }
 
     long completed = 0;
@@ -267,10 +266,6 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
-    std::vector<KDTreeIntersection> tree_intersections;
-    for (size_t y = 0; y < image.height(); ++y) {
-        tree_intersections.emplace_back(tree);
-    }
 
     FaceRadiosityHandle frad;
     bool exists = false;
@@ -282,8 +277,11 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     UNUSED(exists);
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree_intersections,
-                                         &mesh, &frad, &vrad, y, &conf]() {
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
+                                         &vrad, y, &conf]() {
+            // TODO: we need only one tree intersection per thread, not task
+            KDTreeIntersection tree_intersection(tree);
+
             for (size_t x = 0; x < image.width(); ++x) {
                 auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
                                               image.height());
@@ -291,13 +289,12 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
                 Stats::instance().num_prim_rays += 1;
 
                 if (!conf.gouraud_enabled) {
-                    image(x, y) +=
-                        trace(cam.mPosition, cam_dir, tree_intersections[y],
-                              mesh, frad, conf);
+                    image(x, y) += trace(cam.mPosition, cam_dir,
+                                         tree_intersection, mesh, frad, conf);
                 } else {
                     image(x, y) +=
-                        trace_gouraud(cam.mPosition, cam_dir,
-                                      tree_intersections[y], mesh, vrad, conf);
+                        trace_gouraud(cam.mPosition, cam_dir, tree_intersection,
+                                      mesh, vrad, conf);
                 }
 
                 image(x, y) = exposure(image(x, y), conf.exposure);
@@ -335,23 +332,22 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
     // "Ray Tracing NPR-Style Feature Lines" by Choudhury and Parker.
     std::cerr << "Drawing mesh lines ";
 
-    ThreadPool pool(conf.num_threads);
-    std::vector<std::future<void>> mesh_tasks;
-    std::vector<KDTreeIntersection> tree_intersections;
-    for (size_t y = 0; y < image.height(); ++y) {
-        tree_intersections.emplace_back(tree);
-    }
-
     constexpr float offset = 1.f;
     constexpr std::array<Vec2, 8> offsets = {
         Vec2{0.f, 0.f},           Vec2{offset, 0.f},
         Vec2{offset, offset},     Vec2{0.f, offset},
         Vec2{0.f, offset / 2},    Vec2{offset / 2, offset},
         Vec2{offset, offset / 2}, Vec2{offset / 2, 0.f}};
+
+    ThreadPool pool(conf.num_threads);
+    std::vector<std::future<void>> mesh_tasks;
+
     for (size_t y = 0; y < image.height(); ++y) {
-        mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam,
-                                              &tree_intersections, y, &conf]() {
-            auto& tree_intersection = tree_intersections[y];
+        mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam, &tree, y,
+                                              &conf]() {
+            // TODO: we need only one tree intersection per thread, not task
+            KDTreeIntersection tree_intersection(tree);
+
             for (size_t x = 0; x < image.width(); ++x) {
                 float dist_to_triangle, s, t;
                 std::unordered_set<KDTree::OptionalId> triangle_ids;
