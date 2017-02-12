@@ -21,6 +21,8 @@ template <typename T> class xorshift64star;
 
 /**
  * Specialization for random numbers in range of uint64_t.
+ *
+ * Cf. [RB06]
  */
 template <> class xorshift64star<uint64_t> {
 public:
