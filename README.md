@@ -99,21 +99,9 @@ it in your projects.
 
 [cornell_box.blend](scenes/cornell_box.blend)
 
-## Algorithm Implementations from Scratch
-
-The following algorithms have been implemented from scratch. While most are not
-that complicated it is good practice and gives a nice overview of all things
-required for rendering.
-
-- [x] Xorshift64*
-- [x] Lambertian Reflectance
-- [x] Ray-Triangle Intersection after [Dan Sunday](http://geomalgorithms.com/a06-_intersect-2.html)
-- [x] Barycentric Interpolation
-- [x] Monte Carlo Integration for Hemisphere Sampling
-- [x] Polar Coordinates to Cartesian Coordinates
-- [x] KD-Tree (cf. [WH06](#WH06) for building, [HH11](#HH11) for lookup/intersection)
-
 ## References
+
+<a name="RB06"></a>[RB06] Richard P. Brent. _Some Long-Period Random Number Generators using Shifts and Xors_, In _ANZIAM Journal. 48: C188–C202, July 2006_. 
 
 <a name="CW93"></a>[CW93] Michael F. Cohen and John R. Wallace. _Radiosity and Realistic Image Synthesis_, Academic Press Inc., 1993.
 
