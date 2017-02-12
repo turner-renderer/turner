@@ -148,6 +148,93 @@ private:
                   // == 24 bytes
 };
 
+inline uint32_t float_to_uint32(float val) {
+    uint32_t result;
+    std::memcpy(&result, &val, sizeof(val));
+    return result;
+}
+
+inline float uint32_to_float(uint32_t val) {
+    float result;
+    std::memcpy(&result, &val, sizeof(val));
+    return result;
+}
+
+/**
+ * Node in a flattened KDTree.
+ *
+ * This is either:
+ * - an inner node containing a split axis and position, and the index of the
+ *   right child. The left child is not stored explicitly; it is stored as the
+ *   next neighbor in the vector containing nodes. Or,
+ * - a leaf containing two triangles ids. Second, or both of them may be
+ *   invalid. A set of triangles belonging to a leaf node is stored as a
+ *   contiguous sequence in vector starting with a leaf node and ending with a
+ *   node containing a single or no valid triangle ids.
+ *
+ * The size of the node is 8 bytes. Cf. data_ member for exact memory layout.
+ */
+class FlatNode {
+    constexpr static uint32_t MAX_TRIANGLE_ID = 2 ^ 30; // excluding
+    constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFF;
+    constexpr static uint32_t TYPE_MASK = 3;
+
+public:
+    // Inner node containing split axis and pos, and index of the right child
+    FlatNode(Axis split_axis, float split_pos, uint32_t right)
+        : data_(static_cast<uint64_t>(float_to_uint32(split_pos)) << 32 |
+                right << 2 | static_cast<uint32_t>(split_axis)) {
+        // we need two bits to store axis and node type
+        assert(right < MAX_TRIANGLE_ID);
+    }
+
+    // Leaf node containing two ids of triangles (both may be invalid)
+    explicit FlatNode(uint32_t triangle_id_a = INVALID_TRIANGLE_ID,
+                      uint32_t triangle_id_b = INVALID_TRIANGLE_ID)
+        : data_(static_cast<uint64_t>(triangle_id_a) |
+                static_cast<uint64_t>(triangle_id_b << 2 | 3)) {
+        assert(triangle_id_a == INVALID_TRIANGLE_ID ||
+               triangle_id_a < MAX_TRIANGLE_ID);
+        assert(triangle_id_b == INVALID_TRIANGLE_ID ||
+               triangle_id_b < MAX_TRIANGLE_ID);
+    }
+
+    // attributes
+
+    bool is_leaf() const { return (data_ & TYPE_MASK) == 3; }
+    bool is_inner() const { return !is_leaf(); }
+
+    Axis split_axis() const {
+        assert(is_inner());
+        return static_cast<Axis>(data_ & TYPE_MASK);
+    }
+
+    float split_pos() const {
+        assert(is_inner());
+        return uint32_to_float(data_ >> 32);
+    }
+
+    uint32_t right() const {
+        assert(is_inner());
+        return static_cast<uint32_t>(data_) >> 2;
+    }
+
+private:
+    /**
+     * Memory layout:
+     * [  32 bits] [30 bits] [    2 bits]  = 8 bytes
+     * [split_pos] [  right] [split_axis]  inner node
+     * [   tri_id] [ tri_id] [       1 1]  leaf
+     *
+     * 2 last bits describe the node type and splitting axis:
+     * 0 1  inner with X-axis
+     * 1 1  inner with Y-axis
+     * 1 0  inner with Z-axis
+     * 1 1  leaf
+     */
+    uint64_t data_;
+};
+
 } // namespace detail
 
 class KDTreeIntersection;

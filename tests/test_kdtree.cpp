@@ -236,3 +236,32 @@ TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]") {
     REQUIRE(set.count(KDTree::OptionalId(1)) == 1);
     REQUIRE(set.count(KDTree::OptionalId(42)) == 1);
 }
+
+TEST_CASE("Inner FlatNode is constructed correctly", "[FlatNode]") {
+    float split_pos = 3.1415;
+    uint32_t right_index = 42;
+    {
+        detail::FlatNode node(Axis::X, split_pos, right_index);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::X);
+        REQUIRE(node.split_pos() == split_pos);
+        REQUIRE(node.right() == right_index);
+    }
+    {
+        detail::FlatNode node(Axis::Y, split_pos, right_index);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::Y);
+        REQUIRE(node.split_pos() == split_pos);
+        REQUIRE(node.right() == right_index);
+    }
+    {
+        detail::FlatNode node(Axis::Z, split_pos, right_index);
+        REQUIRE(node.is_inner());
+        REQUIRE(!node.is_leaf());
+        REQUIRE(node.split_axis() == Axis::Z);
+        REQUIRE(node.split_pos() == split_pos);
+        REQUIRE(node.right() == right_index);
+    }
+}
