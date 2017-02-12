@@ -83,7 +83,7 @@ convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
 
 Overall brightness is corrected in an external program. Since we are using a point light, the original picture is slightly too dark. The rendering time on 8 cpus was ~28 hours.
 
-[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon_small.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
+[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/dragon_xs.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
 
 Generated with:
 ```(bash)
