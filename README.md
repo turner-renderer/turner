@@ -2,6 +2,8 @@
 
 A Collection of Unbiased Renderers
 
+[![Stanford dragon rendered by our pathtracer](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)](https://f001.backblazeb2.com/file/turner/stanford_dragon.png)
+
 ## Get Started
 
 Build
@@ -17,7 +19,17 @@ make test       # optional: run tests
 Render
 
 ```bash
-./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 128 > cornell_box.pbm
+› ./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 8 > cornell_box.pbm
+Loading scene...
+Loading triangles and building kd-tree...
+Rendering           ■■■■■■■■■■■■■■■■■■■■ 100.00%
+Triangles      : 36
+Kd-Tree Height : 0
+Rays           : 2632399
+Rays (primary) : 819200
+Rays/sec       : 129419
+Loading time   : 0.00 sec
+Rendering time : 20.34 sec
 ```
 
 The renderers output the image as [PBM](https://en.wikipedia.org/wiki/Netpbm_format#PBM_example)
@@ -35,7 +47,7 @@ convert cornell_box.pbm cornell_box.png
 
 Generated with:
 ```(bash)
-./raycaster scenes/cornell_box.blend 3840 > cornell.pbm
+./raycaster ../scenes/cornell_box.blend 3840 > cornell.pbm
 convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 ```
 
@@ -48,7 +60,7 @@ is no real lighting.
 
 Generated with:
 ```(bash)
-./raytracer scenes/cornell_box.blend -w 3840 --max-depth 3 > cornell.pbm
+./raytracer ../scenes/cornell_box.blend -w 3840 --max-depth 3 > cornell.pbm
 convert -resize 640x640 -interpolate bicubic cornell.pbm cornell.png
 ```
 
@@ -61,7 +73,7 @@ Resizing the image is a simple antialiasing method.
 
 Generated with:
 ```(bash)
-./pathtracer scenes/cornell_box.blend -w 3480 --max-depth 3 -m 4 --pixel-samples 128 > cornell_box_3480_3_4_128.pbm
+./pathtracer ../scenes/cornell_box.blend -w 3480 --max-depth 3 -m 4 --pixel-samples 128 > cornell_box_3480_3_4_128.pbm
 convert cornell_box_3480_3_4_128.pbm cornell_box_3480_3_4_128.png
 ```
 
@@ -71,7 +83,7 @@ Overall brightness is corrected in an external program. Since we are using a poi
 
 Generated with:
 ```(bash)
-./pathtracer scenes/stanford_dragon.blend -w 1920 --max-depth 3 -m 4 --pixel-samples 128 > stanford_dragon.pbm
+./pathtracer ../scenes/stanford_dragon.blend -w 1920 --max-depth 3 -m 4 --pixel-samples 128 > stanford_dragon.pbm
 convert stanford_dragon.pbm stanford_dragon.png
 ```
 
