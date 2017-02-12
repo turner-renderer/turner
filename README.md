@@ -19,7 +19,11 @@ Build
 Render
 
 ```bash
-> ./pathtracer ../scenes/cornell_box.blend -w 320 --max-depth 3 -m 1 --pixel-samples 8 > cornell_box.pbm
+> ./pathtracer ../scenes/cornell_box.blend \
+  --width 320 \                            # image width in pixels
+  --max-depth 3 \                          # max number of ray bounces
+  --monte-carlo-samples 1 \                # number of samples for ray bounce
+  --pixel-samples 8 > cornell_box.pbm      # numer of samples per pixel
 Loading scene...
 Loading triangles and building kd-tree...
 Rendering           ■■■■■■■■■■■■■■■■■■■■ 100.00%
