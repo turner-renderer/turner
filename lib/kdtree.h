@@ -380,13 +380,13 @@ public:
 
 private:
     // Helper method which intersects a triangle ids array with a ray
-    const OptionalId intersect(uint32_t node_index, const Ray& ray,
+    const OptionalId intersect(const detail::FlatNode*, const Ray& ray,
                                float& min_r, float& min_s, float& min_t);
 
 private:
     const KDTree* tree_;
     std::stack<
-        std::tuple<uint32_t /*node index*/, float /*tenter*/, float /*texit*/>>
+        std::tuple<const detail::FlatNode*, float /*tenter*/, float /*texit*/>>
         stack_;
 };
 
