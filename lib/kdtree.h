@@ -24,7 +24,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <stack>
 #include <vector>
@@ -33,121 +32,6 @@ namespace detail {
 
 using TriangleId = uint32_t;
 using TriangleIds = std::vector<TriangleId>;
-
-class Node {
-public:
-    Node(Axis split_axis, float split_pos, Node* left, Node* right)
-        : flags_(static_cast<TriangleId>(split_axis) + FLAG_AXIS_X)
-        , split_pos_(split_pos)
-        , left_or_triangle_ids_(static_cast<void*>(left))
-        , right_(right) {}
-
-    explicit Node(const std::vector<TriangleId>& ids) : flags_(ids.size()) {
-        TriangleId* triangle_ids = new TriangleId[ids.size()];
-        ::memcpy(triangle_ids, ids.data(), ids.size() * sizeof(TriangleId));
-        left_or_triangle_ids_ = static_cast<void*>(triangle_ids);
-    }
-
-    ~Node() {
-        if (is_inner()) {
-            if (left()) {
-                delete left();
-            }
-            if (right()) {
-                delete right();
-            }
-        } else {
-            delete[] triangle_ids();
-        }
-    }
-
-    // attributes
-
-    bool is_leaf() const { return flags_ <= MAX_ID; }
-
-    bool is_inner() const { return !is_leaf(); }
-
-    Axis split_axis() const {
-        assert(is_inner());
-
-        if (flags_ == FLAG_AXIS_X) {
-            return Axis::X;
-        } else if (flags_ == FLAG_AXIS_Y) {
-            return Axis::Y;
-        } else if (flags_ == FLAG_AXIS_Z) {
-            return Axis::Z;
-        }
-
-        assert(false);
-        return Axis::X;
-    }
-
-    float split_pos() const {
-        assert(is_inner());
-        return split_pos_;
-    }
-
-    Node* left() const {
-        assert(is_inner());
-        return reinterpret_cast<Node*>(left_or_triangle_ids_);
-    }
-
-    Node* right() const {
-        assert(is_inner());
-        return right_;
-    }
-
-    TriangleId num_tris() const {
-        assert(is_leaf());
-        return flags_;
-    }
-
-    TriangleId* triangle_ids() const {
-        assert(is_leaf());
-        return reinterpret_cast<TriangleId*>(left_or_triangle_ids_);
-    }
-
-    // the last 3 values are reserved for axis description
-    static constexpr TriangleId MAX_ID =
-        std::numeric_limits<TriangleId>::max() - 3;
-
-    // public interface
-
-    size_t height() const {
-        if (is_leaf()) {
-            return 0;
-        }
-        return 1 + std::max(left() ? left()->height() : 0,
-                            right() ? right()->height() : 0);
-    }
-
-    size_t size() const {
-        if (is_leaf()) {
-            return num_tris();
-        }
-        return (left() ? left()->size() : 0) + (right() ? right()->size() : 0);
-    }
-
-private:
-    static constexpr TriangleId FLAG_AXIS_X = MAX_ID + 1;
-    static constexpr TriangleId FLAG_AXIS_Y = MAX_ID + 2;
-    static constexpr TriangleId FLAG_AXIS_Z = MAX_ID + 3;
-
-    // If flags_ in [0, MAX_ID], then this node is a leaf node and this
-    // member is the number of triangles in the leaf. Otherwise, this node
-    // is an inner node. In this case, flags is in [FLAG_AXIS_X,
-    // FLAG_AXIS_Y, FLAG_AXIS_Z] and describes the splitting axis.
-    TriangleId flags_; // 4 bytes
-    // Used only in an inner node
-    float split_pos_; // 4 bytes
-    // Depending whether this node is an inner node or a leaf, this member
-    // is a pointer to the left child or resp. the array containing the
-    // triangles.
-    void* left_or_triangle_ids_; // 8 bytes
-    // Used only in an inner node
-    Node* right_; // 8 bytes
-                  // == 24 bytes
-};
 
 inline uint32_t float_to_uint32(float val) {
     uint32_t result;
@@ -176,9 +60,11 @@ inline float uint32_to_float(uint32_t val) {
  * The size of the node is 8 bytes. Cf. data_ member for exact memory layout.
  */
 class FlatNode {
+    constexpr static uint32_t TYPE_MASK = 3;
+
+public:
     constexpr static uint32_t MAX_TRIANGLE_ID = 1 << 30; // excluding
     constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFFFFFF >> 2;
-    constexpr static uint32_t TYPE_MASK = 3;
 
 public:
     // Inner node containing split axis and pos, and index of the right child
@@ -267,83 +153,103 @@ private:
     uint64_t data_;
 };
 
+class OptionalId {
+public:
+    OptionalId() : id_(FlatNode::MAX_TRIANGLE_ID){};
+    explicit OptionalId(TriangleId id) : id_(id) {}
+
+    operator bool() const { return id_ < FlatNode::MAX_TRIANGLE_ID; }
+    operator TriangleId() const {
+        assert(*this);
+        return id_;
+    }
+    operator size_t() const {
+        assert(*this);
+        return id_;
+    }
+    bool operator==(const OptionalId& other) const { return id_ == other.id_; }
+    bool operator==(const TriangleId& other) const {
+        return this->operator bool() && id_ == other;
+    }
+    bool operator!=(const OptionalId& other) const { return !(*this == other); }
+    bool operator!=(const TriangleId& other) const { return !(*this == other); }
+
+    friend struct std::hash<OptionalId>;
+
+private:
+    TriangleId id_;
+};
+
 } // namespace detail
 
 class KDTreeIntersection;
 
 class KDTree {
-
-    using TriangleIds = detail::TriangleIds;
-    using Node = detail::Node;
-
     friend KDTreeIntersection;
 
 public:
     using TriangleId = detail::TriangleId;
 
-    class OptionalId {
-    public:
-        OptionalId() : id_(Node::MAX_ID + 1){};
-        explicit OptionalId(TriangleId id) : id_(id) {}
-
-        operator bool() const { return id_ <= Node::MAX_ID; }
-        operator TriangleId() const {
-            assert(*this);
-            return id_;
-        }
-        operator size_t() const {
-            assert(*this);
-            return id_;
-        }
-        bool operator==(const OptionalId& other) const {
-            return id_ == other.id_;
-        }
-        bool operator==(const TriangleId& other) const {
-            return this->operator bool() && id_ == other;
-        }
-        bool operator!=(const OptionalId& other) const {
-            return !(*this == other);
-        }
-        bool operator!=(const TriangleId& other) const {
-            return !(*this == other);
-        }
-
-        friend struct std::hash<OptionalId>;
-
-    private:
-        TriangleId id_;
-    };
-
     explicit KDTree(Triangles tris);
 
-    size_t height() const { return root_->height(); }
-    size_t size() const { return root_->size(); }
+    size_t height() const {
+        using Node = detail::FlatNode;
+        std::stack<std::pair<const Node*, uint32_t /* level */>> stack;
+        const Node* root = nodes_.data();
+        stack.emplace(root, 0);
+        size_t height = 0;
+        while (!stack.empty()) {
+            size_t level = stack.top().second;
+            if (level > height) {
+                height = level;
+            }
+
+            const Node* node = stack.top().first;
+            stack.pop();
+
+            if (node->is_inner()) {
+                stack.emplace(node + 1, level + 1);
+                stack.emplace(root + node->right(), level + 1);
+            }
+        }
+        return height;
+    }
+    size_t num_nodes() const { return nodes_.size(); }
     size_t num_triangles() const { return tris_.size(); }
     const Triangles& triangles() const { return tris_; }
     const Box& box() const { return box_; }
     const Triangle& operator[](const TriangleId id) const { return tris_[id]; }
     const Triangle& at(const TriangleId id) const { return tris_.at(id); }
 
-    static constexpr size_t node_size() { return sizeof(Node); }
+    static constexpr size_t node_size() { return sizeof(detail::FlatNode); }
 
 private:
-    // Helper method for recursive construction
-    Node* build(TriangleIds tris, const Box& box);
-
-    // Cf. [WH06], Algorithm 4
-    std::tuple<float /*cost*/, Axis /* plane axis */, float /* plane pos */,
-               TriangleIds /*left*/, TriangleIds /*right*/>
-    find_plane_and_classify(const TriangleIds& tris, const Box& box) const;
-
-    void flatten();
-
-private:
-    std::unique_ptr<Node> root_;
     Triangles tris_;
     Box box_;
 
-    // TODO: Describe layout
-    std::vector<detail::FlatNode> nodes_; // flatten nodes
+    /**
+     * Layout:
+     *
+     * We have 2 types of nodes, cf. Node: inner nodes and leaf nodes. All
+     * nodes are stored in DFS order. Next neighbor node of a node is always its
+     * left child, to the right child the node stores an index. A leaf node
+     * contains 2 or 1 valid references into triangles_ array. If an inner node
+     * points to a leaf node, then all consecutive leaf nodes of the first one
+     * describe the set of triangles belonging to the leaf node. The last node
+     * in the array is an inner node (sentinel) and does not contain any other
+     * valid data.
+     *
+     * Cf. possible layout (numbers are indexes in the array):
+     *
+     *         0
+     *        / \
+     *       /   \
+     *      1     7 8/sentinel
+     *     / \
+     *    /   \
+     *   2 3   4 5 6
+     */
+    std::vector<detail::FlatNode> nodes_;
 };
 
 /**
@@ -352,8 +258,8 @@ private:
  */
 class KDTreeIntersection {
 public:
-    using OptionalId = KDTree::OptionalId;
     using TriangleId = KDTree::TriangleId;
+    using OptionalId = detail::OptionalId;
 
     explicit KDTreeIntersection(const KDTree& tree) : tree_(&tree) {}
 
@@ -365,11 +271,11 @@ public:
     /**
      * Cf. [HH11], Algorithm 2
      *
-     * @param  ray     Ray for which the intersection will be computed
-     * @param  r       distance from ray to triangle (if intersection
-     * exists)
-     * @param  a, b    barycentric coordinates of the intersection point
-     * @return         optinal id of the triangle hit by the ray
+     * @param  ray   Ray for which the intersection will be computed
+     * @param  r     distance from ray to triangle (if intersection
+     *               exists)
+     * @param  a, b  barycentric coordinates of the intersection point
+     * @return       optional id of the triangle hit by the ray
      */
     const OptionalId intersect(const Ray& ray, float& r, float& a, float& b);
 
@@ -393,8 +299,8 @@ private:
 // custom hash for OptionalId
 namespace std {
 
-template <> struct hash<KDTree::OptionalId> {
-    size_t operator()(const KDTree::OptionalId& id) const {
+template <> struct hash<KDTreeIntersection::OptionalId> {
+    size_t operator()(const KDTreeIntersection::OptionalId& id) const {
         return std::hash<detail::TriangleId>()(id.id_);
     }
 };

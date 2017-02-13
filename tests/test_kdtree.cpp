@@ -26,10 +26,10 @@ TEST_CASE("Four separated triangles test", "[kdtree]") {
     auto d = test_triangle({3, 2, 1}, {3, 3, 1}, {2, 3, 1});
     KDTree tree(Triangles{a, b, c, d});
     REQUIRE(tree.height() == 1);
-    REQUIRE(tree.size() == 4);
+    REQUIRE(tree.num_nodes() == 5);
 
     KDTreeIntersection tree_intersection(tree);
-    KDTree::OptionalId hit;
+    KDTreeIntersection::OptionalId hit;
     float r, s, t;
 
     hit = tree_intersection.intersect({{0, 0, 0}, {0.5f, 0.5f, 1}}, r, s, t);
@@ -91,7 +91,7 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
     })();
     std::cerr << "Runtime : " << runtime_ms << "ms" << std::endl;
     std::cerr << "Height  : " << tree.height() << std::endl;
-    std::cerr << "Size    : " << tree.size() << std::endl;
+    std::cerr << "Size    : " << tree.num_nodes() << std::endl;
     std::cerr << std::endl;
 
     // test
@@ -149,7 +149,7 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
 
     KDTree tree(Triangles{a1, a2, a3, a4, b1, b2, b3, b4, c1, c2, c3, c4});
     REQUIRE(tree.height() == 0);
-    REQUIRE(tree.size() == 12);
+    REQUIRE(tree.num_nodes() == 7);
 }
 
 TEST_CASE("All triangles are in the same plane", "[kdtree]") {
@@ -184,7 +184,7 @@ TEST_CASE("Degenerated triangles test", "[KDTree]") {
     tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
 
     KDTree tree(tris);
-    REQUIRE(4 <= tree.size());
+    REQUIRE(3 <= tree.num_nodes());
 }
 
 TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
@@ -198,7 +198,7 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
         KDTreeIntersection tree_intersection(tree);
 
         Vec origin, dest;
-        KDTree::OptionalId triangle_id;
+        KDTreeIntersection::OptionalId triangle_id;
         float r, s, t;
 
         // ray from negative direction to 0
@@ -224,7 +224,7 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
 }
 
 TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]") {
-    std::unordered_set<KDTree::OptionalId> set;
+    std::unordered_set<detail::OptionalId> set;
     set.emplace();
     set.emplace();
     set.emplace(42);
@@ -232,12 +232,12 @@ TEST_CASE("Optional id can be stored in unordered containers", "[OptionalId]") {
     set.emplace(42);
 
     REQUIRE(set.size() == 3);
-    REQUIRE(set.count(KDTree::OptionalId()) == 1);
-    REQUIRE(set.count(KDTree::OptionalId(1)) == 1);
-    REQUIRE(set.count(KDTree::OptionalId(42)) == 1);
+    REQUIRE(set.count(detail::OptionalId()) == 1);
+    REQUIRE(set.count(detail::OptionalId(1)) == 1);
+    REQUIRE(set.count(detail::OptionalId(42)) == 1);
 }
 
-TEST_CASE("Inner FlatNode is constructed correctly", "[FlatNode]") {
+TEST_CASE("Inner Node is constructed correctly", "[node]") {
     float split_pos = 3.1415;
     uint32_t right_index = 42;
     {
@@ -266,7 +266,7 @@ TEST_CASE("Inner FlatNode is constructed correctly", "[FlatNode]") {
     }
 }
 
-TEST_CASE("Set right of inner FlatNode", "[FlatNode]") {
+TEST_CASE("Set right of inner Node", "[node]") {
     float split_pos = 3.1415;
     {
         detail::FlatNode node(Axis::X, split_pos, 0);
@@ -297,29 +297,29 @@ TEST_CASE("Set right of inner FlatNode", "[FlatNode]") {
     }
 }
 
-// TEST_CASE("Leaf FlatNode is constructed correctly", "[FlatNode]") {
-//     {
-//         detail::FlatNode node;
-//         REQUIRE(!node.is_inner());
-//         REQUIRE(node.is_leaf());
-//         REQUIRE(node.is_empty());
-//         REQUIRE(node.is_sentinel());
-//     }
-//     {
-//         detail::FlatNode node(1);
-//         REQUIRE(!node.is_inner());
-//         REQUIRE(node.is_leaf());
-//         REQUIRE(!node.is_empty());
-//         REQUIRE(node.is_sentinel());
-//         REQUIRE(node.first_triangle_id() == 1);
-//     }
-//     {
-//         detail::FlatNode node(1, 2);
-//         REQUIRE(!node.is_inner());
-//         REQUIRE(node.is_leaf());
-//         REQUIRE(!node.is_empty());
-//         REQUIRE(!node.is_sentinel());
-//         REQUIRE(node.first_triangle_id() == 1);
-//         REQUIRE(node.second_triangle_id() == 2);
-//     }
-// }
+TEST_CASE("Leaf Node is constructed correctly", "[node]") {
+    {
+        detail::FlatNode node;
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(node.is_empty());
+        REQUIRE(node.is_sentinel());
+    }
+    {
+        detail::FlatNode node(1);
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(!node.is_empty());
+        REQUIRE(node.is_sentinel());
+        REQUIRE(node.first_triangle_id() == 1);
+    }
+    {
+        detail::FlatNode node(1, 2);
+        REQUIRE(!node.is_inner());
+        REQUIRE(node.is_leaf());
+        REQUIRE(!node.is_empty());
+        REQUIRE(!node.is_sentinel());
+        REQUIRE(node.first_triangle_id() == 1);
+        REQUIRE(node.second_triangle_id() == 2);
+    }
+}
