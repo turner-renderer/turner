@@ -448,6 +448,7 @@ std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
             bool is_odd = true;
             TriangleId first_id;
             const TriangleId* triangle_ids = node.triangle_ids();
+            // fill in pairwise triangles as leaf nodes
             for (size_t i = 0; i < node.num_tris(); ++i) {
                 if (is_odd) {
                     first_id = triangle_ids[i];
@@ -456,15 +457,13 @@ std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
                 }
                 is_odd = !is_odd;
             }
-            // add sentinel
+            // triangle left? => add leaf node with a single triangle
             if (!is_odd) {
                 nodes.emplace_back(first_id);
-            } else {
-                nodes.emplace_back();
             }
         }
     }
-
+    nodes.emplace_back(Axis::X, 0, 0); // add inner node as sentinel
     return nodes;
 }
 } // namespace anonymous
@@ -596,20 +595,13 @@ KDTreeIntersection::intersect(const detail::FlatNode* node, const Ray& ray,
         }
     };
 
-    for (;; ++node) {
-        assert(node->is_leaf());
-
-        if (node->is_empty()) {
-            break;
-        } else {
-            intersect(node->first_triangle_id());
+    for (; node->is_leaf(); ++node) {
+        intersect(node->first_triangle_id());
+        uint32_t second_triangle_id = node->second_triangle_id();
+        if (second_triangle_id == detail::FlatNode::INVALID_TRIANGLE_ID) {
+            return res;
         }
-
-        if (node->is_sentinel()) {
-            break;
-        } else {
-            intersect(node->second_triangle_id());
-        }
+        intersect(node->second_triangle_id());
     }
 
     return res;

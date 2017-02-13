@@ -52,10 +52,9 @@ inline float uint32_to_float(uint32_t val) {
  * - an inner node containing a split axis and position, and the index of the
  *   right child. The left child is not stored explicitly; it is stored as the
  *   next neighbor in the vector containing nodes. Or,
- * - a leaf containing two triangles ids. Second, or both of them may be
- *   invalid. A set of triangles belonging to a leaf node is stored as a
- *   contiguous sequence in vector starting with a leaf node and ending with a
- *   node containing a single or no valid triangle ids.
+ * - a leaf containing two triangles ids. Second, may be invalid. A set of
+ *   triangles belonging to a leaf node is stored as a contiguous sequence in
+ *   vector starting with a leaf node and ending with an inner node.
  *
  * The size of the node is 8 bytes. Cf. data_ member for exact memory layout.
  */
@@ -76,12 +75,11 @@ public:
     }
 
     // Leaf node containing two ids of triangles (both may be invalid)
-    explicit FlatNode(uint32_t triangle_id_a = INVALID_TRIANGLE_ID,
+    explicit FlatNode(uint32_t triangle_id_a,
                       uint32_t triangle_id_b = INVALID_TRIANGLE_ID)
         : data_(static_cast<uint64_t>(triangle_id_a) << 32 |
                 static_cast<uint64_t>(triangle_id_b << 2 | 3)) {
-        assert(triangle_id_a == INVALID_TRIANGLE_ID ||
-               triangle_id_a < MAX_TRIANGLE_ID);
+        assert(triangle_id_a < MAX_TRIANGLE_ID);
         assert(triangle_id_b == INVALID_TRIANGLE_ID ||
                triangle_id_b < MAX_TRIANGLE_ID);
     }
@@ -125,16 +123,6 @@ public:
     uint32_t second_triangle_id() const {
         assert(is_leaf());
         return static_cast<uint32_t>((data_ & 0xFFFFFFFF) >> 2);
-    }
-
-    bool is_sentinel() const {
-        assert(is_leaf());
-        return second_triangle_id() == INVALID_TRIANGLE_ID;
-    }
-
-    bool is_empty() const {
-        assert(is_leaf());
-        return data_ == ~(3ull << 62); // all bits except the highest 2 are set
     }
 
 private:
@@ -285,8 +273,9 @@ public:
     }
 
 private:
-    // Helper method which intersects a triangle ids array with a ray
-    const OptionalId intersect(const detail::FlatNode*, const Ray& ray,
+    // Helper method which intersects triangles from consecutive nodes (starting
+    // at node) until we reach an inner node.
+    const OptionalId intersect(const detail::FlatNode* node, const Ray& ray,
                                float& min_r, float& min_s, float& min_t);
 
 private:
