@@ -117,12 +117,17 @@ public:
 
     uint32_t first_triangle_id() const {
         assert(is_leaf());
-        return static_cast<uint32_t>(data_ >> 32);
+        return data_ >> 32;
+    }
+
+    bool has_second_triangle_id() const {
+        assert(is_leaf());
+        return ~static_cast<uint32_t>(data_ & 0xFFFFFFFF);
     }
 
     uint32_t second_triangle_id() const {
         assert(is_leaf());
-        return static_cast<uint32_t>((data_ & 0xFFFFFFFF) >> 2);
+        return (data_ & 0xFFFFFFFF) >> 2;
     }
 
 private:
@@ -218,24 +223,29 @@ private:
     /**
      * Layout:
      *
-     * We have 2 types of nodes, cf. Node: inner nodes and leaf nodes. All
-     * nodes are stored in DFS order. Next neighbor node of a node is always its
-     * left child, to the right child the node stores an index. A leaf node
-     * contains 2 or 1 valid references into triangles_ array. If an inner node
-     * points to a leaf node, then all consecutive leaf nodes of the first one
-     * describe the set of triangles belonging to the leaf node. The last node
-     * in the array is an inner node (sentinel) and does not contain any other
-     * valid data.
+     * We have 2 types of nodes (cf. Node): inner nodes and leaf nodes. All
+     * nodes are stored in the DFS order. An inner node has its left child as
+     * the next node, and stores an index to its right child. A leaf node
+     * contains at most two valid references into triangles_ array. All triangle
+     * ids are read from the first leaf until the first sentinel. A sentinel is
+     * either an inner node without a parent, or a leaf node containing a single
+     * triangle.
      *
-     * Cf. possible layout (numbers are indexes in the array):
+     * Cf. possible layout of the array:
+     *
+     * [] - a node, i - inner node, l - leaf, / - sentinel
+     * [i] [i] [l l] [/] [  l] [l /] [  l] [/]
+     * [0] [1] [2 3] [/] [4 5] [6  ] [7 8] [/]
+     *
+     * representing the following tree:
      *
      *         0
      *        / \
      *       /   \
-     *      1     7 8/sentinel
+     *      1    [7 8]
      *     / \
      *    /   \
-     *   2 3   4 5 6
+     * [2 3]  [4 5 6]
      */
     std::vector<detail::FlatNode> nodes_;
 };

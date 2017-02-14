@@ -445,25 +445,23 @@ std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
             stack.emplace(node.right(), node_index);
             stack.emplace(node.left(), INVALID_INDEX);
         } else {
-            bool is_odd = true;
-            TriangleId first_id;
             const TriangleId* triangle_ids = node.triangle_ids();
-            // fill in pairwise triangles as leaf nodes
-            for (size_t i = 0; i < node.num_tris(); ++i) {
-                if (is_odd) {
-                    first_id = triangle_ids[i];
-                } else {
-                    nodes.emplace_back(first_id, triangle_ids[i]);
-                }
-                is_odd = !is_odd;
+            // create a leaf node for each pair of triangles
+            size_t i = 1;
+            for (; i < node.num_tris(); i += 2) {
+                nodes.emplace_back(triangle_ids[i - 1], triangle_ids[i]);
             }
-            // triangle left? => add leaf node with a single triangle
-            if (!is_odd) {
-                nodes.emplace_back(first_id);
+            // a triangle left? => add leaf node with a single triangle
+            if (i - 1 < node.num_tris()) {
+                nodes.emplace_back(triangle_ids[i - 1]);
+                // in that case we don't need a sentinel node, since a
+                // half-empty node can be used as a sentinel
+            } else {
+                // add inner node as sentinel
+                nodes.emplace_back(Axis::X, 0, 0);
             }
         }
     }
-    nodes.emplace_back(Axis::X, 0, 0); // add inner node as sentinel
     return nodes;
 }
 } // namespace anonymous
@@ -583,8 +581,9 @@ KDTreeIntersection::intersect(const detail::FlatNode* node, const Ray& ray,
     min_r = std::numeric_limits<float>::max();
     OptionalId res;
 
+    const Triangles& triangles = tree_->tris_;
     auto intersect = [&](uint32_t triangle_id) {
-        const auto& tri = tree_->tris_[triangle_id];
+        const auto& tri = triangles[triangle_id];
         float r, s, t;
         bool intersects = intersect_ray_triangle(ray, tri, r, s, t);
         if (intersects && r < min_r) {
@@ -597,12 +596,10 @@ KDTreeIntersection::intersect(const detail::FlatNode* node, const Ray& ray,
 
     for (; node->is_leaf(); ++node) {
         intersect(node->first_triangle_id());
-        uint32_t second_triangle_id = node->second_triangle_id();
-        if (second_triangle_id == detail::FlatNode::INVALID_TRIANGLE_ID) {
-            return res;
+        if (!node->has_second_triangle_id()) {
+            break;
         }
         intersect(node->second_triangle_id());
     }
-
     return res;
 }

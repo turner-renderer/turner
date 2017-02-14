@@ -26,7 +26,7 @@ TEST_CASE("Four separated triangles test", "[kdtree]") {
     auto d = test_triangle({3, 2, 1}, {3, 3, 1}, {2, 3, 1});
     KDTree tree(Triangles{a, b, c, d});
     REQUIRE(tree.height() == 1);
-    REQUIRE(tree.num_nodes() == 4);
+    REQUIRE(tree.num_nodes() == 5);
 
     KDTreeIntersection tree_intersection(tree);
     KDTreeIntersection::OptionalId hit;
@@ -303,6 +303,7 @@ TEST_CASE("Leaf Node is constructed correctly", "[node]") {
         REQUIRE(!node.is_inner());
         REQUIRE(node.is_leaf());
         REQUIRE(node.first_triangle_id() == 1);
+        REQUIRE(!node.has_second_triangle_id());
     }
     {
         detail::FlatNode node(1, 2);
@@ -310,5 +311,6 @@ TEST_CASE("Leaf Node is constructed correctly", "[node]") {
         REQUIRE(node.is_leaf());
         REQUIRE(node.first_triangle_id() == 1);
         REQUIRE(node.second_triangle_id() == 2);
+        REQUIRE(node.has_second_triangle_id());
     }
 }
