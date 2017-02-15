@@ -36,10 +36,10 @@ file(GLOB LIB_SRCS
 )
 
 add_library(common OBJECT ${LIB_SRCS})
-add_dependencies(common assimp zlibstatic)
+add_dependencies(common assimp zlibstatic mms)
 
 add_library(main OBJECT main.cpp)
-add_dependencies(main assimp zlibstatic docopt threadpool)
+add_dependencies(main assimp zlibstatic docopt threadpool mms)
 
 find_package(Threads REQUIRED)
 
@@ -65,13 +65,15 @@ target_link_libraries(pathtracer
 )
 
 add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:common>)
-add_dependencies(radiosity docopt openmesh threadpool)
+add_dependencies(radiosity docopt openmesh threadpool mms)
 target_link_libraries(radiosity
 	Threads::Threads
 	${assimp_LIBRARIES}
 	${docopt_LIBRARIES}
 	${openmesh_LIBRARIES}
 )
+
+add_executable(simple_mms simple_mms.cpp $<TARGET_OBJECTS:common>)
 
 # Add tests
 
