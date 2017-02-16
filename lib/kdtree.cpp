@@ -419,6 +419,7 @@ private:
  */
 std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
     static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
+    const detail::FlatNode sentinel(Axis::X, 0, 0);
     std::vector<detail::FlatNode> nodes;
 
     // do DFS through nodes
@@ -458,7 +459,7 @@ std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
                 // half-empty node can be used as a sentinel
             } else {
                 // add inner node as sentinel
-                nodes.emplace_back(Axis::X, 0, 0);
+                nodes.push_back(sentinel);
             }
         }
     }
