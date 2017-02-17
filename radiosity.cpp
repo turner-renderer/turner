@@ -350,7 +350,7 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
 
             for (size_t x = 0; x < image.width(); ++x) {
                 float dist_to_triangle, s, t;
-                std::unordered_set<KDTree::OptionalId> triangle_ids;
+                std::unordered_set<KDTreeIntersection::OptionalId> triangle_ids;
 
                 // Shoot center ray.
                 auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
