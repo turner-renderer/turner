@@ -195,9 +195,10 @@ public:
 
     size_t height() const {
         using Node = detail::FlatNode;
-        std::stack<std::pair<const uint32_t, uint32_t /* level */>> stack;
-        uint32_t root_node_index = 0;
-        stack.emplace(root_node_index, 0);
+        std::stack<std::pair<const Node*, uint32_t /* level */>> stack;
+
+        const Node* root = &nodes_[0];
+        stack.emplace(root, 0);
         size_t height = 0;
         while (!stack.empty()) {
             size_t level = stack.top().second;
@@ -205,13 +206,12 @@ public:
                 height = level;
             }
 
-            uint32_t node_index = stack.top().first;
-            const Node& node = nodes_[node_index];
+            const Node* node = stack.top().first;
             stack.pop();
 
-            if (node.is_inner()) {
-                stack.emplace(node_index + 1, level + 1);
-                stack.emplace(root_node_index + node.right(), level + 1);
+            if (node->is_inner()) {
+                stack.emplace(node + 1, level + 1);
+                stack.emplace(root + node->right(), level + 1);
             }
         }
         return height;

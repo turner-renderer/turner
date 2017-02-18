@@ -18,12 +18,14 @@ endif(COVERAGE)
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/vendor)
 add_subdirectory(${EXT_PROJECTS_DIR}/assimp)
 add_subdirectory(${EXT_PROJECTS_DIR}/docopt)
+add_subdirectory(${EXT_PROJECTS_DIR}/mms)
 add_subdirectory(${EXT_PROJECTS_DIR}/openmesh)
 add_subdirectory(${EXT_PROJECTS_DIR}/threadpool)
 
 include_directories(
 	${assimp_INCLUDE_DIR}
 	${docopt_INCLUDE_DIR}
+	${mms_INCLUDE_DIR}
 	${threadpool_INCLUDE_DIR}
 	${openmesh_INCLUDE_DIR}
 )

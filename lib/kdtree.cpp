@@ -430,7 +430,7 @@ private:
  */
 mms::vector<mms::Mmapped, detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
     static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
-    const detail::FlatNode sentinel(Axis::X, 0, 0);
+    const detail::FlatNodeT<mms::Standalone> sentinel(Axis::X, 0, 0);
     mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> nodes;
 
     // do DFS through nodes
@@ -554,7 +554,7 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     // Note: No need to clear, since when we leave this function, the stack is
     // always empty.
     assert(stack_.empty());
-    const auto* root = tree_->nodes_.data();
+    const auto* root = &tree_->nodes_.operator[](0);
     stack_.emplace(root, tenter, texit);
 
     const detail::FlatNode* node;
