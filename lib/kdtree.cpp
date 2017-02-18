@@ -3,6 +3,17 @@
 #include "clipping.h"
 #include "intersection.h"
 
+#include <mms/vector.h>
+#include <mms/writer.h>
+
+#include <fcntl.h>
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+
 namespace {
 
 using TriangleId = detail::TriangleId;
@@ -417,10 +428,10 @@ private:
  * @param  root node of the KDTree
  * @return array of nodes representing flattened KDTree
  */
-std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
+mms::vector<mms::Mmapped, detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
     static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
     const detail::FlatNode sentinel(Axis::X, 0, 0);
-    std::vector<detail::FlatNode> nodes;
+    mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> nodes;
 
     // do DFS through nodes
     std::stack<std::pair<TreeNode*, uint32_t /*parent index*/>> stack;
@@ -463,7 +474,24 @@ std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
             }
         }
     }
-    return nodes;
+
+    // Save nodes and mmap them.
+
+    // Serialize
+    std::ofstream out("kdtree_cache");
+    size_t pos = mms::write(out, nodes);
+    out.close();
+
+    // mmap data
+    int fd = ::open("kdtree_cache", O_RDONLY);
+    struct stat st;
+    fstat(fd, &st);
+    char* data = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    const mms::vector<mms::Mmapped, detail::FlatNode>* m_nodes =
+        reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data + pos);
+
+    return *m_nodes;
+    //return nodes;
 }
 } // namespace anonymous
 

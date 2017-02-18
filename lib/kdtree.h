@@ -22,6 +22,7 @@
 
 #include "triangle.h"
 
+#include <mms/vector.h>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -58,7 +59,8 @@ inline float uint32_to_float(uint32_t val) {
  *
  * The size of the node is 8 bytes. Cf. data_ member for exact memory layout.
  */
-class FlatNode {
+template<class P>
+class FlatNodeT {
     constexpr static uint32_t TYPE_MASK = 3;
 
 public:
@@ -67,7 +69,7 @@ public:
 
 public:
     // Inner node containing split axis and pos, and index of the right child
-    FlatNode(Axis split_axis, float split_pos, uint32_t right)
+    FlatNodeT(Axis split_axis, float split_pos, uint32_t right)
         : data_(static_cast<uint64_t>(float_to_uint32(split_pos)) << 32 |
                 right << 2 | static_cast<uint32_t>(split_axis)) {
         // we need two bits to store axis and node type
@@ -75,7 +77,7 @@ public:
     }
 
     // Leaf node containing two ids of triangles (both may be invalid)
-    explicit FlatNode(uint32_t triangle_id_a,
+    explicit FlatNodeT(uint32_t triangle_id_a,
                       uint32_t triangle_id_b = INVALID_TRIANGLE_ID)
         : data_(static_cast<uint64_t>(triangle_id_a) << 32 |
                 static_cast<uint64_t>(triangle_id_b << 2 | 3)) {
@@ -130,6 +132,9 @@ public:
         return (data_ & 0xFFFFFFFF) >> 2;
     }
 
+    // Expose struct's fields to mms
+    template<class A> void traverseFields(A a) const { a(data_); }
+
 private:
     /**
      * Memory layout:
@@ -145,6 +150,9 @@ private:
      */
     uint64_t data_;
 };
+
+// Defines an alias for memory mapped nodes that should always be used.
+using FlatNode = FlatNodeT<mms::Mmapped>;
 
 class OptionalId {
 public:
@@ -187,9 +195,9 @@ public:
 
     size_t height() const {
         using Node = detail::FlatNode;
-        std::stack<std::pair<const Node*, uint32_t /* level */>> stack;
-        const Node* root = nodes_.data();
-        stack.emplace(root, 0);
+        std::stack<std::pair<const uint32_t, uint32_t /* level */>> stack;
+        uint32_t root_node_index = 0;
+        stack.emplace(root_node_index, 0);
         size_t height = 0;
         while (!stack.empty()) {
             size_t level = stack.top().second;
@@ -197,12 +205,13 @@ public:
                 height = level;
             }
 
-            const Node* node = stack.top().first;
+            uint32_t node_index = stack.top().first;
+            const Node& node = nodes_[node_index];
             stack.pop();
 
-            if (node->is_inner()) {
-                stack.emplace(node + 1, level + 1);
-                stack.emplace(root + node->right(), level + 1);
+            if (node.is_inner()) {
+                stack.emplace(node_index + 1, level + 1);
+                stack.emplace(root_node_index + node.right(), level + 1);
             }
         }
         return height;
@@ -247,7 +256,7 @@ private:
      *    /   \
      * [2 3]  [4 5 6]
      */
-    std::vector<detail::FlatNode> nodes_;
+     mms::vector<mms::Mmapped, detail::FlatNode> nodes_;
 };
 
 /**
