@@ -363,7 +363,7 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 // TODO: Sample disc with Poisson or similar.
                 for (auto offset : offsets) {
                     cam_dir =
-                        cam.raster2cam(aiVector2D(x + offset[0], y + offset[1]),
+                        cam.raster2cam(aiVector2D(x + offset.x, y + offset.y),
                                        image.width(), image.height());
                     auto id = tree_intersection.intersect(
                         Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
