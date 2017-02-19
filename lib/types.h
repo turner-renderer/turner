@@ -167,14 +167,10 @@ struct Light {
 /**
  * Ray with precomputed inverse direction
  */
-struct Ray : public aiRay {
-    // Ray with precomputed inverse direction
-    Ray(const Vec& pos, const Vec& dir) : aiRay(pos, dir), invdir(1 / dir) {}
+struct Ray {
+    Ray(const Vec& pos, const Vec& dir) : pos(pos), dir(dir), invdir(1 / dir) {}
 
-    Ray(const aiRay& ray) : Ray(ray.pos, ray.dir) {}
-
-    // pos, dir are in aiRay
-    Vec invdir;
+    Vec pos, dir, invdir;
 };
 
 /**
