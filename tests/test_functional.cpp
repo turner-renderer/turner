@@ -20,3 +20,20 @@ TEST_CASE("Test hash of a pair", "[hash]") {
     // uniformly depending on the input
     REQUIRE(res == std::numeric_limits<size_t>::max());
 }
+
+TEST_CASE("Test hash of a Vec", "[hash]") {
+    std::default_random_engine rd;
+    std::uniform_real_distribution<> dist(std::numeric_limits<float>::lowest(),
+                                          std::numeric_limits<float>::max());
+    std::hash<Vec> hasher;
+
+    size_t res = 0;
+    for (size_t i = 0; i < 32; ++i) {
+        Vec v{dist(rd), dist(rd), dist(rd)};
+        res |= hasher(v);
+    }
+
+    // all bits are expected to be set, since a good hash function sets a bit
+    // uniformly depending on the input
+    REQUIRE(static_cast<uint32_t>(res) == std::numeric_limits<uint32_t>::max());
+}
