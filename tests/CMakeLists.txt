@@ -11,16 +11,17 @@ set(TESTS
     test_clipping
     test_config
     test_effects
+    test_functional
     test_intersection
     test_kdtree
     test_lambertian
+    test_mesh
     test_progress_bar
     test_radiosity
     test_raster
     test_sampling
     test_triangle
     test_types
-    test_mesh
 )
 
 foreach (TEST_NAME ${TESTS})

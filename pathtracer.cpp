@@ -49,7 +49,7 @@ Color trace(const Vec& origin, const Vec& dir,
         float dist_to_light = (light.position - p2).Length();
         float dist_to_next_triangle;
         auto has_shadow = tree_intersection.intersect(
-            aiRay(p2, light_dir), dist_to_next_triangle, s, t);
+            {p2, light_dir}, dist_to_next_triangle, s, t);
 
         // Do we get direct light?
         if (!has_shadow || dist_to_next_triangle > dist_to_light) {

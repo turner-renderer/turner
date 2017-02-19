@@ -18,7 +18,7 @@ Color trace(const Vec& origin, const Vec& dir,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree_intersection.intersect(aiRay(origin, dir), dist_to_triangle, s, t);
+        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -56,7 +56,7 @@ Color trace(const Vec& origin, const Vec& dir,
     light_dir = (light.position - p2).Normalize();
     float dist_to_light = (light.position - p2).Length();
 
-    auto has_shadow = tree_intersection.intersect(aiRay(p2, light_dir),
+    auto has_shadow = tree_intersection.intersect({p2, light_dir},
                                                   dist_to_next_triangle, s, t);
 
     if (has_shadow && dist_to_next_triangle < dist_to_light) {

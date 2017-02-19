@@ -36,7 +36,7 @@ Color trace(const Vec& origin, const Vec& dir,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -52,7 +52,7 @@ Color trace(const Vec& origin, const Vec& dir,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -71,7 +71,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree_intersection.intersect(aiRay{origin, dir}, dist_to_triangle, s, t);
+        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -356,17 +356,17 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
                                               image.width(), image.height());
                 auto center_id = tree_intersection.intersect(
-                    Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
+                    {cam.mPosition, cam_dir}, dist_to_triangle, s, t);
                 triangle_ids.insert(center_id);
 
                 // Sample disc rays around center.
                 // TODO: Sample disc with Poisson or similar.
                 for (auto offset : offsets) {
                     cam_dir =
-                        cam.raster2cam(aiVector2D(x + offset[0], y + offset[1]),
+                        cam.raster2cam(aiVector2D(x + offset.x, y + offset.y),
                                        image.width(), image.height());
                     auto id = tree_intersection.intersect(
-                        Ray(cam.mPosition, cam_dir), dist_to_triangle, s, t);
+                        {cam.mPosition, cam_dir}, dist_to_triangle, s, t);
                     triangle_ids.insert(id);
                 }
 
