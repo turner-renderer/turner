@@ -8,6 +8,7 @@ add_dependencies(catch_main catch)
 
 set(TESTS
     test_algorithm
+    test_associative
     test_clipping
     test_config
     test_effects
