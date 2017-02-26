@@ -28,6 +28,16 @@
 #include <unordered_set>
 #include <vector>
 
+#include <mms/vector.h>
+#include <mms/writer.h>
+
+#include <fcntl.h>
+#include <fstream>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+
 Color trace(const Vec& origin, const Vec& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
@@ -498,7 +508,38 @@ int main(int argc, char const* argv[]) {
     // Scene triangles
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
-    KDTree tree(std::move(triangles));
+
+    // Build and allocate tree data outside of tree
+
+    std::vector<detail::TriangleId> ids(triangles.size(), 0);
+
+    // Compute the bounding box of all triangles and fill in vector of all ids.
+    auto box = triangles.front().bbox();
+    for (size_t i = 1; i < triangles.size(); ++i) {
+        box = box + triangles[i].bbox();
+        ids[i] = i;
+    }
+
+    KDTreeBuildAlgorithm algo(triangles);
+    mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> tmp_nodes =
+        flatten(std::unique_ptr<detail::TreeNode>(algo.build(std::move(ids), box)));
+
+    // Save nodes and mmap them.
+
+    // Serialize
+    std::ofstream out("kdtree_cache");
+    size_t pos = mms::write(out, tmp_nodes);
+    out.close();
+
+    // mmap data
+    int fd = ::open("kdtree_cache", O_RDONLY);
+    struct stat st;
+    fstat(fd, &st);
+    char* data = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    auto nodes_ = reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data + pos);
+
+    KDTree tree(std::move(triangles), std::move(box), nodes_);
+    //KDTree tree(std::move(triangles));
 
     // Image
     int width = conf.width;
@@ -550,7 +591,36 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        KDTree refined_tree(model.triangles());
+        // Build and allocate tree data outside of tree
+        auto triangles2 = model.triangles();
+        std::vector<detail::TriangleId> ids2(triangles.size(), 0);
+
+        // Compute the bounding box of all triangles and fill in vector of all ids.
+        auto box2 = triangles2.front().bbox();
+        for (size_t i = 1; i < triangles2.size(); ++i) {
+            box2 = box2 + triangles2[i].bbox();
+            ids2[i] = i;
+        }
+
+        KDTreeBuildAlgorithm algo2(triangles2);
+        tmp_nodes = flatten(std::unique_ptr<detail::TreeNode>(algo2.build(std::move(ids2), box)));
+
+        // Save nodes and mmap them.
+
+        // Serialize
+        std::ofstream out2("kdtree_cache_2");
+        pos = mms::write(out2, tmp_nodes);
+        out2.close();
+
+        // mmap data
+        int fd2 = ::open("kdtree_cache_2", O_RDONLY);
+        struct stat st2;
+        fstat(fd2, &st2);
+        char* data2 = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd2, 0);
+        auto nodes_2 = reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data2 + pos);
+
+        KDTree refined_tree(triangles2, std::move(box2), nodes_2);
+        //KDTree refined_tree(model.triangles());
         Stats::instance().num_triangles = refined_tree.num_triangles();
         Stats::instance().kdtree_height = refined_tree.height();
 
