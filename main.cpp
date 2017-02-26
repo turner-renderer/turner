@@ -20,6 +20,16 @@
 #include <math.h>
 #include <vector>
 
+#include <mms/vector.h>
+#include <mms/writer.h>
+
+#include <fcntl.h>
+#include <fstream>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+
 Triangles triangles_from_scene(const aiScene* scene) {
     Triangles triangles;
     for (auto node : make_range(scene->mRootNode->mChildren,
@@ -124,7 +134,37 @@ int main(int argc, char const* argv[]) {
     Runtime loading_time;
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
-    KDTree tree(std::move(triangles));
+
+    // Build and allocate tree data outside of tree
+
+    std::vector<detail::TriangleId> ids(triangles.size(), 0);
+
+    // Compute the bounding box of all triangles and fill in vector of all ids.
+    auto box = triangles.front().bbox();
+    for (size_t i = 1; i < triangles.size(); ++i) {
+        box = box + triangles[i].bbox();
+        ids[i] = i;
+    }
+
+    KDTreeBuildAlgorithm algo(triangles);
+    mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> tmp_nodes =
+        flatten(std::unique_ptr<detail::TreeNode>(algo.build(std::move(ids), box)));
+
+    // Save nodes and mmap them.
+
+    // Serialize
+    std::ofstream out("kdtree_cache");
+    size_t pos = mms::write(out, tmp_nodes);
+    out.close();
+
+    // mmap data
+    int fd = ::open("kdtree_cache", O_RDONLY);
+    struct stat st;
+    fstat(fd, &st);
+    char* data = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    auto nodes_ = reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data + pos);
+
+    KDTree tree(std::move(triangles), std::move(box), nodes_);
     Stats::instance().loading_time_ms = loading_time();
     Stats::instance().kdtree_height = tree.height();
 
