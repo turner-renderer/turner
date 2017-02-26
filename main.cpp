@@ -124,6 +124,20 @@ int main(int argc, char const* argv[]) {
     Runtime loading_time;
     auto triangles = triangles_from_scene(scene);
     Stats::instance().num_triangles = triangles.size();
+
+    // Build and allocate tree data outside of tree
+    //
+    // Compute the bounding box of all triangles and fill in vector of all ids.
+   // auto box_ = tris_.front().bbox();
+   // for (size_t i = 1; i < tris_.size(); ++i) {
+   //     box_ = box_ + tris_[i].bbox();
+   //     ids[i] = i;
+   // }
+
+   // KDTreeBuildAlgorithm algo(tris_);
+   // nodes_ =
+   //     flatten(std::unique_ptr<TreeNode>(algo.build(std::move(ids), box_)));
+
     KDTree tree(std::move(triangles));
     Stats::instance().loading_time_ms = loading_time();
     Stats::instance().kdtree_height = tree.height();

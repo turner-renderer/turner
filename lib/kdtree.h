@@ -197,7 +197,7 @@ public:
         using Node = detail::FlatNode;
         std::stack<std::pair<const Node*, uint32_t /* level */>> stack;
 
-        const Node* root = &nodes_[0];
+        const Node* root = &nodes_->operator[](0);
         stack.emplace(root, 0);
         size_t height = 0;
         while (!stack.empty()) {
@@ -216,7 +216,7 @@ public:
         }
         return height;
     }
-    size_t num_nodes() const { return nodes_.size(); }
+    size_t num_nodes() const { return nodes_->size(); }
     size_t num_triangles() const { return tris_.size(); }
     const Triangles& triangles() const { return tris_; }
     const Box& box() const { return box_; }
@@ -256,7 +256,7 @@ private:
      *    /   \
      * [2 3]  [4 5 6]
      */
-     mms::vector<mms::Mmapped, detail::FlatNode> nodes_;
+     const mms::vector<mms::Mmapped, detail::FlatNode>* nodes_;
 };
 
 /**

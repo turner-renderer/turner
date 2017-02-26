@@ -428,7 +428,7 @@ private:
  * @param  root node of the KDTree
  * @return array of nodes representing flattened KDTree
  */
-mms::vector<mms::Mmapped, detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
+mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> flatten(std::unique_ptr<TreeNode> root) {
     static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
     const detail::FlatNodeT<mms::Standalone> sentinel(Axis::X, 0, 0);
     mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> nodes;
@@ -475,23 +475,7 @@ mms::vector<mms::Mmapped, detail::FlatNode> flatten(std::unique_ptr<TreeNode> ro
         }
     }
 
-    // Save nodes and mmap them.
-
-    // Serialize
-    std::ofstream out("kdtree_cache");
-    size_t pos = mms::write(out, nodes);
-    out.close();
-
-    // mmap data
-    int fd = ::open("kdtree_cache", O_RDONLY);
-    struct stat st;
-    fstat(fd, &st);
-    char* data = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    const mms::vector<mms::Mmapped, detail::FlatNode>* m_nodes =
-        reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data + pos);
-
-    return *m_nodes;
-    //return nodes;
+    return nodes;
 }
 } // namespace anonymous
 
@@ -513,8 +497,22 @@ KDTree::KDTree(Triangles tris) : tris_(std::move(tris)) {
     }
 
     KDTreeBuildAlgorithm algo(tris_);
-    nodes_ =
+    mms::vector<mms::Standalone, detail::FlatNodeT<mms::Standalone>> tmp_nodes =
         flatten(std::unique_ptr<TreeNode>(algo.build(std::move(ids), box_)));
+
+    // Save nodes and mmap them.
+
+    // Serialize
+    std::ofstream out("kdtree_cache");
+    size_t pos = mms::write(out, tmp_nodes);
+    out.close();
+
+    // mmap data
+    int fd = ::open("kdtree_cache", O_RDONLY);
+    struct stat st;
+    fstat(fd, &st);
+    char* data = (char*) mmap(0, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    nodes_ = reinterpret_cast<const mms::vector<mms::Mmapped, detail::FlatNode>*>(data + pos);
 }
 
 //
@@ -554,7 +552,7 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     // Note: No need to clear, since when we leave this function, the stack is
     // always empty.
     assert(stack_.empty());
-    const auto* root = &tree_->nodes_.operator[](0);
+    const auto* root = &tree_->nodes_->operator[](0);
     stack_.emplace(root, tenter, texit);
 
     const detail::FlatNode* node;
