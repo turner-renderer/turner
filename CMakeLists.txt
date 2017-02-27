@@ -38,7 +38,7 @@ file(GLOB LIB_SRCS
 )
 
 add_library(common OBJECT ${LIB_SRCS})
-add_dependencies(common assimp zlibstatic)
+add_dependencies(common assimp cereal zlibstatic)
 
 add_library(main OBJECT main.cpp)
 add_dependencies(main assimp zlibstatic cereal docopt threadpool)
