@@ -3,6 +3,8 @@
 #include "types.h"
 
 #include <array>
+#include <cereal/types/array.hpp>
+#include <cereal/types/vector.hpp>
 #include <vector>
 
 //
@@ -13,6 +15,9 @@
 //
 class Triangle {
 public:
+
+    Triangle() {};
+
     Triangle(std::array<Vec, 3> vs, std::array<Vec, 3> ns,
              const aiColor4D& ambient, const aiColor4D& diffuse,
              const aiColor4D& emissive, const aiColor4D& reflective,
@@ -79,6 +84,12 @@ public:
             return is_eps_zero(normal.x) && is_eps_zero(normal.z);
         }
         return is_eps_zero(normal.x) && is_eps_zero(normal.y);
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive) {
+        archive(vertices, normals, ambient, diffuse, emissive, reflective,
+                reflectivity, u, v, normal, uv, vv, uu, denom);
     }
 
     // members

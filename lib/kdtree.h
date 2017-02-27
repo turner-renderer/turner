@@ -22,6 +22,7 @@
 
 #include "triangle.h"
 
+#include <cereal/types/vector.hpp>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -66,6 +67,9 @@ public:
     constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFFFFFF >> 2;
 
 public:
+
+    FlatNode() {};
+
     // Inner node containing split axis and pos, and index of the right child
     FlatNode(Axis split_axis, float split_pos, uint32_t right)
         : data_(static_cast<uint64_t>(float_to_uint32(split_pos)) << 32 |
@@ -130,6 +134,11 @@ public:
         return (data_ & 0xFFFFFFFF) >> 2;
     }
 
+    template <class Archive>
+    void serialize(Archive & archive) {
+        archive(data_);
+    }
+
 private:
     /**
      * Memory layout:
@@ -183,6 +192,8 @@ class KDTree {
 public:
     using TriangleId = detail::TriangleId;
 
+    KDTree() {};
+
     explicit KDTree(Triangles tris);
 
     size_t height() const {
@@ -215,6 +226,12 @@ public:
     const Triangle& at(const TriangleId id) const { return tris_.at(id); }
 
     static constexpr size_t node_size() { return sizeof(detail::FlatNode); }
+
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(tris_, box_, nodes_);
+    }
 
 private:
     Triangles tris_;

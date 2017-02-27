@@ -17,12 +17,14 @@ endif(COVERAGE)
 
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/vendor)
 add_subdirectory(${EXT_PROJECTS_DIR}/assimp)
+add_subdirectory(${EXT_PROJECTS_DIR}/cereal)
 add_subdirectory(${EXT_PROJECTS_DIR}/docopt)
 add_subdirectory(${EXT_PROJECTS_DIR}/openmesh)
 add_subdirectory(${EXT_PROJECTS_DIR}/threadpool)
 
 include_directories(
 	${assimp_INCLUDE_DIR}
+	${cereal_INCLUDE_DIR}
 	${docopt_INCLUDE_DIR}
 	${threadpool_INCLUDE_DIR}
 	${openmesh_INCLUDE_DIR}
@@ -39,7 +41,7 @@ add_library(common OBJECT ${LIB_SRCS})
 add_dependencies(common assimp zlibstatic)
 
 add_library(main OBJECT main.cpp)
-add_dependencies(main assimp zlibstatic docopt threadpool)
+add_dependencies(main assimp zlibstatic cereal docopt threadpool)
 
 find_package(Threads REQUIRED)
 
@@ -65,7 +67,7 @@ target_link_libraries(pathtracer
 )
 
 add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:common>)
-add_dependencies(radiosity docopt openmesh threadpool)
+add_dependencies(radiosity cereal docopt openmesh threadpool)
 target_link_libraries(radiosity
 	Threads::Threads
 	${assimp_LIBRARIES}

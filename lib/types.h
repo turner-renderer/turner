@@ -67,6 +67,11 @@ public:
     bool operator<=(const Vec& v) const {
         return x <= v.x && y <= v.y && z <= v.z;
     }
+
+    template<class Archive>
+    void serialize(Archive& archive) {
+        archive(x, y, z);
+    }
 };
 
 inline Vec operator/(int a, const Vec& v) {
@@ -97,6 +102,11 @@ inline float fmin(float x, float y, float z) {
 
 inline float fmax(float x, float y, float z) {
     return std::fmax(x, std::max(y, z));
+}
+
+template<class Archive>
+void serialize(Archive& archive, Color& c) {
+    archive(c.r, c.g, c.b, c.a);
 }
 
 /**
@@ -145,6 +155,11 @@ struct Box {
         rmin[plane_ax] = plane_pos;
 
         return {{this->min, lmax}, {rmin, this->max}};
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive) {
+        archive(min, max);
     }
 
     Vec min, max;

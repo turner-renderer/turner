@@ -13,11 +13,13 @@
 #include <assimp/Importer.hpp>  // C++ importer interface
 #include <assimp/postprocess.h> // Post processing flags
 #include <assimp/scene.h>       // Output data structure
+#include <cereal/archives/portable_binary.hpp>
 #include <docopt/docopt.h>
 
 #include <iostream>
 #include <map>
 #include <math.h>
+#include <fstream>
 #include <vector>
 
 Triangles triangles_from_scene(const aiScene* scene) {
@@ -122,9 +124,37 @@ int main(int argc, char const* argv[]) {
     // load triangles from the scene into a kd-tree
     std::cerr << "Loading triangles and building kd-tree..." << std::endl;
     Runtime loading_time;
-    auto triangles = triangles_from_scene(scene);
-    Stats::instance().num_triangles = triangles.size();
-    KDTree tree(std::move(triangles));
+
+    // Load KDTree from cache if it exists or build it.
+    size_t kdtree_runtime_ms = 0;
+    KDTree tree;
+    {
+        Runtime runtime(kdtree_runtime_ms);
+        std::ifstream kdtree_cache("kdtree.cache");
+        if(kdtree_cache.is_open()) {
+            {
+                cereal::PortableBinaryInputArchive iarchive(kdtree_cache);
+                iarchive(tree);
+            }
+            kdtree_cache.close();
+        } else {
+            // Build tree
+            auto triangles = triangles_from_scene(scene);
+            tree = KDTree(std::move(triangles));
+
+            // Cache KDTree
+            std::ofstream output_file;
+            {
+                output_file.open("kdtree.cache", std::ios::out | std::ios::binary);
+                cereal::PortableBinaryOutputArchive oarchive(output_file);
+                oarchive(tree);
+                output_file.close();
+            }
+        }
+    }
+    std::cerr << "KDTree runtime: " << kdtree_runtime_ms << std::endl;
+
+    Stats::instance().num_triangles = tree.num_triangles();
     Stats::instance().loading_time_ms = loading_time();
     Stats::instance().kdtree_height = tree.height();
 
