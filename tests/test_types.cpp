@@ -4,6 +4,7 @@
 #include "../lib/output.h"
 #include "../lib/runtime.h"
 #include <catch.hpp>
+#include <cereal/archives/portable_binary.hpp>
 
 
 TEST_CASE("Test min and max", "[helper]") {
@@ -100,6 +101,30 @@ TEST_CASE("Test is_planar of triangle", "[triangle]")
         Triangle triangle = test_triangle(vs[0], vs[1], vs[2]);
         REQUIRE(triangle.is_planar(ax));
     }
+}
+
+TEST_CASE("Test serialization of triangle", "[triangle]")
+{
+    Triangle tri_out = test_triangle(random_vec(), random_vec(), random_vec());
+
+    // Serialize triangle
+    std::ostringstream os;
+    {
+        cereal::PortableBinaryOutputArchive oarchive(os);
+        oarchive(tri_out);
+    }
+
+    // Deserialize triangle again
+    Triangle tri_in;
+    std::istringstream is(os.str());
+    {
+        cereal::PortableBinaryInputArchive iarchive(is);
+        iarchive(tri_in);
+    }
+
+    REQUIRE(tri_in.vertices[0] == tri_out.vertices[0]);
+    REQUIRE(tri_in.vertices[1] == tri_out.vertices[1]);
+    REQUIRE(tri_in.vertices[2] == tri_out.vertices[2]);
 }
 
 TEST_CASE("Test clamping", "[clamping]")
