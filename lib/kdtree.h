@@ -68,7 +68,7 @@ public:
 
 public:
 
-    FlatNode() {};
+    FlatNode() = default;
 
     // Inner node containing split axis and pos, and index of the right child
     FlatNode(Axis split_axis, float split_pos, uint32_t right)
@@ -192,7 +192,7 @@ class KDTree {
 public:
     using TriangleId = detail::TriangleId;
 
-    KDTree() {};
+    KDTree() = default;
 
     explicit KDTree(Triangles tris);
 

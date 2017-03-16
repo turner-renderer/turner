@@ -16,7 +16,7 @@
 class Triangle {
 public:
 
-    Triangle() {};
+    Triangle() = default;
 
     Triangle(std::array<Vec, 3> vs, std::array<Vec, 3> ns,
              const aiColor4D& ambient, const aiColor4D& diffuse,

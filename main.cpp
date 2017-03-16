@@ -16,10 +16,10 @@
 #include <cereal/archives/portable_binary.hpp>
 #include <docopt/docopt.h>
 
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <math.h>
-#include <fstream>
 #include <vector>
 
 Triangles triangles_from_scene(const aiScene* scene) {
@@ -131,21 +131,21 @@ int main(int argc, char const* argv[]) {
     {
         Runtime runtime(kdtree_runtime_ms);
         std::ifstream kdtree_cache("kdtree.cache");
-        if(kdtree_cache.is_open()) {
+        if (kdtree_cache.is_open()) {
             {
                 cereal::PortableBinaryInputArchive iarchive(kdtree_cache);
                 iarchive(tree);
             }
-            kdtree_cache.close();
         } else {
             // Build tree
             auto triangles = triangles_from_scene(scene);
             tree = KDTree(std::move(triangles));
 
             // Cache KDTree
-            std::ofstream output_file;
             {
-                output_file.open("kdtree.cache", std::ios::out | std::ios::binary);
+                std::ofstream output_file;
+                output_file.open("kdtree.cache",
+                                 std::ios::out | std::ios::binary);
                 cereal::PortableBinaryOutputArchive oarchive(output_file);
                 oarchive(tree);
                 output_file.close();
