@@ -40,6 +40,7 @@ void test_common_config(const char* usage) {
     REQUIRE(conf.gamma_correction_enabled == false);
     REQUIRE(conf.exposure == 1.5);
     REQUIRE(conf.filename == "file");
+    REQUIRE(conf.cache_dir == NULL);
 }
 
 TEST_CASE("Create config from raycaster USAGE", "[config]") {
