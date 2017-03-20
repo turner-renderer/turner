@@ -148,7 +148,6 @@ int main(int argc, char const* argv[]) {
                                  std::ios::out | std::ios::binary);
                 cereal::PortableBinaryOutputArchive oarchive(output_file);
                 oarchive(tree);
-                output_file.close();
             }
         }
     }

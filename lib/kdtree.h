@@ -67,7 +67,6 @@ public:
     constexpr static uint32_t INVALID_TRIANGLE_ID = 0xFFFFFFFF >> 2;
 
 public:
-
     FlatNode() = default;
 
     // Inner node containing split axis and pos, and index of the right child
@@ -134,8 +133,7 @@ public:
         return (data_ & 0xFFFFFFFF) >> 2;
     }
 
-    template <class Archive>
-    void serialize(Archive & archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(data_);
     }
 
@@ -227,9 +225,7 @@ public:
 
     static constexpr size_t node_size() { return sizeof(detail::FlatNode); }
 
-    template<class Archive>
-    void serialize(Archive & archive)
-    {
+    template <class Archive> void serialize(Archive& archive) {
         archive(tris_, box_, nodes_);
     }
 

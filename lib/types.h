@@ -68,8 +68,7 @@ public:
         return x <= v.x && y <= v.y && z <= v.z;
     }
 
-    template<class Archive>
-    void serialize(Archive& archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(x, y, z);
     }
 };
@@ -104,8 +103,7 @@ inline float fmax(float x, float y, float z) {
     return std::fmax(x, std::max(y, z));
 }
 
-template<class Archive>
-void serialize(Archive& archive, Color& c) {
+template <class Archive> void serialize(Archive& archive, Color& c) {
     archive(c.r, c.g, c.b, c.a);
 }
 
@@ -157,8 +155,7 @@ struct Box {
         return {{this->min, lmax}, {rmin, this->max}};
     }
 
-    template<class Archive>
-    void serialize(Archive& archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(min, max);
     }
 

@@ -15,7 +15,6 @@
 //
 class Triangle {
 public:
-
     Triangle() = default;
 
     Triangle(std::array<Vec, 3> vs, std::array<Vec, 3> ns,
@@ -86,8 +85,7 @@ public:
         return is_eps_zero(normal.x) && is_eps_zero(normal.y);
     }
 
-    template<class Archive>
-    void serialize(Archive& archive) {
+    template <class Archive> void serialize(Archive& archive) {
         archive(vertices, normals, ambient, diffuse, emissive, reflective,
                 reflectivity, u, v, normal, uv, vv, uu, denom);
     }
