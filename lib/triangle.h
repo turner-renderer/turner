@@ -2,9 +2,10 @@
 
 #include "types.h"
 
-#include <array>
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
+
+#include <array>
 #include <vector>
 
 //
