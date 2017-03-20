@@ -4,6 +4,7 @@
 #include "helper.h"
 #include <catch.hpp>
 
+#include <cereal/archives/portable_binary.hpp>
 #include <iostream>
 #include <unordered_set>
 
@@ -59,6 +60,39 @@ TEST_CASE("Four separated triangles test", "[kdtree]") {
     REQUIRE(r == 1);
     REQUIRE(s == 0);
     REQUIRE(t == 0.5f);
+}
+
+TEST_CASE("Serialize and deserialize", "[kdtree]")
+{
+    auto a = test_triangle({0, 0, 1}, {0, 1, 1}, {1, 0, 1});
+    auto b = test_triangle({2, 0, 1}, {3, 0, 1}, {3, 1, 1});
+    auto c = test_triangle({0, 2, 1}, {0, 3, 1}, {1, 3, 1});
+    auto d = test_triangle({3, 2, 1}, {3, 3, 1}, {2, 3, 1});
+    KDTree tree(Triangles{a, b, c, d});
+
+    // Serialize kdtree
+    std::ostringstream os;
+    {
+        cereal::PortableBinaryOutputArchive oarchive(os);
+        oarchive(tree);
+    }
+
+    // Deserialize kdtree again
+    KDTree tree_in;
+    std::istringstream is(os.str());
+    {
+        cereal::PortableBinaryInputArchive iarchive(is);
+        iarchive(tree_in);
+    }
+
+    REQUIRE(tree_in.height() == 1);
+    REQUIRE(tree_in.num_nodes() == 5);
+    REQUIRE(tree_in.num_triangles() == 4);
+
+    REQUIRE(tree_in.triangles()[0] == a);
+    REQUIRE(tree_in.triangles()[1] == b);
+    REQUIRE(tree_in.triangles()[2] == c);
+    REQUIRE(tree_in.triangles()[3] == d);
 }
 
 TEST_CASE("KDTree stress test", "[kdtree]") {

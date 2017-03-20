@@ -18,6 +18,7 @@ set(TESTS
     test_mesh
     test_progress_bar
     test_radiosity
+    test_range
     test_raster
     test_sampling
     test_triangle
