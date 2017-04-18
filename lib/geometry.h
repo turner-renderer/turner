@@ -6,6 +6,11 @@
 
 namespace turner {
 
+// Forward declaration for conversion operators and constructors
+template <typename T> class Vector2;
+template <typename T> class Vector3;
+template <typename T> class Point2;
+template <typename T> class Point3;
 template <typename T> class Normal3;
 
 /**
@@ -33,7 +38,7 @@ public:
     bool operator!=(const Vector2& v) const { return !(*this == v); }
 
     Vector2<T> operator+(const Vector2<T>& v) const {
-        return Vector2<T>(x + v.x, y + v.y);
+        return {x + v.x, y + v.y};
     }
 
     Vector2<T>& operator+=(const Vector2<T>& v) {
@@ -43,7 +48,7 @@ public:
     }
 
     Vector2<T> operator-(const Vector2<T>& v) const {
-        return Vector2<T>(x - v.x, y - v.y);
+        return {x - v.x, y - v.y};
     }
 
     Vector2<T>& operator-=(const Vector2<T>& v) {
@@ -52,7 +57,7 @@ public:
         return *this;
     }
 
-    Vector2<T> operator*(T s) const { return Vector2<T>(s * x, s * y); }
+    Vector2<T> operator*(T s) const { return {s * x, s * y}; }
 
     Vector2<T>& operator*=(T s) {
         x *= s;
@@ -67,10 +72,10 @@ public:
 
     Vector2<T>& operator/=(T s) const {
         assert(s != 0);
-        return *this *= 1 / s;
+        return * this *= 1 / s;
     }
 
-    Vector2<T> operator-() const { return Vector2<T>(-x, -y); }
+    Vector2<T> operator-() const { return {-x, -y}; }
 
     T length_squared() const { return x * x + y * y; }
     T length() const { return std::sqrt(length_squared()); }
@@ -84,11 +89,11 @@ using Vector2f = Vector2<float>;
 using Vector2i = Vector2<int>;
 
 template <typename T> Vector2<T> operator*(T s, const Vector2<T>& v) {
-    return Vector2<T>(s * v.x, s * v.y);
+    return {s * v.x, s * v.y};
 }
 
 template <typename T> Vector2<T> abs(const Vector2<T>& v) {
-    return Vector2<T>(std::abs(v.x), std::abs(v.y));
+    return {std::abs(v.x), std::abs(v.y)};
 }
 
 template <typename T> T dot(const Vector2<T>& v1, const Vector2<T>& v2) {
@@ -117,12 +122,12 @@ template <typename T> int max_dimension(const Vector2<T>& v) {
 
 template <typename T>
 Vector2<T> min(const Vector2<T>& p1, const Vector2<T>& p2) {
-    return Vector2<T>(std::min(p1.x, p2.x), std::min(p1.y, p2.y));
+    return {std::min(p1.x, p2.x), std::min(p1.y, p2.y)};
 }
 
 template <typename T>
 Vector2<T> max(const Vector2<T>& p1, const Vector2<T>& p2) {
-    return Vector2<T>(std::max(p1.x, p2.x), std::max(p1.y, p2.y));
+    return {std::max(p1.x, p2.x), std::max(p1.y, p2.y)};
 }
 
 /**
@@ -142,12 +147,12 @@ public:
 
     T operator[](size_t i) const {
         assert(i < 3);
-        return i == 0 ? x : i == 1 ? y : z;
+        return i == 0 ? x : (i == 1 ? y : z);
     }
 
     T& operator[](size_t i) {
         assert(i < 3);
-        return i == 0 ? x : i == 1 ? y : z;
+        return i == 0 ? x : (i == 1 ? y : z);
     }
 
     bool operator==(const Vector3& v) const {
@@ -157,7 +162,7 @@ public:
     bool operator!=(const Vector3& v) const { return !(*this == v); }
 
     Vector3<T> operator+(const Vector3<T>& v) const {
-        return Vector3<T>(x + v.x, y + v.y, z + v.z);
+        return {x + v.x, y + v.y, z + v.z};
     }
 
     Vector3<T>& operator+=(const Vector3<T>& v) {
@@ -168,7 +173,7 @@ public:
     }
 
     Vector3<T> operator-(const Vector3<T>& v) const {
-        return Vector3<T>(x - v.x, y - v.y, z - v.z);
+        return {x - v.x, y - v.y, z - v.z};
     }
 
     Vector3<T>& operator-=(const Vector3<T>& v) {
@@ -178,7 +183,7 @@ public:
         return *this;
     }
 
-    Vector3<T> operator*(T s) const { return Vector3<T>(s * x, s * y, s * z); }
+    Vector3<T> operator*(T s) const { return {s * x, s * y, s * z}; }
 
     Vector3<T>& operator*=(T s) {
         x *= s;
@@ -194,10 +199,10 @@ public:
 
     Vector3<T>& operator/=(T s) const {
         assert(s != 0);
-        return *this *= 1 / s;
+        return * this *= 1 / s;
     }
 
-    Vector3<T> operator-() const { return Vector3<T>(-x, -y, -z); }
+    Vector3<T> operator-() const { return {-x, -y, -z}; }
 
     T length_squared() const { return x * x + y * y + z * z; }
     T length() const { return std::sqrt(length_squared()); }
@@ -212,11 +217,11 @@ using Vector3f = Vector3<float>;
 using Vector3i = Vector3<int>;
 
 template <typename T> Vector3<T> operator*(T s, const Vector3<T>& v) {
-    return Vector3<T>(s * v.x, s * v.y, s * v.z);
+    return {s * v.x, s * v.y, s * v.z};
 }
 
 template <typename T> Vector3<T> abs(const Vector3<T>& v) {
-    return Vector3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z));
+    return {std::abs(v.x), std::abs(v.y), std::abs(v.z)};
 }
 
 template <typename T> T Dot(const Vector3<T>& v1, const Vector3<T>& v2) {
@@ -232,8 +237,8 @@ Vector3<T> cross(const Vector3<T>& v1, const Vector3<T>& v2) {
     // use double to prevent cancelation errors
     double v1x = v1.x, v1y = v1.y, v1z = v1.z;
     double v2x = v2.x, v2y = v2.y, v2z = v2.z;
-    return Vector3<T>((v1y * v2z) - (v1z * v2y), (v1z * v2x) - (v1x * v2z),
-                      (v1x * v2y) - (v1y * v2x));
+    return {(v1y * v2z) - (v1z * v2y), (v1z * v2x) - (v1x * v2z),
+            (v1x * v2y) - (v1y * v2x)};
 }
 
 template <typename T> Vector3<T> normalize(const Vector3<T>& v) {
@@ -254,19 +259,17 @@ template <typename T> int max_dimension(const Vector3<T>& v) {
 
 template <typename T>
 Vector3<T> min(const Vector3<T>& p1, const Vector3<T>& p2) {
-    return Vector3<T>(std::min(p1.x, p2.x), std::min(p1.y, p2.y),
-                      std::min(p1.z, p2.z));
+    return {std::min(p1.x, p2.x), std::min(p1.y, p2.y), std::min(p1.z, p2.z)};
 }
 
 template <typename T>
 Vector3<T> max(const Vector3<T>& p1, const Vector3<T>& p2) {
-    return Vector3<T>(std::max(p1.x, p2.x), std::max(p1.y, p2.y),
-                      std::max(p1.z, p2.z));
+    return {std::max(p1.x, p2.x), std::max(p1.y, p2.y), std::max(p1.z, p2.z)};
 }
 
 template <typename T>
 Vector3<T> permute(const Vector3<T>& v, int x, int y, int z) {
-    return Vector3<T>(v[x], v[y], v[z]);
+    return {v[x], v[y], v[z]};
 }
 
 /**
@@ -286,7 +289,7 @@ public:
     }
 
     template <typename U> explicit operator Vector3<U>() const {
-        return Vector3<U>(x, y, z);
+        return {x, y, z};
     }
 
     bool contains_nan() const {
@@ -295,12 +298,12 @@ public:
 
     T operator[](size_t i) const {
         assert(i < 3);
-        return i == 0 ? x : i == 1 ? y : z;
+        return i == 0 ? x : (i == 1 ? y : z);
     }
 
     T& operator[](size_t i) {
         assert(i < 3);
-        return i == 0 ? x : i == 1 ? y : z;
+        return i == 0 ? x : (i == 1 ? y : z);
     }
 
     bool operator==(const Point3<T>& v) const {
@@ -310,7 +313,7 @@ public:
     bool operator!=(const Point3<T>& v) const { return !(*this == v); }
 
     Point3<T> operator+(const Vector3<T>& v) const {
-        return Point3<T>(x + v.x, y + v.y, z + v.z);
+        return {x + v.x, y + v.y, z + v.z};
     }
 
     Point3<T>& operator+=(const Vector3<T>& v) {
@@ -321,11 +324,11 @@ public:
     }
 
     Vector3<T> operator-(const Point3<T>& p) const {
-        return Vector3<T>(x - p.x, y - p.y, z - p.z);
+        return {p.x - x, p.y - y, p.z - z};
     }
 
     Point3<T> operator-(const Vector3<T>& v) const {
-        return Vector3<T>(x - v.x, y - v.y, z - v.z);
+        return {x - v.x, y - v.y, z - v.z};
     }
 
     Point3<T>& operator-=(const Vector3<T>& v) {
@@ -351,7 +354,7 @@ public:
 
     Point3<T>& operator/=(T s) const {
         assert(s != 0);
-        return *this *= 1 / s;
+        return * this *= 1 / s;
     }
 
 public:
@@ -381,30 +384,28 @@ Point3<T> lerp(float t, const Point3<T>& p0, const Point3<T>& p1) {
 }
 
 template <typename T> Point3<T> min(const Point3<T>& p1, const Point3<T>& p2) {
-    return Point3<T>(std::min(p1.x, p2.x), std::min(p1.y, p2.y),
-                     std::min(p1.z, p2.z));
+    return {std::min(p1.x, p2.x), std::min(p1.y, p2.y), std::min(p1.z, p2.z)};
 }
 
 template <typename T> Point3<T> max(const Point3<T>& p1, const Point3<T>& p2) {
-    return Point3<T>(std::max(p1.x, p2.x), std::max(p1.y, p2.y),
-                     std::max(p1.z, p2.z));
+    return {std::max(p1.x, p2.x), std::max(p1.y, p2.y), std::max(p1.z, p2.z)};
 }
 
 template <typename T> Point3<T> floor(const Point3<T>& p) {
-    return Point3<T>(std::floor(p.x), std::floor(p.y), std::floor(p.z));
+    return {std::floor(p.x), std::floor(p.y), std::floor(p.z)};
 }
 
 template <typename T> Point3<T> ceil(const Point3<T>& p) {
-    return Point3<T>(std::ceil(p.x), std::ceil(p.y), std::ceil(p.z));
+    return {std::ceil(p.x), std::ceil(p.y), std::ceil(p.z)};
 }
 
 template <typename T> Point3<T> abs(const Point3<T>& p) {
-    return Point3<T>(std::abs(p.x), std::abs(p.y), std::abs(p.z));
+    return {std::abs(p.x), std::abs(p.y), std::abs(p.z)};
 }
 
 template <typename T>
 Point3<T> permute(const Point3<T>& p, int x, int y, int z) {
-    return Point3<T>(p[x], p[y], p[z]);
+    return {p[x], p[y], p[z]};
 }
 
 /**
@@ -415,12 +416,20 @@ public:
     Normal3() = default;
     Normal3(T x, T y, T z) : x{x}, y{y}, z{z} { assert(!contains_nan()); }
 
-    explicit Normal3(const Vector3f<T>& v) : x(v.x), y(v.y), z(v.z) {
+    explicit Normal3(const Vector3<T>& v) : x(v.x), y(v.y), z(v.z) {
         assert(!contains_nan());
     }
 
     template <typename U>
-    explicit Point3(const Point3<U>& p)
+    explicit Normal3(const Vector3<U>& v)
+        : x(static_cast<T>(v.x))
+        , y(static_cast<T>(v.y))
+        , z(static_cast<T>(v.z)) {
+        assert(!contains_nan());
+    }
+
+    template <typename U>
+    explicit Normal3(const Point3<U>& p)
         : x(static_cast<T>(p.x))
         , y(static_cast<T>(p.y))
         , z(static_cast<T>(p.z)) {
@@ -428,7 +437,7 @@ public:
     }
 
     template <typename U> explicit operator Vector3<U>() const {
-        return Vector3<U>(x, y, z);
+        return {x, y, z};
     }
 
     bool contains_nan() const {
@@ -445,55 +454,51 @@ public:
         return i == 0 ? x : i == 1 ? y : z;
     }
 
-    bool operator==(const Point3<T>& v) const {
-        return x == v.x && y == v.y && z == v.z;
+    bool operator==(const Normal3<T>& n) const {
+        return x == n.x && y == n.y && z == n.z;
     }
 
-    bool operator!=(const Point3<T>& v) const { return !(*this == v); }
+    bool operator!=(const Normal3<T>& v) const { return !(*this == v); }
 
-    Point3<T> operator+(const Vector3<T>& v) const {
-        return Point3<T>(x + v.x, y + v.y, z + v.z);
+    Normal3<T> operator+(const Normal3<T>& v) const {
+        return {x + v.x, y + v.y, z + v.z};
     }
 
-    Point3<T>& operator+=(const Vector3<T>& v) {
+    Normal3<T>& operator+=(const Normal3<T>& v) {
         x += v.x;
         y += v.y;
         z += v.z;
         return *this;
     }
 
-    Vector3<T> operator-(const Point3<T>& p) const {
-        return Vector3<T>(x - p.x, y - p.y, z - p.z);
+    Normal3<T> operator-(const Normal3<T>& v) const {
+        return {x - v.x, y - v.y, z - v.z};
     }
 
-    Point3<T> operator-(const Vector3<T>& v) const {
-        return Vector3<T>(x - v.x, y - v.y, z - v.z);
-    }
-
-    Point3<T>& operator-=(const Vector3<T>& v) {
+    Normal3<T>& operator-=(const Normal3<T>& v) {
         x -= v.x;
         y -= v.y;
         z -= v.z;
         return *this;
     }
 
-    Point3<T> operator*(T s) const { return Point3<T>(s * x, s * y, s * z); }
+    Normal3<T> operator*(T s) const { return Normal3<T>(s * x, s * y, s * z); }
 
-    Point3<T>& operator*=(T s) {
+    Normal3<T>& operator*=(T s) {
         x *= s;
         y *= s;
         z *= s;
         return *this;
     }
 
-    Point3<T> operator/(T s) const {
+    Normal3<T> operator/(T s) const {
         assert(s != 0);
         return (1 / s) * *this;
     }
 
-    Point3<T>& operator/=(T s) const {
+    Normal3<T>& operator/=(T s) const {
         assert(s != 0);
-        return *this *= 1 / s;
+        return * this *= 1 / s;
     }
 
 public:
@@ -530,6 +535,9 @@ public:
     float t_max = std::numeric_limits<float>::max(); // max ray extension
 };
 
+/**
+ * Bounding box in 3d space.
+ */
 template <typename T> class Bbox3 {
 public:
     Bbox3()
@@ -539,8 +547,8 @@ public:
         , p_max(std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
                 std::numeric_limits<T>::max()) {}
     Bbox3(const Point3<T>& p) : p_min(p), p_max(p) {}
-    Bounds3(const Point3<T>& p1, const Point3<T>& p2)
-        : pMin(min(p1, p2)), pMax(max(p1, p2)) {}
+    Bbox3(const Point3<T>& p1, const Point3<T>& p2)
+        : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
 
     const Point3<T>& operator[](size_t i) const {
         assert(i < 2);
@@ -572,41 +580,41 @@ public:
     Point3<T> lerp(const Point3f& t) const {
         return {lerp(t.x, p_min.x, p_max.x), lerp(t.y, p_min.y, p_max.y),
                 lerp(t.z, p_min.z, p_max.z)};
-
-    public:
-        Point3<T> p_min;
-        Point3<T> p_max;
-    };
-
-    using Bbox3f = Bbox3<float>;
-    using Bbox3i = Bbox3<int>;
-
-    template <typename T>
-    Bbox3<T> union(const Bbox3<T>& b, const Point3<T>& p) {
-        return {min(b.p_min, p), max(b.p_max, p)};
     }
 
-    template <typename T>
-    Bbox3<T> union(const Bbox3<T>& b1, const Bbox3<T>& b2) {
-        return {min(b1.p_min, b2.p_min), max(b1.p_max, b2.p_max)};
-    }
+public:
+    Point3<T> p_min;
+    Point3<T> p_max;
+};
 
-    template <typename T>
-    Bbox3<T> intersect(const Bbox3<T>& b1, const Bbox3<T>& b2) {
-        return {max(b1.p_min, b2.p_min), min(b1.p_max, b2.p_max)};
-    }
+using Bbox3f = Bbox3<float>;
+using Bbox3i = Bbox3<int>;
 
-    template <typename T>
-    bool overlaps(const Bbox3<T>& b1, const Bbox3<T>& b2) {
-        bool x = (b1.p_max.x >= b2.p_min.x) && (b1.p_min.x <= b2.p_max.x);
-        bool y = (b1.p_max.y >= b2.p_min.y) && (b1.p_min.y <= b2.p_max.y);
-        bool z = (b1.p_max.z >= b2.p_min.z) && (b1.p_min.z <= b2.p_max.z);
-        return x && y && z;
-    }
+template <typename T>
+Bbox3<T> bbox_union(const Bbox3<T>& b, const Point3<T>& p) {
+    return {min(b.p_min, p), max(b.p_max, p)};
+}
 
-    template <typename T> bool inside(const Point3<T>& p, const Bbox3<T>& b) {
-        return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y &&
-                p.y <= b.p_max.y && p.z >= b.p_min.z && p.z <= b.p_max.z);
-    }
+template <typename T>
+Bbox3<T> bbox_union(const Bbox3<T>& b1, const Bbox3<T>& b2) {
+    return {min(b1.p_min, b2.p_min), max(b1.p_max, b2.p_max)};
+}
+
+template <typename T>
+Bbox3<T> intersect(const Bbox3<T>& b1, const Bbox3<T>& b2) {
+    return {max(b1.p_min, b2.p_min), min(b1.p_max, b2.p_max)};
+}
+
+template <typename T> bool overlaps(const Bbox3<T>& b1, const Bbox3<T>& b2) {
+    bool x = (b1.p_max.x >= b2.p_min.x) && (b1.p_min.x <= b2.p_max.x);
+    bool y = (b1.p_max.y >= b2.p_min.y) && (b1.p_min.y <= b2.p_max.y);
+    bool z = (b1.p_max.z >= b2.p_min.z) && (b1.p_min.z <= b2.p_max.z);
+    return x && y && z;
+}
+
+template <typename T> bool inside(const Point3<T>& p, const Bbox3<T>& b) {
+    return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y &&
+            p.y <= b.p_max.y && p.z >= b.p_min.z && p.z <= b.p_max.z);
+}
 
 } // namespace turner
