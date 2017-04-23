@@ -1,19 +1,33 @@
 #pragma once
 
+#include <functional>
+#include <ostream>
 #include <unordered_map>
 
 namespace turner {
 
-void profiler_init();
+void profiler_start();
 void profiler_clear();
-void profiler_destroy();
+void profiler_stop();
 
-enum class ProfCategory { cat1, cat2, cat3, size };
-static const char* ProfCategoryNames[]{"cat1", "cat2", "cat3", "total"};
+enum class ProfCategory {
+    Render,
+    Trace,
+    Intersect,
+    IntersectInner,
+    IntersectLeaf,
+    SamplingHemisphere,
+    size
+};
+static const char* ProfCategoryNames[]{"render",
+                                       "trace()",
+                                       "KDTree::intersect()",
+                                       "KDTree::intersect()::inner",
+                                       "KDTree::intersect()::leaf",
+                                       "sampling::hemisphere()",
+                                       "total"};
 static_assert(static_cast<size_t>(ProfCategory::size) <= 64,
               "too many profiling categories");
-
-std::unordered_map<ProfCategory, size_t> profiler_results();
 
 class Profile {
 public:
@@ -26,12 +40,11 @@ public:
 private:
     size_t bit_;
 };
-} // namespace turner
 
-namespace std {
-template <> struct hash<turner::ProfCategory> {
-    size_t operator()(const turner::ProfCategory& cat) const {
-        return std::hash<uint64_t>{}(static_cast<uint64_t>(cat));
-    }
+struct ProfilerResults {
+    std::unordered_map<ProfCategory, size_t> category_counts;
 };
-} // namespace std
+ProfilerResults profiler_get_results();
+std::ostream& operator<<(std::ostream& os, const ProfilerResults& res);
+
+} // namespace turner

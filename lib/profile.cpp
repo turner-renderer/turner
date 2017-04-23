@@ -63,7 +63,7 @@ void profiler_make_sample(int, siginfo_t*, void*) {
 
 } // namespace
 
-void profiler_init() {
+void profiler_start() {
     assert(!profiler_running && "logic error");
 
     profiler_start_time = std::chrono::system_clock::now();
@@ -96,7 +96,7 @@ void profiler_clear() {
     }
 }
 
-void profiler_destroy() {
+void profiler_stop() {
     assert(profiler_running);
 
     static struct itimerval timer;
@@ -112,22 +112,36 @@ void profiler_destroy() {
     profiler_running = false;
 }
 
-std::unordered_map<ProfCategory, size_t> profiler_results() {
-    std::unordered_map<ProfCategory, size_t> data;
-    for (const auto& ps : profiler_samples) {
-        for (size_t bit = 0; bit < 64; ++bit) {
-            if (ps.state & (1ull << bit)) {
-                data[static_cast<ProfCategory>(bit)] += ps.count;
-                data[ProfCategory::size] += ps.count;
-            }
-        }
-    }
-    return data;
-}
-
 Profile::Profile(ProfCategory category) : bit_(static_cast<size_t>(category)) {
     profiler_state |= (1ull << bit_);
 }
 Profile::~Profile() { profiler_state &= ~(1ull << bit_); }
 
+ProfilerResults profiler_get_results() {
+    std::unordered_map<ProfCategory, size_t> data;
+    for (const auto& ps : profiler_samples) {
+        data[ProfCategory::size] += ps.count;
+        for (size_t bit = 0; bit < 64; ++bit) {
+            if (ps.state & (1ull << bit)) {
+                data[static_cast<ProfCategory>(bit)] += ps.count;
+            }
+        }
+    }
+    return {data};
+}
+
+std::ostream& operator<<(std::ostream& os, const ProfilerResults& res) {
+    auto it = res.category_counts.find(ProfCategory::size);
+    assert(it != res.category_counts.end());
+    double total = it->second;
+
+    for (const auto& kv : res.category_counts) {
+        if (kv.first == ProfCategory::size) {
+            continue;
+        }
+        os << ProfCategoryNames[static_cast<size_t>(kv.first)] << "\t\t"
+           << (100. * kv.second / total) << std::endl;
+    }
+    return os;
+}
 } // namespace turner
