@@ -10,9 +10,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <iomanip>
 #include <string>
-
-#include <iostream>
 
 namespace turner {
 
@@ -25,11 +24,20 @@ struct ProfilerSample {
 
 __thread uint64_t profiler_state;
 static std::atomic<bool> profiler_running{false};
-static std::chrono::system_clock::time_point profiler_start_time;
+static std::chrono::steady_clock::time_point profiler_start_time;
 
 static constexpr int profiler_samples_size = 256;
+// static size hash table (cf. `get_profiler_samples_index`)
 static std::array<ProfilerSample, profiler_samples_size> profiler_samples;
 
+/**
+ * Return the index of the bucket in the hash table.
+ *
+ * The collision resolution strategy is to go to the next bucket on collision.
+ *
+ * @param  state key
+ * @return       index of the bucket in the hash table.
+ */
 size_t get_profiler_samples_index(uint64_t state) {
     uint64_t i = std::hash<uint64_t>{}(state) % (profiler_samples_size - 1);
     int num_visited = 0;
@@ -49,7 +57,7 @@ size_t get_profiler_samples_index(uint64_t state) {
 }
 
 /**
- * Signal callback for reporting a profiler sample.
+ * Signal callback for sampling profiler and reporting sample.
  */
 void profiler_make_sample(int, siginfo_t*, void*) {
     if (profiler_state == 0) {
@@ -66,7 +74,7 @@ void profiler_make_sample(int, siginfo_t*, void*) {
 void profiler_start() {
     assert(!profiler_running && "logic error");
 
-    profiler_start_time = std::chrono::system_clock::now();
+    profiler_start_time = std::chrono::steady_clock::now();
 
     // profile signal
     struct sigaction sa;
@@ -96,8 +104,9 @@ void profiler_clear() {
     }
 }
 
-void profiler_stop() {
+std::chrono::seconds profiler_stop() {
     assert(profiler_running);
+    auto profiler_runtime = std::chrono::steady_clock::now() - profiler_start_time;
 
     static struct itimerval timer;
     timer.it_interval.tv_sec = 0;
@@ -110,6 +119,7 @@ void profiler_stop() {
     }
 
     profiler_running = false;
+    return std::chrono::duration_cast<std::chrono::seconds>(profiler_runtime);
 }
 
 Profile::Profile(ProfCategory category) : bit_(static_cast<size_t>(category)) {
@@ -120,6 +130,7 @@ Profile::~Profile() { profiler_state &= ~(1ull << bit_); }
 ProfilerResults profiler_get_results() {
     std::unordered_map<ProfCategory, size_t> data;
     for (const auto& ps : profiler_samples) {
+        // Use `size` of categories to store the total number of samples.
         data[ProfCategory::size] += ps.count;
         for (size_t bit = 0; bit < 64; ++bit) {
             if (ps.state & (1ull << bit)) {
@@ -139,8 +150,13 @@ std::ostream& operator<<(std::ostream& os, const ProfilerResults& res) {
         if (kv.first == ProfCategory::size) {
             continue;
         }
-        os << ProfCategoryNames[static_cast<size_t>(kv.first)] << "\t\t"
-           << (100. * kv.second / total) << std::endl;
+
+        const char* category_name = ProfCategoryNames[kv.first];
+        const double category_percent = (100. * kv.second / total);
+
+        os << std::setw(20) << std::setfill(' ') << std::left << category_name
+           << std::setw(7) << std::setfill(' ') << std::right << std::fixed
+           << std::setprecision(2) << category_percent << '%';
     }
     return os;
 }
