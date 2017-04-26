@@ -36,7 +36,7 @@ static std::array<ProfilerSample, profiler_samples_size> profiler_samples;
  * The collision resolution strategy is to go to the next bucket on collision.
  *
  * @param  state key
- * @return       index of the bucket in the hash table.
+ * @return index of the bucket in the hash table.
  */
 size_t get_profiler_samples_index(uint64_t state) {
     uint64_t i = std::hash<uint64_t>{}(state) % (profiler_samples_size - 1);
@@ -106,7 +106,8 @@ void profiler_clear() {
 
 std::chrono::seconds profiler_stop() {
     assert(profiler_running);
-    auto profiler_runtime = std::chrono::steady_clock::now() - profiler_start_time;
+    auto profiler_runtime =
+        std::chrono::steady_clock::now() - profiler_start_time;
 
     static struct itimerval timer;
     timer.it_interval.tv_sec = 0;
@@ -151,7 +152,8 @@ std::ostream& operator<<(std::ostream& os, const ProfilerResults& res) {
             continue;
         }
 
-        const char* category_name = ProfCategoryNames[kv.first];
+        const char* category_name =
+            ProfCategoryNames[static_cast<size_t>(kv.first)];
         const double category_percent = (100. * kv.second / total);
 
         os << std::setw(20) << std::setfill(' ') << std::left << category_name

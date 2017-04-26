@@ -10,11 +10,11 @@ namespace turner {
 /**
  * Profiler
  *
- * Internally profiler uses system signals to make samples. Technically it is a global object.
- * Therefore, we provide here a C API.
+ * Internally profiler uses system signals to make samples. Technically it is a
+ * global object. Therefore, we provide here a C API.
  *
- * Each start call should be accompanied by a stop call. Cf. `Profile` to enable profiling for a
- * specific category.
+ * Each start call should be accompanied by a stop call. Cf. `Profile` to enable
+ * profiling for a specific category.
  */
 void profiler_start();
 void profiler_clear();
