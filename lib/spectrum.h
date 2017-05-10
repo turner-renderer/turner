@@ -87,11 +87,64 @@ public:
 SampledSpectrum::SampledSpectrum(float v) : Spectrum<NUM_SAMPLES>(v) {}
 
 template <size_t N>
+float average_spectrum_samples(
+    const std::array<std::pair<float /* lambda */, float /* v */>, N>&
+        sorted_samples,
+    float lambda_start, float lambda_end) {
+    float sum = 0;
+
+    // edge cases
+    if (lambda_end <= sorted_samples[0].first) {
+        return sorted_samples[0].second;
+    } else if (sorted_samples[N - 1].first <= lambda_start) {
+        return sorted_samples[N - 1].second;
+    } else if (N == 1) {
+        return sorted_samples[0].second;
+    }
+
+    if (lambda_start < sorted_samples[0].first) {
+        sum += sorted_samples[0].second;
+    }
+    if (sorted_samples[N - 1].first < lambda_end) {
+        sum += sorted_samples[N - 1].second;
+    }
+
+    auto interpolate = [&sorted_samples](float w, size_t i) {
+        float lambda_start = sorted_samples[i].first;
+        float lambda_end = sorted_samples[i + 1].first;
+
+        return lerp((w - lambda_start) / (lambda_end - lambda_start),
+                    sorted_samples[i].second, sorted_samples[i + 1].second);
+    };
+
+    size_t i = 0;
+    for (; sorted_samples[i + 1] < lambda_start; ++i) {
+        // advance to the first place in samples after lambda_start
+        // Note: linear search is neglectable
+    }
+    for (; i + 1 < N && sorted_samples[i] <= lambda_end; ++i) {
+        float segment_lambda_start =
+            std::max(lambda_start, sorted_samples[i].first);
+        float segment_lambda_end =
+            std::min(lambda_end, sorted_samples[i + 1].first);
+        sum += 0.5 * (interpolate(segment_lambda_start, i) +
+                      interpolate(segment_lambda_end, i));
+    }
+
+    return sum / (lambda_end - lambda_start);
+}
+
+template <size_t N>
 SampledSpectrum SampledSpectrum::from_samples(
     const std::array<std::pair<float /* lambda */, float /* v */>, N>&
         sorted_samples) {
     SampledSpectrum res;
     for (size_t i = 0; i < N; ++i) {
+        float lambda0 =
+            lerp(static_cast<float>(i) / N, LAMBDA_START, LAMBDA_END);
+        float lambda1 =
+            lerp(static_cast<float>(i + 1) / N, LAMBDA_START, LAMBDA_END);
+        res.c[i] = average_spectrum_samples(sorted_samples, lambda0, lambda1);
     }
     return res;
 }
