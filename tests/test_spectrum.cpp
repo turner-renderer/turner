@@ -97,3 +97,19 @@ TEST_CASE("Spectrum::to_string", "[spectrum]") {
     ss << s;
     REQUIRE(ss.str() == "[1.000000, 1.000000, 1.000000, 1.000000]");
 }
+
+TEST_CASE("Spectrum lerp", "[spectrum]") {
+    Spectrum<2> o(0);
+
+    Spectrum<2> s(0);
+    s[0] = -1;
+    s[1] = 1;
+
+    Spectrum<2> t(0);
+    t[0] = 1;
+    t[1] = -1;
+
+    REQUIRE(lerp(0, s, t) == s);
+    REQUIRE(lerp(1.f / 2, s, t) == o);
+    REQUIRE(lerp(1, s, t) == t);
+}

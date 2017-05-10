@@ -1,6 +1,7 @@
 #include "turner.h"
 
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <ostream>
 
@@ -60,9 +61,40 @@ template <size_t N> Spectrum<N> operator*(float a, const Spectrum<N>& s);
 template <size_t N> Spectrum<N> pow(const Spectrum<N>& s, float e);
 template <size_t N> Spectrum<N> exp(const Spectrum<N>& s);
 template <size_t N> Spectrum<N> sqrt(const Spectrum<N>& s);
+template <size_t N>
+Spectrum<N> lerp(float t, const Spectrum<N>& s1, const Spectrum<N>& s2);
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const Spectrum<N>& spectrum);
+
+class SampledSpectrum : public Spectrum<60> {
+public:
+    static constexpr size_t LAMBDA_START = 400;
+    static constexpr size_t LAMBDA_END = 700;
+
+    SampledSpectrum(float v = 0);
+
+    template <size_t N>
+    static SampledSpectrum
+    from_samples(const std::array<std::pair<float /* lambda */, float /* v */>,
+                                  N>& sorted_samples);
+};
+
+//
+// SampledSpectrum implementation
+//
+
+SampledSpectrum::SampledSpectrum(float v) : Spectrum<NUM_SAMPLES>(v) {}
+
+template <size_t N>
+SampledSpectrum SampledSpectrum::from_samples(
+    const std::array<std::pair<float /* lambda */, float /* v */>, N>&
+        sorted_samples) {
+    SampledSpectrum res;
+    for (size_t i = 0; i < N; ++i) {
+    }
+    return res;
+}
 
 //
 // Spectrum implementation
@@ -112,6 +144,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator+=(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] += s[i];
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -121,6 +154,7 @@ Spectrum<N> Spectrum<N>::operator+(const Spectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] + s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -128,6 +162,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator-=(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] -= s[i];
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -137,6 +172,7 @@ Spectrum<N> Spectrum<N>::operator-(const Spectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] - s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -144,6 +180,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] *= s[i];
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -153,6 +190,7 @@ Spectrum<N> Spectrum<N>::operator*(const Spectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] * s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -160,6 +198,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] /= s[i];
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -169,6 +208,7 @@ Spectrum<N> Spectrum<N>::operator/(const Spectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] / s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -176,6 +216,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(float a) {
     for (size_t i = 0; i < N; ++i) {
         c[i] *= a;
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -184,6 +225,7 @@ template <size_t N> Spectrum<N> Spectrum<N>::operator*(float a) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] * a;
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -191,6 +233,7 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(float a) {
     for (size_t i = 0; i < N; ++i) {
         c[i] /= a;
     }
+    assert(!has_nan());
     return *this;
 }
 
@@ -199,6 +242,7 @@ template <size_t N> Spectrum<N> Spectrum<N>::operator/(float a) const {
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] / a;
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -231,6 +275,7 @@ template <size_t N> Spectrum<N> operator-(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         res[i] = -s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -239,6 +284,7 @@ template <size_t N> Spectrum<N> operator*(float a, const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         res[i] = a * s[i];
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -247,6 +293,7 @@ template <size_t N> Spectrum<N> pow(const Spectrum<N>& s, float e) {
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::pow(s[i], e);
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -255,6 +302,7 @@ template <size_t N> Spectrum<N> exp(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::exp(s[i]);
     }
+    assert(!res.has_nan());
     return res;
 }
 
@@ -263,7 +311,13 @@ template <size_t N> Spectrum<N> sqrt(const Spectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::sqrt(s[i]);
     }
+    assert(!res.has_nan());
     return res;
+}
+
+template <size_t N>
+Spectrum<N> lerp(float t, const Spectrum<N>& s1, const Spectrum<N>& s2) {
+    return (1 - t) * s1 + t * s2;
 }
 
 template <size_t N>
