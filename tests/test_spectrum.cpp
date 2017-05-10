@@ -15,11 +15,18 @@ TEST_CASE("Constant black spectrum", "[spectrum]") {
 
     Spectrum<64> t(0);
     Spectrum<64> u(1);
+    REQUIRE(!u.is_black());
 
     REQUIRE(s == t);
     REQUIRE(!(s != t));
     REQUIRE(!(s == u));
     REQUIRE(s != u);
+}
+
+TEST_CASE("NaN spectrum", "[spectrum]") {
+    Spectrum<64> s(0);
+    s[0] /= 0;
+    REQUIRE(s.has_nan());
 }
 
 TEST_CASE("Spectrum is a |R-ring", "[spectrum]") {
@@ -112,4 +119,53 @@ TEST_CASE("Spectrum lerp", "[spectrum]") {
     REQUIRE(lerp(0, s, t) == s);
     REQUIRE(lerp(1.f / 2, s, t) == o);
     REQUIRE(lerp(1, s, t) == t);
+}
+
+TEST_CASE("Spectrum::clamp", "[spectrum]") {
+    Spectrum<2> s(0);
+    s[0] = -1;
+    s[1] = 1;
+    Spectrum<2> t = s;
+
+    t = s.clamp(0);
+    REQUIRE(t[0] == 0);
+    REQUIRE(t[1] == 1);
+
+    t = s.clamp(-1, 0);
+    REQUIRE(t[0] == -1);
+    REQUIRE(t[1] == 0);
+
+    t = s.clamp(0, 0);
+    REQUIRE(t[0] == 0);
+    REQUIRE(t[1] == 0);
+}
+
+TEST_CASE("Spectrum pow", "[spectrum]") {
+    Spectrum<2> s(0);
+    s[0] = -1;
+    s[1] = 1;
+    auto t = pow(s, 2);
+
+    REQUIRE(t[0] == std::pow(-1, 2));
+    REQUIRE(t[1] == std::pow(1, 2));
+}
+
+TEST_CASE("Spectrum exp", "[spectrum]") {
+    Spectrum<2> s(0);
+    s[0] = std::log(2.f);
+    s[1] = std::log(3.f);
+    auto t = exp(s);
+
+    REQUIRE(t[0] == 2);
+    REQUIRE(t[1] == 3);
+}
+
+TEST_CASE("Spectrum sqrt", "[spectrum]") {
+    Spectrum<2> s(0);
+    s[0] = 0;
+    s[1] = 1;
+    auto t = sqrt(s);
+
+    REQUIRE(t[0] == 0);
+    REQUIRE(t[1] == 1);
 }
