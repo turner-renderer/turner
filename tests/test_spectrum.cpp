@@ -30,7 +30,7 @@ TEST_CASE("NaN spectrum", "[spectrum]") {
     REQUIRE(s.has_nan());
 }
 
-TEST_CASE("Spectrum is a |R-ring", "[spectrum]") {
+TEST_CASE("Spectrum is a |R-algebra", "[spectrum]") {
     Spectrum<2> o(0);
     Spectrum<2> e(1);
     Spectrum<2> e_neg(-1);
