@@ -24,6 +24,11 @@ public:
     float& operator[](int i);
     float operator[](int i) const;
 
+    typename std::array<float, N>::iterator begin();
+    typename std::array<float, N>::const_iterator begin() const;
+    typename std::array<float, N>::iterator end();
+    typename std::array<float, N>::const_iterator end() const;
+
     bool operator==(const Spectrum& s) const;
     bool operator!=(const Spectrum& s) const;
 
@@ -103,10 +108,12 @@ float average_spectrum_samples(
     }
 
     if (lambda_start < sorted_samples[0].first) {
-        sum += sorted_samples[0].second;
+        sum +=
+            sorted_samples[0].second * (sorted_samples[0].first - lambda_start);
     }
     if (sorted_samples[N - 1].first < lambda_end) {
-        sum += sorted_samples[N - 1].second;
+        sum += sorted_samples[N - 1].second *
+               (lambda_end - sorted_samples[N - 1].first);
     }
 
     auto interpolate = [&sorted_samples](float w, size_t i) {
@@ -118,17 +125,18 @@ float average_spectrum_samples(
     };
 
     size_t i = 0;
-    for (; sorted_samples[i + 1] < lambda_start; ++i) {
+    for (; sorted_samples[i + 1].first < lambda_start; ++i) {
         // advance to the first place in samples after lambda_start
         // Note: linear search is neglectable
     }
-    for (; i + 1 < N && sorted_samples[i] <= lambda_end; ++i) {
+    for (; i + 1 < N && sorted_samples[i].first <= lambda_end; ++i) {
         float segment_lambda_start =
             std::max(lambda_start, sorted_samples[i].first);
         float segment_lambda_end =
             std::min(lambda_end, sorted_samples[i + 1].first);
         sum += 0.5 * (interpolate(segment_lambda_start, i) +
-                      interpolate(segment_lambda_end, i));
+                      interpolate(segment_lambda_end, i)) *
+               (segment_lambda_end - segment_lambda_start);
     }
 
     return sum / (lambda_end - lambda_start);
@@ -139,11 +147,11 @@ SampledSpectrum SampledSpectrum::from_samples(
     const std::array<std::pair<float /* lambda */, float /* v */>, N>&
         sorted_samples) {
     SampledSpectrum res;
-    for (size_t i = 0; i < N; ++i) {
+    for (size_t i = 0; i < NUM_SAMPLES; ++i) {
         float lambda0 =
-            lerp(static_cast<float>(i) / N, LAMBDA_START, LAMBDA_END);
-        float lambda1 =
-            lerp(static_cast<float>(i + 1) / N, LAMBDA_START, LAMBDA_END);
+            lerp(static_cast<float>(i) / NUM_SAMPLES, LAMBDA_START, LAMBDA_END);
+        float lambda1 = lerp(static_cast<float>(i + 1) / NUM_SAMPLES,
+                             LAMBDA_START, LAMBDA_END);
         res.c[i] = average_spectrum_samples(sorted_samples, lambda0, lambda1);
     }
     return res;
@@ -161,6 +169,22 @@ template <size_t N> Spectrum<N>::Spectrum(float v) {
 
 template <size_t N> float& Spectrum<N>::operator[](int i) { return c[i]; }
 template <size_t N> float Spectrum<N>::operator[](int i) const { return c[i]; }
+
+template <size_t N>
+typename std::array<float, N>::iterator Spectrum<N>::begin() {
+    return c.begin();
+}
+template <size_t N>
+typename std::array<float, N>::const_iterator Spectrum<N>::begin() const {
+    return c.begin();
+}
+template <size_t N> typename std::array<float, N>::iterator Spectrum<N>::end() {
+    return c.end();
+}
+template <size_t N>
+typename std::array<float, N>::const_iterator Spectrum<N>::end() const {
+    return c.end();
+}
 
 template <size_t N> bool Spectrum<N>::operator==(const Spectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {

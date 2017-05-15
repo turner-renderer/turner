@@ -1,6 +1,7 @@
 #include "../lib/spectrum.h"
 #include <catch.hpp>
 
+#include <iostream>
 #include <sstream>
 
 using namespace turner;
@@ -168,4 +169,11 @@ TEST_CASE("Spectrum sqrt", "[spectrum]") {
 
     REQUIRE(t[0] == 0);
     REQUIRE(t[1] == 1);
+}
+
+TEST_CASE("SampledSpectrum::from_samples constant", "[spectrum]") {
+    auto spec = SampledSpectrum::from_samples<2>({{{400, 1}, {700, 1}}});
+    for (const auto& c : spec) {
+        REQUIRE(c == 1);
+    }
 }
