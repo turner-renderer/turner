@@ -79,10 +79,12 @@ public:
 
     SampledSpectrum(float v = 0);
 
-    template <size_t N>
-    static SampledSpectrum
-    from_samples(const std::array<std::pair<float /* lambda */, float /* v */>,
-                                  N>& sorted_samples);
+    template <typename Iter>
+    static SampledSpectrum from_samples(Iter sorted_samples_begin,
+                                        Iter sorted_samples_end);
+    static SampledSpectrum from_samples(
+        std::initializer_list<std::pair<float /* lambda */, float /* v */>>
+            sorted_samples);
 };
 
 //
@@ -91,70 +93,81 @@ public:
 
 SampledSpectrum::SampledSpectrum(float v) : Spectrum<NUM_SAMPLES>(v) {}
 
-template <size_t N>
-float average_spectrum_samples(
-    const std::array<std::pair<float /* lambda */, float /* v */>, N>&
-        sorted_samples,
-    float lambda_start, float lambda_end) {
+namespace detail {
+
+template <typename Iter>
+float average_spectrum_samples(Iter sorted_samples_begin,
+                               Iter sorted_samples_end, float lambda_start,
+                               float lambda_end) {
     float sum = 0;
 
+    float samples_lambda_start = sorted_samples_begin->first;
+    float samples_lambda_end = (sorted_samples_end - 1)->first;
+    float samples_value_start = sorted_samples_begin->second;
+    float samples_value_end = (sorted_samples_end - 1)->second;
+
     // edge cases
-    if (lambda_end <= sorted_samples[0].first) {
-        return sorted_samples[0].second;
-    } else if (sorted_samples[N - 1].first <= lambda_start) {
-        return sorted_samples[N - 1].second;
-    } else if (N == 1) {
-        return sorted_samples[0].second;
+    if (lambda_end <= samples_lambda_start) {
+        return samples_value_start;
+    } else if (samples_lambda_end <= lambda_start) {
+        return samples_value_end;
+    } else if (std::distance(sorted_samples_end, sorted_samples_begin) == 1) {
+        return samples_value_start;
     }
 
-    if (lambda_start < sorted_samples[0].first) {
-        sum +=
-            sorted_samples[0].second * (sorted_samples[0].first - lambda_start);
+    if (lambda_start < samples_lambda_start) {
+        sum += samples_value_start * (samples_lambda_start - lambda_start);
     }
-    if (sorted_samples[N - 1].first < lambda_end) {
-        sum += sorted_samples[N - 1].second *
-               (lambda_end - sorted_samples[N - 1].first);
+    if (samples_lambda_end < lambda_end) {
+        sum += samples_value_end * (lambda_end - samples_lambda_end);
     }
 
-    auto interpolate = [&sorted_samples](float w, size_t i) {
-        float lambda_start = sorted_samples[i].first;
-        float lambda_end = sorted_samples[i + 1].first;
-
+    auto interpolate = [](float w, auto it, auto it_next) {
+        float lambda_start = it->first;
+        float lambda_end = it_next->first;
         return lerp((w - lambda_start) / (lambda_end - lambda_start),
-                    sorted_samples[i].second, sorted_samples[i + 1].second);
+                    it->second, it_next->second);
     };
 
-    size_t i = 0;
-    for (; sorted_samples[i + 1].first < lambda_start; ++i) {
+    auto it = sorted_samples_begin;
+    for (auto it_next = it + 1; it_next->first < lambda_start;
+         it = it_next, ++it_next) {
         // advance to the first place in samples after lambda_start
         // Note: linear search is neglectable
     }
-    for (; i + 1 < N && sorted_samples[i].first <= lambda_end; ++i) {
-        float segment_lambda_start =
-            std::max(lambda_start, sorted_samples[i].first);
-        float segment_lambda_end =
-            std::min(lambda_end, sorted_samples[i + 1].first);
-        sum += 0.5 * (interpolate(segment_lambda_start, i) +
-                      interpolate(segment_lambda_end, i)) *
+    for (auto it_next = it + 1;
+         it_next != sorted_samples_end && it->first <= lambda_end;
+         it = it_next, ++it_next) {
+        float segment_lambda_start = std::max(lambda_start, it->first);
+        float segment_lambda_end = std::min(lambda_end, it_next->first);
+        sum += 0.5 * (interpolate(segment_lambda_start, it, it_next) +
+                      interpolate(segment_lambda_end, it, it_next)) *
                (segment_lambda_end - segment_lambda_start);
     }
 
     return sum / (lambda_end - lambda_start);
 }
 
-template <size_t N>
-SampledSpectrum SampledSpectrum::from_samples(
-    const std::array<std::pair<float /* lambda */, float /* v */>, N>&
-        sorted_samples) {
+} // namespace detail
+
+template <typename Iter>
+SampledSpectrum SampledSpectrum::from_samples(Iter sorted_samples_begin,
+                                              Iter sorted_samples_end) {
     SampledSpectrum res;
     for (size_t i = 0; i < NUM_SAMPLES; ++i) {
-        float lambda0 =
-            lerp(static_cast<float>(i) / NUM_SAMPLES, LAMBDA_START, LAMBDA_END);
-        float lambda1 = lerp(static_cast<float>(i + 1) / NUM_SAMPLES,
-                             LAMBDA_START, LAMBDA_END);
-        res.c[i] = average_spectrum_samples(sorted_samples, lambda0, lambda1);
+        float lambda0 = lerp(1.f * i / NUM_SAMPLES, LAMBDA_START, LAMBDA_END);
+        float lambda1 =
+            lerp(1.f * (i + 1) / NUM_SAMPLES, LAMBDA_START, LAMBDA_END);
+        res.c[i] = detail::average_spectrum_samples(
+            sorted_samples_begin, sorted_samples_end, lambda0, lambda1);
     }
     return res;
+}
+
+SampledSpectrum SampledSpectrum::from_samples(
+    std::initializer_list<std::pair<float /* lambda */, float /* v */>>
+        sorted_samples) {
+    return from_samples(sorted_samples.begin(), sorted_samples.end());
 }
 
 //
