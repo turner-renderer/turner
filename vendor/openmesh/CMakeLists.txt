@@ -19,7 +19,7 @@ ExternalProject_Add(
     LOG_DOWNLOAD ON
     UPDATE_COMMAND ""
     PATCH_COMMAND
-        patch -p1 < ${CMAKE_SOURCE_DIR}/vendor/openmesh/001-fix-include-of-struct-timeval-definition.patch
+        patch -t -p1 < ${CMAKE_SOURCE_DIR}/vendor/openmesh/001-fix-include-of-struct-timeval-definition.patch
 )
 
 ExternalProject_Get_Property(openmesh install_dir)
