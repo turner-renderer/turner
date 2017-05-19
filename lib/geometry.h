@@ -72,7 +72,7 @@ public:
 
     Vector2<T>& operator/=(T s) const {
         assert(s != 0);
-        return * this *= 1 / s;
+        return *this *= 1 / s;
     }
 
     Vector2<T> operator-() const { return {-x, -y}; }
@@ -199,7 +199,7 @@ public:
 
     Vector3<T>& operator/=(T s) const {
         assert(s != 0);
-        return * this *= 1 / s;
+        return *this *= 1 / s;
     }
 
     Vector3<T> operator-() const { return {-x, -y, -z}; }
@@ -270,6 +270,102 @@ Vector3<T> max(const Vector3<T>& p1, const Vector3<T>& p2) {
 template <typename T>
 Vector3<T> permute(const Vector3<T>& v, int x, int y, int z) {
     return {v[x], v[y], v[z]};
+}
+
+/**
+ * Point in 2-dimensional space.
+ */
+template <typename T> class Point2 {
+public:
+    Point2() = default;
+    Point2(T x, T y) : x{x}, y{y} { assert(!contains_nan()); }
+
+    template <typename U>
+    explicit Point2(const Point2<U>& p)
+        : x(static_cast<T>(p.x)), y(static_cast<T>(p.y)) {
+        assert(!contains_nan());
+    }
+
+    template <typename U> explicit operator Vector2<U>() const {
+        return {x, y};
+    }
+
+    bool contains_nan() const {
+        return std::isnan(x) || std::isnan(y) || std::isnan(z);
+    }
+
+    T operator[](size_t i) const {
+        assert(i < 2);
+        return i == 0 ? x : y;
+    }
+
+    T& operator[](size_t i) {
+        assert(i < 2);
+        return i == 0 ? x : y;
+    }
+
+    bool operator==(const Point2<T>& p) const { return x == p.x && y == p.y; }
+
+    bool operator!=(const Point2<T>& p) const { return !(*this == p); }
+
+    Point2<T> operator+(const Vector2<T>& v) const {
+        return {x + v.x, y + v.y};
+    }
+
+    Point2<T>& operator+=(const Vector2<T>& v) {
+        x += v.x;
+        y += v.y;
+        return *this;
+    }
+
+    Vector2<T> operator-(const Point2<T>& p) const {
+        return {p.x - x, p.y - y};
+    }
+
+    Point2<T> operator-(const Vector2<T>& v) const {
+        return {x - v.x, y - v.y};
+    }
+
+    Point2<T>& operator-=(const Vector2<T>& v) {
+        x -= v.x;
+        y -= v.y;
+        return *this;
+    }
+
+    Point2<T> operator*(T s) const { return Point2<T>(s * x, s * y); }
+
+    Point2<T>& operator*=(T s) {
+        x *= s;
+        y *= s;
+        return *this;
+    }
+
+    Point2<T> operator/(T s) const {
+        assert(s != 0);
+        return (1 / s) * *this;
+    }
+
+    Point2<T>& operator/=(T s) const {
+        assert(s != 0);
+        return *this *= 1 / s;
+    }
+
+public:
+    T x = 0;
+    T y = 0;
+    T z = 0;
+};
+
+using Point2f = Point3<float>;
+using Point2i = Point3<int>;
+
+template <typename T> float distance(const Point2<T>& p1, const Point2<T>& p2) {
+    return (p1 - p2).length();
+}
+
+template <typename T>
+float distance_squared(const Point2<T>& p1, const Point2<T>& p2) {
+    return (p1 - p2).length_squared();
 }
 
 /**
@@ -354,7 +450,7 @@ public:
 
     Point3<T>& operator/=(T s) const {
         assert(s != 0);
-        return * this *= 1 / s;
+        return *this *= 1 / s;
     }
 
 public:
@@ -498,7 +594,7 @@ public:
 
     Normal3<T>& operator/=(T s) const {
         assert(s != 0);
-        return * this *= 1 / s;
+        return *this *= 1 / s;
     }
 
 public:
@@ -536,6 +632,79 @@ public:
 };
 
 /**
+ * Bounding box in 2d space.
+ */
+template <typename T> class Bbox2 {
+public:
+    Bbox2()
+        : p_min(std::numeric_limits<T>::lowest(),
+                std::numeric_limits<T>::lowest())
+        , p_max(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()) {}
+    Bbox2(const Point2<T>& p) : p_min(p), p_max(p) {}
+    Bbox2(const Point2<T>& p1, const Point2<T>& p2)
+        : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
+
+    const Point2<T>& operator[](size_t i) const {
+        assert(i < 2);
+        return i == 0 ? p_min : p_max;
+    }
+
+    Point2<T>& operator[](size_t i) {
+        assert(i < 2);
+        return i == 0 ? p_min : p_max;
+    }
+
+    Point2<T> corner(size_t corner) const {
+        return {(*this)[(corner & 1)].x, (*this)[(corner & 2) ? 1 : 0].y};
+    }
+
+    Vector3<T> diagonal() const { return p_max - p_min; }
+
+    T area() const {
+        Vector3<T> d = diagonal();
+        return d.x * d.y;
+    }
+
+    Point2<T> lerp(const Point2f& t) const {
+        return {lerp(t.x, p_min.x, p_max.x), lerp(t.y, p_min.y, p_max.y)};
+    }
+
+public:
+    Point2<T> p_min;
+    Point2<T> p_max;
+};
+
+using Bbox2f = Bbox2<float>;
+using Bbox2i = Bbox2<int>;
+
+template <typename T>
+Bbox2<T> bbox_union(const Bbox2<T>& b, const Point3<T>& p) {
+    return {min(b.p_min, p), max(b.p_max, p)};
+}
+
+template <typename T>
+Bbox2<T> bbox_union(const Bbox2<T>& b1, const Bbox2<T>& b2) {
+    return {min(b1.p_min, b2.p_min), max(b1.p_max, b2.p_max)};
+}
+
+template <typename T>
+Bbox2<T> intersect(const Bbox2<T>& b1, const Bbox2<T>& b2) {
+    return {max(b1.p_min, b2.p_min), min(b1.p_max, b2.p_max)};
+}
+
+template <typename T> bool overlaps(const Bbox2<T>& b1, const Bbox2<T>& b2) {
+    bool x = (b1.p_max.x >= b2.p_min.x) && (b1.p_min.x <= b2.p_max.x);
+    bool y = (b1.p_max.y >= b2.p_min.y) && (b1.p_min.y <= b2.p_max.y);
+    bool z = (b1.p_max.z >= b2.p_min.z) && (b1.p_min.z <= b2.p_max.z);
+    return x && y && z;
+}
+
+template <typename T> bool inside(const Point2<T>& p, const Bbox2<T>& b) {
+    return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y &&
+            p.y <= b.p_max.y && p.z >= b.p_min.z && p.z <= b.p_max.z);
+}
+
+/**
  * Bounding box in 3d space.
  */
 template <typename T> class Bbox3 {
@@ -567,12 +736,12 @@ public:
 
     Vector3<T> diagonal() const { return p_max - p_min; }
 
-    T SurfaceArea() const {
+    T surface_area() const {
         Vector3<T> d = diagonal();
         return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
     }
 
-    T Volume() const {
+    T volume() const {
         Vector3<T> d = diagonal();
         return d.x * d.y * d.z;
     }
