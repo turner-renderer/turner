@@ -11,6 +11,7 @@ set(TESTS
     test_clipping
     test_config
     test_effects
+    test_filter
     test_functional
     test_geometry
     test_intersection
@@ -24,6 +25,7 @@ set(TESTS
     test_sampling
     test_triangle
     test_types
+    test_film
 )
 
 foreach (TEST_NAME ${TESTS})

@@ -356,8 +356,8 @@ public:
     T z = 0;
 };
 
-using Point2f = Point3<float>;
-using Point2i = Point3<int>;
+using Point2f = Point2<float>;
+using Point2i = Point2<int>;
 
 template <typename T> float distance(const Point2<T>& p1, const Point2<T>& p2) {
     return (p1 - p2).length();
@@ -366,6 +366,34 @@ template <typename T> float distance(const Point2<T>& p1, const Point2<T>& p2) {
 template <typename T>
 float distance_squared(const Point2<T>& p1, const Point2<T>& p2) {
     return (p1 - p2).length_squared();
+}
+
+/**
+ * Linearly interpolate between two points.
+ */
+template <typename T>
+Point3<T> lerp(float t, const Point2<T>& p0, const Point2<T>& p1) {
+    return (1 - t) * p0 + t * p1;
+}
+
+template <typename T> Point2<T> min(const Point2<T>& p1, const Point2<T>& p2) {
+    return {std::min(p1.x, p2.x), std::min(p1.y, p2.y)};
+}
+
+template <typename T> Point2<T> max(const Point2<T>& p1, const Point2<T>& p2) {
+    return {std::max(p1.x, p2.x), std::max(p1.y, p2.y)};
+}
+
+template <typename T> Point2<T> floor(const Point2<T>& p) {
+    return {std::floor(p.x), std::floor(p.y)};
+}
+
+template <typename T> Point2<T> ceil(const Point2<T>& p) {
+    return {std::ceil(p.x), std::ceil(p.y)};
+}
+
+template <typename T> Point2<T> abs(const Point2<T>& p) {
+    return {std::abs(p.x), std::abs(p.y)};
 }
 
 /**
