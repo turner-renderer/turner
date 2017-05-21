@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <string>
 
 namespace turner {
 
@@ -290,9 +291,7 @@ public:
         return {x, y};
     }
 
-    bool contains_nan() const {
-        return std::isnan(x) || std::isnan(y) || std::isnan(z);
-    }
+    bool contains_nan() const { return std::isnan(x) || std::isnan(y); }
 
     T operator[](size_t i) const {
         assert(i < 2);
@@ -350,10 +349,13 @@ public:
         return *this *= 1 / s;
     }
 
+    std::string to_string() const {
+        return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+    }
+
 public:
     T x = 0;
     T y = 0;
-    T z = 0;
 };
 
 using Point2f = Point2<float>;
@@ -394,6 +396,11 @@ template <typename T> Point2<T> ceil(const Point2<T>& p) {
 
 template <typename T> Point2<T> abs(const Point2<T>& p) {
     return {std::abs(p.x), std::abs(p.y)};
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const Point2<T>& p) {
+    return out << p.to_string();
 }
 
 /**
@@ -672,6 +679,9 @@ public:
     Bbox2(const Point2<T>& p1, const Point2<T>& p2)
         : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
 
+    template <typename U>
+    explicit Bbox2(const Bbox2<U>& b) : p_min(b.p_min, b.p_max) {}
+
     const Point2<T>& operator[](size_t i) const {
         assert(i < 2);
         return i == 0 ? p_min : p_max;
@@ -686,10 +696,14 @@ public:
         return {(*this)[(corner & 1)].x, (*this)[(corner & 2) ? 1 : 0].y};
     }
 
-    Vector3<T> diagonal() const { return p_max - p_min; }
+    bool empty() const { return p_max.x <= p_min.x || p_max.y <= p_min.y; }
+
+    T width() const { return p_max.x - p_min.x; }
+    T height() const { return p_max.y - p_min.y; }
+    Vector2<T> diagonal() const { return p_max - p_min; }
 
     T area() const {
-        Vector3<T> d = diagonal();
+        Vector2<T> d = diagonal();
         return d.x * d.y;
     }
 
@@ -733,6 +747,53 @@ template <typename T> bool inside(const Point2<T>& p, const Bbox2<T>& b) {
 }
 
 /**
+ * Iterator through points for integer-valued bounding box.
+ */
+
+class Bbox2iIterator : public std::forward_iterator_tag {
+public:
+    Bbox2iIterator(const Bbox2i& b, const Point2i& p) : bbox_(&b), p_(p) {}
+    Bbox2iIterator operator++() {
+        advance();
+        return *this;
+    }
+    Bbox2iIterator operator++(int) {
+        Bbox2iIterator previous = *this;
+        advance();
+        return previous;
+    }
+    bool operator==(const Bbox2iIterator& other) const {
+        return bbox_ == other.bbox_ && p_ == other.p_;
+    }
+    bool operator!=(const Bbox2iIterator& other) const {
+        return !(*this == other);
+    }
+    const Point2i& operator*() const { return p_; }
+
+private:
+    void advance() {
+        ++p_.x;
+        if (bbox_->p_max.x <= p_.x) {
+            p_.x = bbox_->p_min.x;
+            ++p_.y;
+        }
+    }
+
+private:
+    const Bbox2i* bbox_;
+    Point2i p_;
+};
+
+inline Bbox2iIterator begin(const Bbox2i& b) {
+    return Bbox2iIterator(b, b.p_min);
+}
+
+inline Bbox2iIterator end(const Bbox2i& b) {
+    return b.empty() ? Bbox2iIterator(b, b.p_min)
+                     : Bbox2iIterator(b, {b.p_min.x, b.p_max.y});
+}
+
+/**
  * Bounding box in 3d space.
  */
 template <typename T> class Bbox3 {
@@ -746,6 +807,9 @@ public:
     Bbox3(const Point3<T>& p) : p_min(p), p_max(p) {}
     Bbox3(const Point3<T>& p1, const Point3<T>& p2)
         : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
+
+    template <typename U>
+    explicit Bbox3(const Bbox3<U>& b) : p_min(b.p_min, b.p_max) {}
 
     const Point3<T>& operator[](size_t i) const {
         assert(i < 2);

@@ -1,5 +1,6 @@
 #include "../lib/geometry.h"
 #include <catch.hpp>
+#include <iostream>
 
 using namespace turner;
 
@@ -26,4 +27,17 @@ TEST_CASE("Vector3 is abelian group", "[vector3]") {
     REQUIRE(v - v == zero);
     REQUIRE(v + w == v + w);
     REQUIRE(((v + w) + u) == (v + (w + u)));
+}
+
+TEST_CASE("Iterate through integer-valued bbox", "[bbox]") {
+    Bbox2i b({-1, -2}, {3, 4});
+    int x = 0;
+    int y = 0;
+    for (const auto& p : b) {
+        x += p.x;
+        y += p.y;
+    }
+
+    REQUIRE(x == (-1 + 0 + 1 + 2) * 6);
+    REQUIRE(y == (-2 + -1 + 0 + 1 + 2 + 3) * 4);
 }
