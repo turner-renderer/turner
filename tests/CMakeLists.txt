@@ -23,6 +23,7 @@ set(TESTS
     test_range
     test_raster
     test_sampling
+    test_spectrum
     test_triangle
     test_types
     test_film
