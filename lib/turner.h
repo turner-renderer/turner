@@ -23,6 +23,7 @@ inline T clamp(T val, U low, V high) {
     }
 }
 
+// TODO: Docs and explanation of values.
 inline float gamma_correction(float value) {
     if (value <= 0.0031308f) {
         return 12.92f * value;
