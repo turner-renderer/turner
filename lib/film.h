@@ -30,7 +30,7 @@ public:
         int width = pixel_bbox_.p_max.x - pixel_bbox_.p_min.x;
         int offset =
             (p.x - pixel_bbox_.p_min.x) + (p.y - pixel_bbox_.p_min.y) * width;
-        assert(0 < offset && offset < pixel_bbox_.size());
+        assert(0 < offset && offset < pixels_.size());
         return pixels_[offset];
     }
 
@@ -142,16 +142,20 @@ public:
     /**
      * Output sRGB image in PBM format.
      */
-    friend std::ostream& operator<<(std::ostream& out,
-                                    const Film<Filter>& film);
+    template <typename Filt>
+    friend std::ostream& operator<<(std::ostream& out, const Film<Filt>& film);
 
 private:
-    Pixel& get_pixel(const Point2i& p) {
+    size_t pixel_offset(const Point2i& p) const {
         int width = cropped_pixel_bbox.width();
-        int offset = (p.x - cropped_pixel_bbox.p_min.x) +
-                     (p.y - cropped_pixel_bbox.p_min.y) * width;
-        return pixels_[offset];
+        return (p.x - cropped_pixel_bbox.p_min.x) +
+               (p.y - cropped_pixel_bbox.p_min.y) * width;
     }
+
+    const Pixel& get_pixel(const Point2i& p) const {
+        return pixels_[pixel_offset(p)];
+    }
+    Pixel& get_pixel(const Point2i& p) { return pixels_[pixel_offset(p)]; }
 
 public:
     const Point2i resolution;
@@ -216,7 +220,10 @@ void output_pbm(std::ostream& out, std::vector<float> rgb,
                 << std::setfill(' ') << std::setw(3)
                 << to_byte(rgb[3 * (y * resolution.x + x) + 1]) << " "
                 << std::setfill(' ') << std::setw(3)
-                << to_byte(rgb[3 * (y * resolution.x + x) + 0]) << " ";
+                << to_byte(rgb[3 * (y * resolution.x + x) + 2]);
+            if (x + 1 < resolution.x) {
+                out << " ";
+            }
         }
         out << std::endl;
     }

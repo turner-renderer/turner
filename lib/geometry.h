@@ -318,7 +318,7 @@ public:
     }
 
     Vector2<T> operator-(const Point2<T>& p) const {
-        return {p.x - x, p.y - y};
+        return {x - p.x, y - p.y};
     }
 
     Point2<T> operator-(const Vector2<T>& v) const {
@@ -455,7 +455,7 @@ public:
     }
 
     Vector3<T> operator-(const Point3<T>& p) const {
-        return {p.x - x, p.y - y, p.z - z};
+        return {x - p.x, y - p.y, z - p.z};
     }
 
     Point3<T> operator-(const Vector3<T>& v) const {
