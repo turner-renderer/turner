@@ -23,7 +23,14 @@ inline T clamp(T val, U low, V high) {
     }
 }
 
-// TODO: Docs and explanation of values.
+/**
+ * Transform sRGB value to non-linear sR'G'B'.
+ *
+ * Cf. https://www.w3.org/Graphics/Color/sRGB
+ *
+ * @param  value color value to transform
+ * @return       transformed value
+ */
 inline float gamma_correction(float value) {
     if (value <= 0.0031308f) {
         return 12.92f * value;
