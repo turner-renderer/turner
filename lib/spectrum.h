@@ -82,8 +82,8 @@ public:
     static constexpr size_t LAMBDA_START = 400;
     static constexpr size_t LAMBDA_END = 700;
 
-    SampledSpectrum(float v = 0);
-    explicit SampledSpectrum(Spectrum<60> s) : Spectrum<60>(std::move(s)) {}
+    explicit SampledSpectrum(float v = 0);
+    explicit SampledSpectrum(const Spectrum<60>& s);
 
     template <typename Iter>
     static SampledSpectrum from_samples(Iter sorted_samples_begin,
@@ -112,16 +112,36 @@ public:
     static const SampledSpectrum& illum_blue();
     static const SampledSpectrum& illum_yellow();
 
-    std::array<float, 3> to_xyz() const;
     float y() const;
+    std::array<float, 3> to_xyz() const;
     std::array<float, 3> to_rgb() const;
 
     static SampledSpectrum from_rgb(float r, float g, float b,
                                     SpectrumType type);
+    static SampledSpectrum
+    from_xyz(float r, float g, float b,
+             SpectrumType type = SpectrumType::Reflectance);
 };
 
 inline std::array<float, 3> xyz_to_rgb(float x, float y, float z);
 inline std::array<float, 3> rgb_to_xyz(float r, float g, float b);
+
+class RGBSpectrum : public Spectrum<3> {
+public:
+    explicit RGBSpectrum(float v = 0.f);
+    explicit RGBSpectrum(const Spectrum<3>& s);
+
+    // TODO: from_samples is not implemented
+
+    float y() const;
+    std::array<float, 3> to_xyz() const;
+    std::array<float, 3> to_rgb() const;
+
+    static RGBSpectrum from_rgb(float r, float g, float b,
+                                SpectrumType type = SpectrumType::Reflectance);
+    static RGBSpectrum from_xyz(float r, float g, float b,
+                                SpectrumType type = SpectrumType::Reflectance);
+};
 
 //
 // Spectrum implementation
@@ -373,6 +393,7 @@ std::ostream& operator<<(std::ostream& os, const Spectrum<N>& spectrum) {
 //
 
 SampledSpectrum::SampledSpectrum(float v) : Spectrum<NUM_SAMPLES>(v) {}
+SampledSpectrum::SampledSpectrum(const Spectrum<60>& s) : Spectrum<60>(s) {}
 
 namespace detail {
 
@@ -653,6 +674,12 @@ SampledSpectrum SampledSpectrum::from_rgb(float r, float g, float b,
     return s;
 }
 
+SampledSpectrum SampledSpectrum::from_xyz(float x, float y, float z,
+                                          SpectrumType type) {
+    auto rgb = xyz_to_rgb(x, y, z);
+    return from_rgb(rgb[0], rgb[1], rgb[2], type);
+}
+
 /**
  * Matrix coefficients are from pbrt v3.
  */
@@ -668,6 +695,41 @@ inline std::array<float, 3> rgb_to_xyz(float r, float g, float b) {
     auto y = 0.212671f * r + 0.715160f * g + 0.072169f * b;
     auto z = 0.019334f * r + 0.119193f * g + 0.950227f * b;
     return {x, y, z};
+}
+
+//
+// RGBSpectrum implementation
+//
+
+RGBSpectrum::RGBSpectrum(float v) : Spectrum<3>(v){};
+RGBSpectrum::RGBSpectrum(const Spectrum<3>& s) : Spectrum<3>(s){};
+
+float RGBSpectrum::y() const {
+    // cf. rgb_to_xyz function for the coefficients
+    return 0.212671f * c[0] + 0.715160f * c[1] + 0.072169f * c[2];
+}
+
+std::array<float, 3> RGBSpectrum::to_xyz() const {
+    return rgb_to_xyz(c[0], c[1], c[2]);
+}
+
+std::array<float, 3> RGBSpectrum::to_rgb() const { return {c[0], c[1], c[2]}; }
+
+RGBSpectrum RGBSpectrum::from_rgb(float r, float g, float b, SpectrumType) {
+    RGBSpectrum s;
+    s[0] = r;
+    s[1] = g;
+    s[2] = b;
+    return s;
+}
+
+RGBSpectrum RGBSpectrum::from_xyz(float x, float y, float z, SpectrumType) {
+    auto rgb = xyz_to_rgb(x, y, z);
+    RGBSpectrum s;
+    s[0] = rgb[0];
+    s[1] = rgb[1];
+    s[2] = rgb[2];
+    return s;
 }
 
 } // namespace turner
