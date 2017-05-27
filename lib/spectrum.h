@@ -591,7 +591,6 @@ const SampledSpectrum& SampledSpectrum::illum_blue() {
 const SampledSpectrum& SampledSpectrum::illum_yellow() {
     static auto s = detail::zip_spectrum(RGB_FREQUENCIES, RGB_ILLUM_YELLOW);
     return s;
-    return s;
 }
 
 std::array<float, 3> SampledSpectrum::to_xyz() const {
