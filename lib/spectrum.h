@@ -13,12 +13,12 @@ namespace turner {
  *
  * @tparam N Number of samples used to represent the spectrum.
  */
-template <size_t N> class Spectrum {
+template <size_t N> class BaseSpectrum {
 public:
     static_assert(1 < N, "number of samples has to be greater than 0");
     static constexpr size_t NUM_SAMPLES = N;
 
-    explicit Spectrum(float v = 0);
+    explicit BaseSpectrum(float v = 0);
 
     // observers
 
@@ -30,29 +30,29 @@ public:
     typename std::array<float, N>::iterator end();
     typename std::array<float, N>::const_iterator end() const;
 
-    bool operator==(const Spectrum& s) const;
-    bool operator!=(const Spectrum& s) const;
+    bool operator==(const BaseSpectrum& s) const;
+    bool operator!=(const BaseSpectrum& s) const;
 
     bool is_black() const;
     bool has_nan() const;
 
     // operations
 
-    Spectrum& operator+=(const Spectrum& s);
-    Spectrum operator+(const Spectrum& s) const;
-    Spectrum& operator-=(const Spectrum& s);
-    Spectrum operator-(const Spectrum& s) const;
-    Spectrum& operator*=(const Spectrum& s);
-    Spectrum operator*(const Spectrum& s) const;
-    Spectrum& operator/=(const Spectrum& s);
-    Spectrum operator/(const Spectrum& s) const;
+    BaseSpectrum& operator+=(const BaseSpectrum& s);
+    BaseSpectrum operator+(const BaseSpectrum& s) const;
+    BaseSpectrum& operator-=(const BaseSpectrum& s);
+    BaseSpectrum operator-(const BaseSpectrum& s) const;
+    BaseSpectrum& operator*=(const BaseSpectrum& s);
+    BaseSpectrum operator*(const BaseSpectrum& s) const;
+    BaseSpectrum& operator/=(const BaseSpectrum& s);
+    BaseSpectrum operator/(const BaseSpectrum& s) const;
 
-    Spectrum& operator*=(float a);
-    Spectrum operator*(float a) const;
-    Spectrum& operator/=(float a);
-    Spectrum operator/(float a) const;
+    BaseSpectrum& operator*=(float a);
+    BaseSpectrum operator*(float a) const;
+    BaseSpectrum& operator/=(float a);
+    BaseSpectrum operator/(float a) const;
 
-    Spectrum clamp(float low = 0, float high = INFINITY) const;
+    BaseSpectrum clamp(float low = 0, float high = INFINITY) const;
 
     // utils
 
@@ -62,28 +62,30 @@ protected:
     std::array<float, N> c;
 };
 
-template <size_t N> Spectrum<N> operator-(const Spectrum<N>& s);
-template <size_t N> Spectrum<N> operator*(float a, const Spectrum<N>& s);
-template <size_t N> Spectrum<N> pow(const Spectrum<N>& s, float e);
-template <size_t N> Spectrum<N> exp(const Spectrum<N>& s);
-template <size_t N> Spectrum<N> sqrt(const Spectrum<N>& s);
+template <size_t N> BaseSpectrum<N> operator-(const BaseSpectrum<N>& s);
 template <size_t N>
-Spectrum<N> lerp(float t, const Spectrum<N>& s1, const Spectrum<N>& s2);
+BaseSpectrum<N> operator*(float a, const BaseSpectrum<N>& s);
+template <size_t N> BaseSpectrum<N> pow(const BaseSpectrum<N>& s, float e);
+template <size_t N> BaseSpectrum<N> exp(const BaseSpectrum<N>& s);
+template <size_t N> BaseSpectrum<N> sqrt(const BaseSpectrum<N>& s);
+template <size_t N>
+BaseSpectrum<N> lerp(float t, const BaseSpectrum<N>& s1,
+                     const BaseSpectrum<N>& s2);
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os, const Spectrum<N>& spectrum);
+std::ostream& operator<<(std::ostream& os, const BaseSpectrum<N>& Basespectrum);
 
 #include "spectrum.inl"
 
-enum class SpectrumType { Reflectance, Illuminance };
+enum class BaseSpectrumType { Reflectance, Illuminance };
 
-class SampledSpectrum : public Spectrum<60> {
+class SampledSpectrum : public BaseSpectrum<60> {
 public:
     static constexpr size_t LAMBDA_START = 400;
     static constexpr size_t LAMBDA_END = 700;
 
     explicit SampledSpectrum(float v = 0);
-    explicit SampledSpectrum(const Spectrum<60>& s);
+    explicit SampledSpectrum(const BaseSpectrum<60>& s);
 
     template <typename Iter>
     static SampledSpectrum from_samples(Iter sorted_samples_begin,
@@ -117,19 +119,19 @@ public:
     std::array<float, 3> to_rgb() const;
 
     static SampledSpectrum from_rgb(float r, float g, float b,
-                                    SpectrumType type);
+                                    BaseSpectrumType type);
     static SampledSpectrum
     from_xyz(float r, float g, float b,
-             SpectrumType type = SpectrumType::Reflectance);
+             BaseSpectrumType type = BaseSpectrumType::Reflectance);
 };
 
 inline std::array<float, 3> xyz_to_rgb(float x, float y, float z);
 inline std::array<float, 3> rgb_to_xyz(float r, float g, float b);
 
-class RGBSpectrum : public Spectrum<3> {
+class RGBSpectrum : public BaseSpectrum<3> {
 public:
     explicit RGBSpectrum(float v = 0.f);
-    explicit RGBSpectrum(const Spectrum<3>& s);
+    explicit RGBSpectrum(const BaseSpectrum<3>& s);
 
     // TODO: from_samples is not implemented
 
@@ -137,42 +139,48 @@ public:
     std::array<float, 3> to_xyz() const;
     std::array<float, 3> to_rgb() const;
 
-    static RGBSpectrum from_rgb(float r, float g, float b,
-                                SpectrumType type = SpectrumType::Reflectance);
-    static RGBSpectrum from_xyz(float r, float g, float b,
-                                SpectrumType type = SpectrumType::Reflectance);
+    static RGBSpectrum
+    from_rgb(float r, float g, float b,
+             BaseSpectrumType type = BaseSpectrumType::Reflectance);
+    static RGBSpectrum
+    from_xyz(float r, float g, float b,
+             BaseSpectrumType type = BaseSpectrumType::Reflectance);
 };
 
 //
-// Spectrum implementation
+// BaseSpectrum implementation
 //
 
-template <size_t N> Spectrum<N>::Spectrum(float v) {
+template <size_t N> BaseSpectrum<N>::BaseSpectrum(float v) {
     for (size_t i = 0; i < N; ++i) {
         (*this)[i] = v;
     }
 }
 
-template <size_t N> float& Spectrum<N>::operator[](int i) { return c[i]; }
-template <size_t N> float Spectrum<N>::operator[](int i) const { return c[i]; }
+template <size_t N> float& BaseSpectrum<N>::operator[](int i) { return c[i]; }
+template <size_t N> float BaseSpectrum<N>::operator[](int i) const {
+    return c[i];
+}
 
 template <size_t N>
-typename std::array<float, N>::iterator Spectrum<N>::begin() {
+typename std::array<float, N>::iterator BaseSpectrum<N>::begin() {
     return c.begin();
 }
 template <size_t N>
-typename std::array<float, N>::const_iterator Spectrum<N>::begin() const {
+typename std::array<float, N>::const_iterator BaseSpectrum<N>::begin() const {
     return c.begin();
 }
-template <size_t N> typename std::array<float, N>::iterator Spectrum<N>::end() {
+template <size_t N>
+typename std::array<float, N>::iterator BaseSpectrum<N>::end() {
     return c.end();
 }
 template <size_t N>
-typename std::array<float, N>::const_iterator Spectrum<N>::end() const {
+typename std::array<float, N>::const_iterator BaseSpectrum<N>::end() const {
     return c.end();
 }
 
-template <size_t N> bool Spectrum<N>::operator==(const Spectrum<N>& s) const {
+template <size_t N>
+bool BaseSpectrum<N>::operator==(const BaseSpectrum<N>& s) const {
     for (size_t i = 0; i < N; ++i) {
         if (c[i] != s[i]) {
             return false;
@@ -181,11 +189,12 @@ template <size_t N> bool Spectrum<N>::operator==(const Spectrum<N>& s) const {
     return true;
 }
 
-template <size_t N> bool Spectrum<N>::operator!=(const Spectrum<N>& s) const {
+template <size_t N>
+bool BaseSpectrum<N>::operator!=(const BaseSpectrum<N>& s) const {
     return !(*this == s);
 }
 
-template <size_t N> bool Spectrum<N>::is_black() const {
+template <size_t N> bool BaseSpectrum<N>::is_black() const {
     for (size_t i = 0; i < N; ++i) {
         if (c[i] != 0.f) {
             return false;
@@ -194,7 +203,7 @@ template <size_t N> bool Spectrum<N>::is_black() const {
     return true;
 }
 
-template <size_t N> bool Spectrum<N>::has_nan() const {
+template <size_t N> bool BaseSpectrum<N>::has_nan() const {
     for (size_t i = 0; i < N; ++i) {
         if (std::isnan(c[i])) {
             return true;
@@ -203,7 +212,8 @@ template <size_t N> bool Spectrum<N>::has_nan() const {
     return false;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator+=(const Spectrum<N>& s) {
+template <size_t N>
+BaseSpectrum<N>& BaseSpectrum<N>::operator+=(const BaseSpectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] += s[i];
     }
@@ -212,8 +222,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator+=(const Spectrum<N>& s) {
 }
 
 template <size_t N>
-Spectrum<N> Spectrum<N>::operator+(const Spectrum<N>& s) const {
-    Spectrum<N> res;
+BaseSpectrum<N> BaseSpectrum<N>::operator+(const BaseSpectrum<N>& s) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] + s[i];
     }
@@ -221,7 +231,8 @@ Spectrum<N> Spectrum<N>::operator+(const Spectrum<N>& s) const {
     return res;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator-=(const Spectrum<N>& s) {
+template <size_t N>
+BaseSpectrum<N>& BaseSpectrum<N>::operator-=(const BaseSpectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] -= s[i];
     }
@@ -230,8 +241,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator-=(const Spectrum<N>& s) {
 }
 
 template <size_t N>
-Spectrum<N> Spectrum<N>::operator-(const Spectrum<N>& s) const {
-    Spectrum<N> res;
+BaseSpectrum<N> BaseSpectrum<N>::operator-(const BaseSpectrum<N>& s) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] - s[i];
     }
@@ -239,7 +250,8 @@ Spectrum<N> Spectrum<N>::operator-(const Spectrum<N>& s) const {
     return res;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(const Spectrum<N>& s) {
+template <size_t N>
+BaseSpectrum<N>& BaseSpectrum<N>::operator*=(const BaseSpectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] *= s[i];
     }
@@ -248,8 +260,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(const Spectrum<N>& s) {
 }
 
 template <size_t N>
-Spectrum<N> Spectrum<N>::operator*(const Spectrum<N>& s) const {
-    Spectrum<N> res;
+BaseSpectrum<N> BaseSpectrum<N>::operator*(const BaseSpectrum<N>& s) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] * s[i];
     }
@@ -257,7 +269,8 @@ Spectrum<N> Spectrum<N>::operator*(const Spectrum<N>& s) const {
     return res;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(const Spectrum<N>& s) {
+template <size_t N>
+BaseSpectrum<N>& BaseSpectrum<N>::operator/=(const BaseSpectrum<N>& s) {
     for (size_t i = 0; i < N; ++i) {
         c[i] /= s[i];
     }
@@ -266,8 +279,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(const Spectrum<N>& s) {
 }
 
 template <size_t N>
-Spectrum<N> Spectrum<N>::operator/(const Spectrum<N>& s) const {
-    Spectrum<N> res;
+BaseSpectrum<N> BaseSpectrum<N>::operator/(const BaseSpectrum<N>& s) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] / s[i];
     }
@@ -275,7 +288,7 @@ Spectrum<N> Spectrum<N>::operator/(const Spectrum<N>& s) const {
     return res;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(float a) {
+template <size_t N> BaseSpectrum<N>& BaseSpectrum<N>::operator*=(float a) {
     for (size_t i = 0; i < N; ++i) {
         c[i] *= a;
     }
@@ -283,8 +296,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator*=(float a) {
     return *this;
 }
 
-template <size_t N> Spectrum<N> Spectrum<N>::operator*(float a) const {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> BaseSpectrum<N>::operator*(float a) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] * a;
     }
@@ -292,7 +305,7 @@ template <size_t N> Spectrum<N> Spectrum<N>::operator*(float a) const {
     return res;
 }
 
-template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(float a) {
+template <size_t N> BaseSpectrum<N>& BaseSpectrum<N>::operator/=(float a) {
     for (size_t i = 0; i < N; ++i) {
         c[i] /= a;
     }
@@ -300,8 +313,8 @@ template <size_t N> Spectrum<N>& Spectrum<N>::operator/=(float a) {
     return *this;
 }
 
-template <size_t N> Spectrum<N> Spectrum<N>::operator/(float a) const {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> BaseSpectrum<N>::operator/(float a) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = c[i] / a;
     }
@@ -310,8 +323,8 @@ template <size_t N> Spectrum<N> Spectrum<N>::operator/(float a) const {
 }
 
 template <size_t N>
-Spectrum<N> Spectrum<N>::clamp(float low, float high) const {
-    Spectrum<N> res;
+BaseSpectrum<N> BaseSpectrum<N>::clamp(float low, float high) const {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         if (c[i] < low) {
             res[i] = low;
@@ -324,7 +337,7 @@ Spectrum<N> Spectrum<N>::clamp(float low, float high) const {
     return res;
 }
 
-template <size_t N> std::string Spectrum<N>::to_string() const {
+template <size_t N> std::string BaseSpectrum<N>::to_string() const {
     std::string str = "[";
     for (size_t i = 0; i < N - 1; ++i) {
         str += std::to_string(c[i]) + ", ";
@@ -333,8 +346,8 @@ template <size_t N> std::string Spectrum<N>::to_string() const {
     return str;
 }
 
-template <size_t N> Spectrum<N> operator-(const Spectrum<N>& s) {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> operator-(const BaseSpectrum<N>& s) {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = -s[i];
     }
@@ -342,8 +355,9 @@ template <size_t N> Spectrum<N> operator-(const Spectrum<N>& s) {
     return res;
 }
 
-template <size_t N> Spectrum<N> operator*(float a, const Spectrum<N>& s) {
-    Spectrum<N> res;
+template <size_t N>
+BaseSpectrum<N> operator*(float a, const BaseSpectrum<N>& s) {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = a * s[i];
     }
@@ -351,8 +365,8 @@ template <size_t N> Spectrum<N> operator*(float a, const Spectrum<N>& s) {
     return res;
 }
 
-template <size_t N> Spectrum<N> pow(const Spectrum<N>& s, float e) {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> pow(const BaseSpectrum<N>& s, float e) {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::pow(s[i], e);
     }
@@ -360,8 +374,8 @@ template <size_t N> Spectrum<N> pow(const Spectrum<N>& s, float e) {
     return res;
 }
 
-template <size_t N> Spectrum<N> exp(const Spectrum<N>& s) {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> exp(const BaseSpectrum<N>& s) {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::exp(s[i]);
     }
@@ -369,8 +383,8 @@ template <size_t N> Spectrum<N> exp(const Spectrum<N>& s) {
     return res;
 }
 
-template <size_t N> Spectrum<N> sqrt(const Spectrum<N>& s) {
-    Spectrum<N> res;
+template <size_t N> BaseSpectrum<N> sqrt(const BaseSpectrum<N>& s) {
+    BaseSpectrum<N> res;
     for (size_t i = 0; i < N; ++i) {
         res[i] = std::sqrt(s[i]);
     }
@@ -379,21 +393,24 @@ template <size_t N> Spectrum<N> sqrt(const Spectrum<N>& s) {
 }
 
 template <size_t N>
-Spectrum<N> lerp(float t, const Spectrum<N>& s1, const Spectrum<N>& s2) {
+BaseSpectrum<N> lerp(float t, const BaseSpectrum<N>& s1,
+                     const BaseSpectrum<N>& s2) {
     return (1 - t) * s1 + t * s2;
 }
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os, const Spectrum<N>& spectrum) {
-    return os << spectrum.to_string();
+std::ostream& operator<<(std::ostream& os,
+                         const BaseSpectrum<N>& Basespectrum) {
+    return os << Basespectrum.to_string();
 }
 
 //
 // SampledSpectrum implementation
 //
 
-SampledSpectrum::SampledSpectrum(float v) : Spectrum<NUM_SAMPLES>(v) {}
-SampledSpectrum::SampledSpectrum(const Spectrum<60>& s) : Spectrum<60>(s) {}
+SampledSpectrum::SampledSpectrum(float v) : BaseSpectrum<NUM_SAMPLES>(v) {}
+SampledSpectrum::SampledSpectrum(const BaseSpectrum<60>& s)
+    : BaseSpectrum<60>(s) {}
 
 namespace detail {
 
@@ -607,9 +624,9 @@ std::array<float, 3> SampledSpectrum::to_rgb() const {
 }
 
 SampledSpectrum SampledSpectrum::from_rgb(float r, float g, float b,
-                                          SpectrumType type) {
+                                          BaseSpectrumType type) {
     SampledSpectrum s;
-    if (type == SpectrumType::Reflectance) {
+    if (type == BaseSpectrumType::Reflectance) {
         if (r <= g && r <= b) {
             s += r * refl_d65_white();
             if (g <= b) {
@@ -638,7 +655,7 @@ SampledSpectrum SampledSpectrum::from_rgb(float r, float g, float b,
                 s += (r - g) * refl_red();
             }
         }
-    } else if (type == SpectrumType::Illuminance) {
+    } else if (type == BaseSpectrumType::Illuminance) {
         if (r <= g && r <= b) {
             s += r * illum_d65_white();
             if (g <= b) {
@@ -675,7 +692,7 @@ SampledSpectrum SampledSpectrum::from_rgb(float r, float g, float b,
 }
 
 SampledSpectrum SampledSpectrum::from_xyz(float x, float y, float z,
-                                          SpectrumType type) {
+                                          BaseSpectrumType type) {
     auto rgb = xyz_to_rgb(x, y, z);
     return from_rgb(rgb[0], rgb[1], rgb[2], type);
 }
@@ -701,8 +718,8 @@ inline std::array<float, 3> rgb_to_xyz(float r, float g, float b) {
 // RGBSpectrum implementation
 //
 
-RGBSpectrum::RGBSpectrum(float v) : Spectrum<3>(v){};
-RGBSpectrum::RGBSpectrum(const Spectrum<3>& s) : Spectrum<3>(s){};
+RGBSpectrum::RGBSpectrum(float v) : BaseSpectrum<3>(v){};
+RGBSpectrum::RGBSpectrum(const BaseSpectrum<3>& s) : BaseSpectrum<3>(s){};
 
 float RGBSpectrum::y() const {
     // cf. rgb_to_xyz function for the coefficients
@@ -715,7 +732,7 @@ std::array<float, 3> RGBSpectrum::to_xyz() const {
 
 std::array<float, 3> RGBSpectrum::to_rgb() const { return {c[0], c[1], c[2]}; }
 
-RGBSpectrum RGBSpectrum::from_rgb(float r, float g, float b, SpectrumType) {
+RGBSpectrum RGBSpectrum::from_rgb(float r, float g, float b, BaseSpectrumType) {
     RGBSpectrum s;
     s[0] = r;
     s[1] = g;
@@ -723,7 +740,7 @@ RGBSpectrum RGBSpectrum::from_rgb(float r, float g, float b, SpectrumType) {
     return s;
 }
 
-RGBSpectrum RGBSpectrum::from_xyz(float x, float y, float z, SpectrumType) {
+RGBSpectrum RGBSpectrum::from_xyz(float x, float y, float z, BaseSpectrumType) {
     auto rgb = xyz_to_rgb(x, y, z);
     RGBSpectrum s;
     s[0] = rgb[0];
