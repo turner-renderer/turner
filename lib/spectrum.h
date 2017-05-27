@@ -8,6 +8,15 @@
 
 namespace turner {
 
+template <size_t N> class BaseSpectrum;
+class SampledSpectrum;
+class RGBSpectrum;
+
+/**
+ * Spectrum implementation which is used by default.
+ */
+using Spectrum = RGBSpectrum;
+
 /**
  * Base spectrum class.
  *
