@@ -1,3 +1,5 @@
+#pragma once
+
 #include "functional.h"
 #include "turner.h"
 
@@ -82,7 +84,7 @@ BaseSpectrum<N> lerp(float t, const BaseSpectrum<N>& s1,
                      const BaseSpectrum<N>& s2);
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os, const BaseSpectrum<N>& Basespectrum);
+std::ostream& operator<<(std::ostream& os, const BaseSpectrum<N>& s);
 
 #include "spectrum.inl"
 
@@ -139,7 +141,7 @@ inline std::array<float, 3> rgb_to_xyz(float r, float g, float b);
 
 class RGBSpectrum : public BaseSpectrum<3> {
 public:
-    explicit RGBSpectrum(float v = 0.f);
+    RGBSpectrum(float v = 0.f);
     explicit RGBSpectrum(const BaseSpectrum<3>& s);
 
     // TODO: from_samples is not implemented
@@ -408,9 +410,8 @@ BaseSpectrum<N> lerp(float t, const BaseSpectrum<N>& s1,
 }
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os,
-                         const BaseSpectrum<N>& Basespectrum) {
-    return os << Basespectrum.to_string();
+std::ostream& operator<<(std::ostream& os, const BaseSpectrum<N>& s) {
+    return os << s.to_string();
 }
 
 //
@@ -709,16 +710,16 @@ SampledSpectrum SampledSpectrum::from_xyz(float x, float y, float z,
  * Matrix coefficients are from pbrt v3.
  */
 inline std::array<float, 3> xyz_to_rgb(float x, float y, float z) {
-    auto r = 3.240479f * x - 1.537150f * y - 0.498535f * z;
-    auto g = -0.969256f * x + 1.875991f * y + 0.041556f * z;
-    auto b = 0.055648f * x - 0.204043f * y + 1.057311f * z;
+    float r = 3.240479f * x - 1.537150f * y - 0.498535f * z;
+    float g = -0.969256f * x + 1.875991f * y + 0.041556f * z;
+    float b = 0.055648f * x - 0.204043f * y + 1.057311f * z;
     return {r, g, b};
 }
 
 inline std::array<float, 3> rgb_to_xyz(float r, float g, float b) {
-    auto x = 0.412453f * r + 0.357580f * g + 0.180423f * b;
-    auto y = 0.212671f * r + 0.715160f * g + 0.072169f * b;
-    auto z = 0.019334f * r + 0.119193f * g + 0.950227f * b;
+    float x = 0.412453f * r + 0.357580f * g + 0.180423f * b;
+    float y = 0.212671f * r + 0.715160f * g + 0.072169f * b;
+    float z = 0.019334f * r + 0.119193f * g + 0.950227f * b;
     return {x, y, z};
 }
 

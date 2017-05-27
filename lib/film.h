@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry.h"
+#include "spectrum.h"
 #include "turner.h"
 
 #include <iomanip>
@@ -30,7 +31,7 @@ public:
         int width = pixel_bbox_.p_max.x - pixel_bbox_.p_min.x;
         int offset =
             (p.x - pixel_bbox_.p_min.x) + (p.y - pixel_bbox_.p_min.y) * width;
-        assert(0 < offset && offset < pixels_.size());
+        assert(0 <= offset && static_cast<size_t>(offset) < pixels_.size());
         return pixels_[offset];
     }
 
@@ -61,7 +62,8 @@ public:
                     float sample_weight = 1.f) {
         Point2f p_film_discrete = p_film - Vector2f(0.5f, 0.5f);
         Point2i p0 = ceil(p_film_discrete - filter_.radius);
-        Point2i p1 = floor(p_film_discrete + filter_.radius) + Point2i(1, 1);
+        Point2i p1 = floor(p_film_discrete + filter_.radius);
+        p1 += Vector2i(1, 1);
         p0 = max(p0, pixel_bbox_.p_min);
         p1 = min(p1, pixel_bbox_.p_max);
 
@@ -76,11 +78,30 @@ public:
         }
     }
 
+    std::string to_string() const {
+        size_t width = pixel_bbox_.p_max.x - pixel_bbox_.p_min.x;
+        size_t offset = 0;
+        std::string result;
+        for (const auto& pixel : pixels_) {
+            result += pixel.contrib_sum.to_string() + " ";
+            if (++offset % width == 0) {
+                result += "\n";
+            }
+        }
+        return result;
+    }
+
 private:
     Bbox2i pixel_bbox_;
     Filter filter_;
     std::vector<FilmTilePixel<Spectrum>> pixels_;
 };
+
+template <typename Filter, typename Spectrum>
+std::ostream& operator<<(std::ostream& out,
+                         const FilmTile<Filter, Spectrum>& tile) {
+    return out << tile.to_string();
+}
 
 /**
  * Filter is a sample filter used to accumulate sampled values into a pixel.
@@ -89,7 +110,7 @@ private:
 template <typename Filter> class Film {
 private:
     struct Pixel {
-        float xyz[3] = {};
+        std::array<float, 3> xyz;
         float filter_weight_sum = 0;
     };
 
@@ -115,27 +136,27 @@ public:
     }
 
     template <typename Spectrum>
-    FilmTile<Filter, Spectrum> get_film_tile(const Bbox2i& sample_bbox) {
+    FilmTile<Filter, Spectrum> get_tile(const Bbox2i& sample_bbox) {
         Vector2f half_pixel(0.5f, 0.5f);
         auto float_bbox = static_cast<Bbox2f>(sample_bbox);
         Point2i p0 = ceil(float_bbox.p_min - half_pixel - filter.radius);
-        Point2i p1 = floor(float_bbox.p_max - half_pixel + filter.radius) +
-                     Point2i(1, 1);
+        Point2i p1 = floor(float_bbox.p_max - half_pixel + filter.radius);
+        p1 += Vector2i(1, 1);
         auto tile_pixel_bbox = intersect(Bbox2i(p0, p1), cropped_pixel_bbox);
         return FilmTile<Filter, Spectrum>(tile_pixel_bbox, filter);
     }
 
     template <typename Spectrum>
-    void merge_film_tile(FilmTile<Filter, Spectrum> tile) {
+    void merge_tile(FilmTile<Filter, Spectrum> tile) {
         std::lock_guard<std::mutex> lock(merge_mutex_);
         for (const auto& p : tile.get_pixel_bbox()) {
             const auto& tile_pixel = tile.get_pixel(p);
+            auto& film_pixel = get_pixel(p);
             auto xyz = tile_pixel.contrib_sum.to_xyz();
-            auto& pixel = get_pixel(p);
-            pixel.xyz[0] += std::get<0>(xyz);
-            pixel.xyz[1] += std::get<1>(xyz);
-            pixel.xyz[2] += std::get<2>(xyz);
-            pixel.filter_weight_sum += tile_pixel.filter_weight_sum;
+            film_pixel.xyz[0] += xyz[0];
+            film_pixel.xyz[1] += xyz[1];
+            film_pixel.xyz[2] += xyz[2];
+            film_pixel.filter_weight_sum += tile_pixel.filter_weight_sum;
         }
     }
 
@@ -174,8 +195,10 @@ std::ostream& operator<<(std::ostream& out, const Film<Filter>& film) {
     int offset = 0;
     for (auto p : film.cropped_pixel_bbox) {
         auto& pixel = film.get_pixel(p);
-
-        // xyz_to_rgb(pixel.xyz, &rgb[0]);  TODO: method missing
+        auto val = xyz_to_rgb(pixel.xyz[0], pixel.xyz[1], pixel.xyz[2]);
+        rgb[3 * offset + 0] = val[0];
+        rgb[3 * offset + 1] = val[1];
+        rgb[3 * offset + 2] = val[2];
 
         // apply filter weight and normlize negative pixel value
         float filter_weight_sum = pixel.filter_weight_sum;

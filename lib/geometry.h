@@ -282,7 +282,7 @@ public:
     Point2(T x, T y) : x{x}, y{y} { assert(!contains_nan()); }
 
     template <typename U>
-    explicit Point2(const Point2<U>& p)
+    Point2(const Point2<U>& p)
         : x(static_cast<T>(p.x)), y(static_cast<T>(p.y)) {
         assert(!contains_nan());
     }
@@ -680,7 +680,7 @@ public:
         : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
 
     template <typename U>
-    explicit Bbox2(const Bbox2<U>& b) : p_min(b.p_min, b.p_max) {}
+    explicit Bbox2(const Bbox2<U>& b) : p_min(b.p_min), p_max(b.p_max) {}
 
     const Point2<T>& operator[](size_t i) const {
         assert(i < 2);
@@ -697,6 +697,10 @@ public:
     }
 
     bool empty() const { return p_max.x <= p_min.x || p_max.y <= p_min.y; }
+    bool operator==(const Bbox2<T> other) const {
+        return p_min == other.p_min && p_max == other.p_max;
+    }
+    bool operator!=(const Bbox2<T> other) const { return !(*this == other); }
 
     T width() const { return p_max.x - p_min.x; }
     T height() const { return p_max.y - p_min.y; }
@@ -709,6 +713,10 @@ public:
 
     Point2<T> lerp(const Point2f& t) const {
         return {lerp(t.x, p_min.x, p_max.x), lerp(t.y, p_min.y, p_max.y)};
+    }
+
+    std::string to_string() const {
+        return "[" + p_min.to_string() + ", " + p_max.to_string() + "]";
     }
 
 public:
@@ -744,6 +752,11 @@ template <typename T> bool overlaps(const Bbox2<T>& b1, const Bbox2<T>& b2) {
 template <typename T> bool inside(const Point2<T>& p, const Bbox2<T>& b) {
     return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y &&
             p.y <= b.p_max.y && p.z >= b.p_min.z && p.z <= b.p_max.z);
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const Bbox2<T>& b) {
+    return out << b.to_string();
 }
 
 /**
@@ -825,6 +838,11 @@ public:
         return {(*this)[(corner & 1)].x, (*this)[(corner & 2) ? 1 : 0].y,
                 (*this)[(corner & 4) ? 1 : 0].z};
     }
+
+    bool operator==(const Bbox2<T> other) const {
+        return p_min == other.p_min && p_max == other.p_max;
+    }
+    bool operator!=(const Bbox2<T> other) const { return !(*this == other); }
 
     Vector3<T> diagonal() const { return p_max - p_min; }
 

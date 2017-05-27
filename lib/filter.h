@@ -10,7 +10,6 @@ public:
     BaseFilter(const Vector2f& radius)
         : radius(radius), inv_radius({1 / radius.x, 1 / radius.y}) {}
 
-protected:
     Vector2f radius;
     Vector2f inv_radius;
 };
