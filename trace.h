@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "lib/geometry.h"
 #include "lib/kdtree.h"
 #include "lib/types.h"
 
@@ -20,7 +21,7 @@
  * @param  conf              configuration
  * @return                   Color hit by the ray
  */
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf);

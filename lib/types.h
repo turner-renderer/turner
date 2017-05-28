@@ -1,28 +1,14 @@
 #pragma once
 
+#include "geometry.h"
+
 #include <assimp/camera.h>
 #include <assimp/types.h>
 
 #include <array>
 #include <assert.h>
-#include <vector>
 
-#define UNUSED(x) (void)(x)
-
-static constexpr float EPS = 0.00001f;
-static constexpr float FLT_MAX = std::numeric_limits<float>::max();
-
-inline bool is_eps_zero(float a) { return std::abs(a) < EPS; }
-
-/**
- * If a is almost zero, return 0.
- */
-inline float eps_zero(float a) {
-    if (is_eps_zero(a)) {
-        return 0;
-    }
-    return a;
-}
+using namespace turner;
 
 template <typename Number>
 Number clamp(Number input, Number min = 0, Number max = 255) {
@@ -46,42 +32,8 @@ enum class Axis : char { X = 0, Y = 1, Z = 2 };
 static constexpr std::array<Axis, 3> AXES = {{Axis::X, Axis::Y, Axis::Z}};
 
 /**
- * Extend vector by [] operator to access axis coordinate.
+ * Color
  */
-class Vec : public aiVector3D {
-public:
-    template <typename... Args> Vec(Args... args) : aiVector3D(args...) {}
-
-    using aiVector3D::operator[];
-
-    float operator[](const Axis ax) const {
-        return *(this->v + static_cast<int>(ax));
-    }
-
-    float& operator[](const Axis ax) {
-        return *(this->v + static_cast<int>(ax));
-    }
-
-    bool operator<(const Vec& v) const { return x < v.x && y < v.y && z < v.z; }
-
-    bool operator<=(const Vec& v) const {
-        return x <= v.x && y <= v.y && z <= v.z;
-    }
-
-    template <class Archive> void serialize(Archive& archive) {
-        archive(x, y, z);
-    }
-};
-
-inline Vec operator/(int a, const Vec& v) {
-    return {static_cast<float>(a) / v.x, static_cast<float>(a) / v.y,
-            static_cast<float>(a) / v.z};
-}
-
-struct Vec2 {
-    float x, y;
-};
-
 using Color = aiColor4D;
 
 inline Color operator/(const Color& c, size_t x) {
@@ -101,88 +53,11 @@ template <class Archive> void serialize(Archive& archive, Color& c) {
 }
 
 /**
- * Axes aligned bounding box (AABB).
- */
-struct Box {
-    float surface_area() const {
-        auto e0 = max[Axis::X] - min[Axis::X];
-        auto e1 = max[Axis::Y] - min[Axis::Y];
-        auto e2 = max[Axis::Z] - min[Axis::Z];
-
-        if (is_eps_zero(e0)) {
-            return e1 * e2;
-        } else if (is_eps_zero(e1)) {
-            return e0 * e2;
-        } else if (is_eps_zero(e2)) {
-            return e0 * e1;
-        }
-
-        return 2.f * (e0 * e1 + e0 * e2 + e1 * e2);
-    }
-
-    /**
-     * Check if the box is planar in the plane: ax = 0.
-     */
-    bool is_planar(Axis ax) const {
-        return !(std::abs((max - min)[static_cast<int>(ax)]) > EPS);
-    }
-
-    bool is_trivial() const {
-        return is_eps_zero(min[Axis::X]) && is_eps_zero(min[Axis::Y]) &&
-               is_eps_zero(min[Axis::Z]) && is_eps_zero(max[Axis::X]) &&
-               is_eps_zero(max[Axis::Y]) && is_eps_zero(max[Axis::Z]);
-    }
-
-    /**
-     * Split `box` on the plane defined by: plane_ax = plane_pos.
-     */
-    std::pair<Box, Box> split(Axis plane_ax, float plane_pos) const {
-        assert(this->min[plane_ax] - EPS <= plane_pos);
-        assert(plane_pos <= this->max[plane_ax] + EPS);
-
-        Vec lmax = this->max;
-        lmax[plane_ax] = plane_pos;
-        Vec rmin = this->min;
-        rmin[plane_ax] = plane_pos;
-
-        return {{this->min, lmax}, {rmin, this->max}};
-    }
-
-    template <class Archive> void serialize(Archive& archive) {
-        archive(min, max);
-    }
-
-    Vec min, max;
-};
-
-/**
- * Compute the minimal AABB containing both `a` and `b`.
- */
-inline Box operator+(const Box& a, const Box& b) {
-    Vec new_min = {std::min(a.min.x, b.min.x), std::min(a.min.y, b.min.y),
-                   std::min(a.min.z, b.min.z)};
-
-    Vec new_max = {std::max(a.max.x, b.max.x), std::max(a.max.y, b.max.y),
-                   std::max(a.max.z, b.max.z)};
-
-    return {new_min, new_max};
-}
-
-/**
  * Light Source
  */
 struct Light {
-    Vec position;
+    Point3f position;
     Color color;
-};
-
-/**
- * Ray with precomputed inverse direction
- */
-struct Ray {
-    Ray(const Vec& pos, const Vec& dir) : pos(pos), dir(dir), invdir(1 / dir) {}
-
-    Vec pos, dir, invdir;
 };
 
 /**
@@ -195,9 +70,9 @@ public:
         : aiCamera{args...}
         , trafo_(trafo) // discard translation in trafo
         , inverse_trafo_(trafo_) {
-        assert(mPosition == Vec());
-        assert(mUp == Vec(0, 1, 0));
-        assert(mLookAt == Vec(0, 0, -1));
+        assert(mPosition == aiVector3D());
+        assert(mUp == aiVector3D(0, 1, 0));
+        assert(mLookAt == aiVector3D(0, 0, -1));
         assert(mAspect != 0);
 
         mPosition = trafo * mPosition;
@@ -218,17 +93,19 @@ public:
      * The positioning of the camera is done in its parent's node
      * transformation matrix.
      */
-    Vec raster2cam(const aiVector2D& p, float w, float h) const {
-        return trafo_ * Vec(-delta_x_ * (1 - 2 * p.x / w),
-                            delta_y_ * (1 - 2 * p.y / h), -1);
+    Point3f raster2cam(const Vector2f& p, float w, float h) const {
+        const auto v = trafo_ * aiVector3D(-delta_x_ * (1 - 2 * p.x / w),
+                                           delta_y_ * (1 - 2 * p.y / h), -1);
+        return {v.x, v.y, v.z};
     }
 
     /**
      * Convert 3d world coordinates to raster 2d coordinates.
      */
-    aiVector2t<int> cam2raster(const Vec& p, float w, float h) const {
+    Vector2i cam2raster(const Point3f& p, float w, float h) const {
+        auto p_ai = aiVector3D(p.x, p.y, p.z);
         // move to camera position and convert to camera space
-        auto v = inverse_trafo_ * (p - mPosition);
+        auto v = inverse_trafo_ * (p_ai - mPosition);
         // project on z = 1 in normal camera space
         v.x /= v.z * -delta_x_;
         v.y /= v.z * -delta_y_;

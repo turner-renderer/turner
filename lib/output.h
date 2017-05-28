@@ -98,10 +98,6 @@ inline std::ostream& operator<<(std::ostream& os, const aiCamera& cam) {
               << "mUp=" << cam.mUp << ")";
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Box& box) {
-    return os << "Box[" << box.min << ", " << box.max << "]";
-}
-
 inline std::ostream& operator<<(std::ostream& os, const Stats& stats) {
     return os << "Triangles      : " << stats.num_triangles << std::endl
               << "Kd-Tree Height : " << stats.kdtree_height << std::endl

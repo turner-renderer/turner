@@ -20,24 +20,24 @@ static constexpr int TOP = 8;    // 001000
 static constexpr int FRONT = 16; // 010000
 static constexpr int BACK = 32;  // 100000
 
-inline OutCode compute_outcode(const Vec& v, const Box& box) {
+inline OutCode compute_outcode(const Vector3f& v, const Bbox3f& box) {
     OutCode code = INSIDE;
 
-    if (v.x < box.min.x) {
+    if (v.x < box.p_min.x) {
         code |= LEFT;
-    } else if (box.max.x < v.x) {
+    } else if (box.p_max.x < v.x) {
         code |= RIGHT;
     }
 
-    if (v.y < box.min.y) {
+    if (v.y < box.p_min.y) {
         code |= BOTTOM;
-    } else if (box.max.y < v.y) {
+    } else if (box.p_max.y < v.y) {
         code |= TOP;
     }
 
-    if (v.z < box.min.z) {
+    if (v.z < box.p_min.z) {
         code |= BACK;
-    } else if (box.max.z < v.z) {
+    } else if (box.p_max.z < v.z) {
         code |= FRONT;
     }
 
@@ -53,7 +53,7 @@ inline OutCode compute_outcode(const Vec& v, const Box& box) {
  *   false, if the line is outside of the box, otherwise return true. In
  *   that case p0 and p1 are updated, and describe the clipped line.
  */
-inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
+inline bool clip_line_aabb(Vector3f& p0, Vector3f& p1, const Bbox3f& box) {
     auto outcode_p0 = detail::compute_outcode(p0, box);
     auto outcode_p1 = detail::compute_outcode(p1, box);
 
@@ -66,35 +66,35 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
 
         float x, y, z, t;
         if (outcode_out & detail::TOP) {
-            t = (box.max.y - p0.y) / (p1.y - p0.y);
+            t = (box.p_max.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
-            y = box.max.y;
+            y = box.p_max.y;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::BOTTOM) {
-            t = (box.min.y - p0.y) / (p1.y - p0.y);
+            t = (box.p_min.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
-            y = box.min.y;
+            y = box.p_min.y;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::RIGHT) {
-            t = (box.max.x - p0.x) / (p1.x - p0.x);
-            x = box.max.x;
+            t = (box.p_max.x - p0.x) / (p1.x - p0.x);
+            x = box.p_max.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::LEFT) {
-            t = (box.min.x - p0.x) / (p1.x - p0.x);
-            x = box.min.x;
+            t = (box.p_min.x - p0.x) / (p1.x - p0.x);
+            x = box.p_min.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::FRONT) {
-            t = (box.max.z - p0.z) / (p1.z - p0.z);
+            t = (box.p_max.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
-            z = box.max.z;
+            z = box.p_max.z;
         } else { // outcode_out & detail::BACK
-            t = (box.min.z - p0.z) / (p1.z - p0.z);
+            t = (box.p_min.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
-            z = box.min.z;
+            z = box.p_min.z;
         }
 
         if (outcode_out == outcode_p0) {
@@ -118,9 +118,9 @@ enum class PointPlanePos { ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE };
 /**
  * Classify point to the thick plane given by equation `n * x = d`.
  */
-inline PointPlanePos classify_point_to_plane(const Vec& pt, const Vec& n,
-                                             float d) {
-    float dist = n * pt - d;
+inline PointPlanePos classify_point_to_plane(const Point3f& pt,
+                                             const Normal3f& n, float d) {
+    float dist = dot(n, Vector3f(pt)) - d;
     if (dist > EPS) {
         return PointPlanePos::IN_FRONT_OF_PLANE;
     } else if (dist < -EPS) {
@@ -132,17 +132,17 @@ inline PointPlanePos classify_point_to_plane(const Vec& pt, const Vec& n,
 /**
  * Sutherland-Hodgman polygon clipping at a (thick) plane.
  */
-inline std::vector<Vec> clip_polygon_at_plane(const std::vector<Vec>& poly,
-                                              const Vec& n, float d) {
+inline std::vector<Point3f>
+clip_polygon_at_plane(const std::vector<Point3f>& poly, const Normal3f& n,
+                      float d) {
     assert(poly.size() > 1);
 
-    std::vector<Vec> points;
+    std::vector<Point3f> points;
 
-    Vec a = poly.back();
+    Point3f a = poly.back();
     auto a_side = classify_point_to_plane(a, n, d);
 
     for (auto b : poly) {
-
         auto b_side = classify_point_to_plane(b, n, d);
 
         if (b_side == PointPlanePos::IN_FRONT_OF_PLANE) {
@@ -153,7 +153,7 @@ inline std::vector<Vec> clip_polygon_at_plane(const std::vector<Vec>& poly,
                 UNUSED(intersects);
                 assert(intersects);
 
-                Vec pt(a + t * (b - a));
+                Point3f pt(a + t * (b - a));
                 assert(classify_point_to_plane(pt, n, d) ==
                        PointPlanePos::ON_PLANE);
                 points.emplace_back(pt);
@@ -167,7 +167,7 @@ inline std::vector<Vec> clip_polygon_at_plane(const std::vector<Vec>& poly,
                 assert(intersects);
                 UNUSED(intersects);
 
-                Vec pt(a + t * (b - a));
+                Point3f pt(a + t * (b - a));
                 assert(classify_point_to_plane(pt, n, d) ==
                        PointPlanePos::ON_PLANE);
                 points.emplace_back(pt);
@@ -193,15 +193,15 @@ inline std::vector<Vec> clip_polygon_at_plane(const std::vector<Vec>& poly,
  * Return:
  *   the bounding box of the clipped polygon.
  */
-inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
-    std::vector<Vec> points(tri.vertices.begin(), tri.vertices.end());
+inline Bbox3f clip_triangle_at_aabb(const Triangle& tri, const Bbox3f& box) {
+    std::vector<Point3f> points(tri.vertices.begin(), tri.vertices.end());
 
     // clip at 6 planes defined by box
-    for (auto ax : AXES) {
+    for (size_t ax = 0; ax < 3; ++ax) {
         for (int side = 0; side < 2; ++side) {
-            Vec normal;
+            Normal3f normal;
             normal[ax] = side == 0 ? 1 : -1;
-            float dist = side == 0 ? box.min[ax] : -box.max[ax];
+            float dist = side == 0 ? box.p_min[ax] : -box.p_max[ax];
 
             points = clip_polygon_at_plane(points, normal, dist);
             if (points.size() < 2) {
@@ -211,18 +211,22 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     }
 
     // compute min and max coordinates
-    Box res{std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::lowest()};
-    for (auto ax : AXES) {
-        for (const auto& pt : points) {
-            if (pt[ax] < res.min[ax]) {
-                res.min[ax] = pt[ax];
+    Point3f p_min(std::numeric_limits<float>::max(),
+                  std::numeric_limits<float>::max(),
+                  std::numeric_limits<float>::max());
+    Point3f p_max(std::numeric_limits<float>::lowest(),
+                  std::numeric_limits<float>::lowest(),
+                  std::numeric_limits<float>::lowest());
+    for (const auto& pt : points) {
+        for (size_t ax = 0; ax < 3; ++ax) {
+            if (pt[ax] < p_min[ax]) {
+                p_min[ax] = pt[ax];
             }
-            if (res.max[ax] < pt[ax]) {
-                res.max[ax] = pt[ax];
+            if (p_max[ax] < pt[ax]) {
+                p_max[ax] = pt[ax];
             }
         }
     }
 
-    return res;
+    return {p_min, p_max};
 }

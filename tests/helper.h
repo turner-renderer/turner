@@ -1,77 +1,89 @@
 #include "../lib/triangle.h"
 #include "../lib/types.h"
 
-#include <math.h>
 #include <random>
 
 // Construct a triangle with trivial normals and colors.
-Triangle test_triangle(Vec a, Vec b, Vec c) { return Triangle({a, b, c}); }
+Triangle test_triangle(const Point3f& a, const Point3f& b, const Point3f& c) {
+    return Triangle({a, b, c});
+}
 
 // Construct a triangle with trivial colors.
-Triangle test_triangle(Vec a, Vec b, Vec c, Vec na, Vec nb, Vec nc) {
+Triangle test_triangle(const Point3f& a, const Point3f& b, const Point3f& c,
+                       const Normal3f& na, const Normal3f& nb,
+                       const Normal3f& nc) {
     return Triangle({a, b, c}, {na, nb, nc}, Color(), Color(), Color(), Color(),
                     0);
 }
 
-Vec random_vec() {
+Vector3f random_vec() {
     static std::default_random_engine gen(0);
     static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
     return {rnd(gen), rnd(gen), rnd(gen)};
 };
 
-// Construct a random vector lying on the unit sphere in the plane ax = pos.
-Vec random_vec_on_unit_sphere(Axis ax, float pos) {
+Point3f random_pt() {
     static std::default_random_engine gen(0);
-    static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
+    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
+    return {rnd(gen), rnd(gen), rnd(gen)};
+};
+
+Normal3f random_normal() {
+    static std::default_random_engine gen(0);
+    static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
+    Normal3f n{rnd(gen), rnd(gen), rnd(gen)};
+    return normalize(n);
+};
+
+// Construct a random vector lying on the unit sphere in the plane ax = pos.
+Point3f random_pt_on_unit_sphere(Axis ax, float pos) {
+    static std::default_random_engine gen(0);
+    static std::uniform_real_distribution<float> rnd(0, PI2);
 
     auto phi = rnd(gen);
     auto x = cos(phi);
     auto y = sin(phi);
 
-    Vec v;
+    Point3f p;
     size_t ax_num = static_cast<size_t>(ax);
-    v[AXES[ax_num]] = pos;
-    v[AXES[(ax_num + 1) % 3]] = x;
-    v[AXES[(ax_num + 2) % 3]] = y;
-    return v;
+    p[(ax_num + 0) % 3] = pos;
+    p[(ax_num + 1) % 3] = x;
+    p[(ax_num + 2) % 3] = y;
+    return p;
 }
 
 Triangle random_triangle() {
-    return test_triangle(random_vec(), random_vec(), random_vec());
+    return test_triangle(random_pt(), random_pt(), random_pt(), random_normal(),
+                         random_normal(), random_normal());
 }
 
 // Construct a random triangle with vertices lying on the unit sphere in the
 // plane ax = pos.
 Triangle random_triangle_on_unit_sphere(Axis ax, float pos) {
-    return test_triangle(random_vec_on_unit_sphere(ax, pos),
-                         random_vec_on_unit_sphere(ax, pos),
-                         random_vec_on_unit_sphere(ax, pos));
+    return test_triangle(random_pt_on_unit_sphere(ax, pos),
+                         random_pt_on_unit_sphere(ax, pos),
+                         random_pt_on_unit_sphere(ax, pos));
 }
 
 // Construct a random regular triangle with vertices lying on the unit sphere
 // in the plane ax = pos. In particular, the 0-point lies in the triangle.
 Triangle random_regular_triangle_on_unit_sphere(Axis ax, float pos) {
     static std::default_random_engine gen(0);
-    static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
+    static std::uniform_real_distribution<float> rnd(0, 2 * PI);
 
     auto phi = rnd(gen);
-    Vec vertices[3];
+    Point3f vertices[3];
     for (size_t i = 0; i < 3; ++i) {
-        auto x = cos(phi + 2.f * M_PI / 3 * i);
-        auto y = sin(phi + 2.f * M_PI / 3 * i);
+        auto x = cos(phi + PI2 / 3 * i);
+        auto y = sin(phi + PI2 / 3 * i);
 
         size_t ax_num = static_cast<size_t>(ax);
-        vertices[i][AXES[ax_num]] = pos;
-        vertices[i][AXES[(ax_num + 1) % 3]] = x;
-        vertices[i][AXES[(ax_num + 2) % 3]] = y;
+        vertices[i][(ax_num + 0) % 3] = pos;
+        vertices[i][(ax_num + 1) % 3] = x;
+        vertices[i][(ax_num + 2) % 3] = y;
     }
 
     return test_triangle(vertices[0], vertices[1], vertices[2]);
-}
-
-// We need this operator only for tests.
-bool operator==(const Box& b1, const Box& b2) {
-    return b1.min == b2.min && b2.max == b2.max;
 }
 
 // We need this operator only for tests.

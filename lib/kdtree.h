@@ -219,7 +219,7 @@ public:
     size_t num_nodes() const { return nodes_.size(); }
     size_t num_triangles() const { return tris_.size(); }
     const Triangles& triangles() const { return tris_; }
-    const Box& box() const { return box_; }
+    const Bbox3f& box() const { return box_; }
     const Triangle& operator[](const TriangleId id) const { return tris_[id]; }
     const Triangle& at(const TriangleId id) const { return tris_.at(id); }
 
@@ -231,7 +231,7 @@ public:
 
 private:
     Triangles tris_;
-    Box box_;
+    Bbox3f box_;
 
     /**
      * Layout:

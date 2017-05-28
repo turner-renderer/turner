@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.2)
 
 add_compile_options(-std=c++1y)
 add_compile_options(
-    -Wall -Wextra -Werror -Wno-missing-braces
+    -Wall -Wextra -Wno-missing-braces
     -Wno-deprecated-declarations
+    -Wno-address-of-packed-member  # from assimp
 )
 
 option(COVERAGE "Generate coverage data" OFF)

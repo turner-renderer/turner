@@ -28,7 +28,7 @@
 #include <unordered_set>
 #include <vector>
 
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
@@ -44,7 +44,7 @@ Color trace(const Vec& origin, const Vec& dir,
     return radiosity[triangle_id];
 }
 
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection, const RadiosityMesh& mesh,
             const FaceRadiosityHandle& rad, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
@@ -61,7 +61,7 @@ Color trace(const Vec& origin, const Vec& dir,
     return mesh.property(rad, face);
 }
 
-Color trace_gouraud(const Vec& origin, const Vec& dir,
+Color trace_gouraud(const Point3f& origin, const Vector3f& dir,
                     KDTreeIntersection& tree_intersection,
                     const RadiosityMesh& mesh,
                     const VertexRadiosityHandle& vrad,
@@ -192,20 +192,25 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(
-                    Triangle{// vertices
-                             {{T * mesh.mVertices[face.mIndices[0]],
-                               T * mesh.mVertices[face.mIndices[1]],
-                               T * mesh.mVertices[face.mIndices[2]]}},
-                             // normals
-                             {{Tp * mesh.mNormals[face.mIndices[0]],
-                               Tp * mesh.mNormals[face.mIndices[1]],
-                               Tp * mesh.mNormals[face.mIndices[2]]}},
-                             ambient,
-                             diffuse,
-                             emissive,
-                             reflective,
-                             reflectivity});
+
+                const auto v0 = T * mesh.mVertices[face.mIndices[0]];
+                const auto v1 = T * mesh.mVertices[face.mIndices[1]];
+                const auto v2 = T * mesh.mVertices[face.mIndices[2]];
+
+                const auto n0 = Tp * mesh.mNormals[face.mIndices[0]];
+                const auto n1 = Tp * mesh.mNormals[face.mIndices[1]];
+                const auto n2 = Tp * mesh.mNormals[face.mIndices[2]];
+
+                Triangle triangle( // vertices
+                    {{{v0.x, v0.y, v0.z},
+                      {v1.x, v1.y, v1.z},
+                      {v2.x, v2.y, v2.z}}},
+                    // normals
+                    {{{n0.x, n0.y, n0.z},
+                      {n1.x, n1.y, n1.z},
+                      {n2.x, n2.y, n2.z}}},
+                    ambient, diffuse, emissive, reflective, reflectivity);
+                triangles.emplace_back(triangle);
             }
         }
     }
@@ -222,28 +227,32 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
 
+    Point3f cam_pos =
+        Point3f(cam.mPosition.x, cam.mPosition.y, cam.mPosition.y);
+
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(
-            pool.enqueue([&image, &cam, &tree, &radiosity, y, &conf]() {
-                // TODO: we need only one tree intersection per thread, not task
-                KDTreeIntersection tree_intersection(tree);
+        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &radiosity, y,
+                                         &conf, &cam_pos]() {
+            // TODO: we need only one tree intersection per thread, not task
+            KDTreeIntersection tree_intersection(tree);
 
-                for (size_t x = 0; x < image.width(); ++x) {
-                    auto cam_dir = cam.raster2cam(
-                        aiVector2D(x, y), image.width(), image.height());
+            for (size_t x = 0; x < image.width(); ++x) {
+                Vector3f cam_dir = Vector3f(cam.raster2cam(
+                    {static_cast<float>(x), static_cast<float>(y)},
+                    image.width(), image.height()));
 
-                    Stats::instance().num_prim_rays += 1;
-                    image(x, y) += trace(cam.mPosition, cam_dir,
-                                         tree_intersection, radiosity, conf);
+                Stats::instance().num_prim_rays += 1;
+                image(x, y) +=
+                    trace(cam_pos, cam_dir, tree_intersection, radiosity, conf);
 
-                    image(x, y) = exposure(image(x, y), conf.exposure);
+                image(x, y) = exposure(image(x, y), conf.exposure);
 
-                    // gamma correction
-                    if (conf.gamma_correction_enabled) {
-                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
-                    }
+                // gamma correction
+                if (conf.gamma_correction_enabled) {
+                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
                 }
-            }));
+            }
+        }));
     }
 
     long completed = 0;
@@ -276,25 +285,28 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     assert(exists);
     UNUSED(exists);
 
+    Point3f cam_pos =
+        Point3f(cam.mPosition.x, cam.mPosition.y, cam.mPosition.y);
+
     for (size_t y = 0; y < image.height(); ++y) {
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
-                                         &vrad, y, &conf]() {
+                                         &vrad, y, &conf, &cam_pos]() {
             // TODO: we need only one tree intersection per thread, not task
             KDTreeIntersection tree_intersection(tree);
 
             for (size_t x = 0; x < image.width(); ++x) {
-                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
-                                              image.height());
+                Vector3f cam_dir = Vector3f(cam.raster2cam(
+                    {static_cast<float>(x), static_cast<float>(y)},
+                    image.width(), image.height()));
 
                 Stats::instance().num_prim_rays += 1;
 
                 if (!conf.gouraud_enabled) {
-                    image(x, y) += trace(cam.mPosition, cam_dir,
-                                         tree_intersection, mesh, frad, conf);
+                    image(x, y) += trace(cam_pos, cam_dir, tree_intersection,
+                                         mesh, frad, conf);
                 } else {
-                    image(x, y) +=
-                        trace_gouraud(cam.mPosition, cam_dir, tree_intersection,
-                                      mesh, vrad, conf);
+                    image(x, y) += trace_gouraud(
+                        cam_pos, cam_dir, tree_intersection, mesh, vrad, conf);
                 }
 
                 image(x, y) = exposure(image(x, y), conf.exposure);
@@ -333,18 +345,21 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
     std::cerr << "Drawing mesh lines ";
 
     constexpr float offset = 1.f;
-    constexpr std::array<Vec2, 8> offsets = {
-        Vec2{0.f, 0.f},           Vec2{offset, 0.f},
-        Vec2{offset, offset},     Vec2{0.f, offset},
-        Vec2{0.f, offset / 2},    Vec2{offset / 2, offset},
-        Vec2{offset, offset / 2}, Vec2{offset / 2, 0.f}};
+    const std::array<Vector2f, 8> offsets = {
+        Vector2f{0.f, 0.f},           Vector2f{offset, 0.f},
+        Vector2f{offset, offset},     Vector2f{0.f, offset},
+        Vector2f{0.f, offset / 2},    Vector2f{offset / 2, offset},
+        Vector2f{offset, offset / 2}, Vector2f{offset / 2, 0.f}};
 
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> mesh_tasks;
 
+    Point3f cam_pos =
+        Point3f(cam.mPosition.x, cam.mPosition.y, cam.mPosition.y);
+
     for (size_t y = 0; y < image.height(); ++y) {
         mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam, &tree, y,
-                                              &conf]() {
+                                              &conf, &cam_pos]() {
             // TODO: we need only one tree intersection per thread, not task
             KDTreeIntersection tree_intersection(tree);
 
@@ -353,20 +368,20 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 std::unordered_set<KDTreeIntersection::OptionalId> triangle_ids;
 
                 // Shoot center ray.
-                auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
-                                              image.width(), image.height());
+                Vector3f cam_dir = Vector3f(cam.raster2cam(
+                    {x + 0.5f, y + 0.5f}, image.width(), image.height()));
                 auto center_id = tree_intersection.intersect(
-                    {cam.mPosition, cam_dir}, dist_to_triangle, s, t);
+                    {cam_pos, cam_dir}, dist_to_triangle, s, t);
                 triangle_ids.insert(center_id);
 
                 // Sample disc rays around center.
                 // TODO: Sample disc with Poisson or similar.
                 for (auto offset : offsets) {
                     cam_dir =
-                        cam.raster2cam(aiVector2D(x + offset.x, y + offset.y),
-                                       image.width(), image.height());
+                        Vector3f(cam.raster2cam({x + offset.x, y + offset.y},
+                                                image.width(), image.height()));
                     auto id = tree_intersection.intersect(
-                        {cam.mPosition, cam_dir}, dist_to_triangle, s, t);
+                        {cam_pos, cam_dir}, dist_to_triangle, s, t);
                     triangle_ids.insert(id);
                 }
 

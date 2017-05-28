@@ -125,7 +125,7 @@ class KDTreeBuildAlgorithm {
 public:
     KDTreeBuildAlgorithm(const Triangles& triangles) : triangles_(&triangles) {}
 
-    TreeNode* build(TriangleIds tris, const Box& box) {
+    TreeNode* build(TriangleIds tris, const Bbox3f& box) {
         using Node = TreeNode;
 
         if (tris.size() == 0) {
@@ -158,8 +158,9 @@ public:
             return new Node(tris);
         }
 
-        Box lbox, rbox;
-        std::tie(lbox, rbox) = box.split(plane_ax, plane_pos);
+        Bbox3f lbox, rbox;
+        std::tie(lbox, rbox) =
+            box.split(static_cast<size_t>(plane_ax), plane_pos);
 
         Node* left = build(std::move(ltris), lbox);
         Node* right = build(std::move(rtris), rbox);
@@ -216,11 +217,11 @@ private:
      *         appended to the lhs or rhs of the box.
      */
     std::pair<float /*cost*/, Dir>
-    surface_area_heuristics(Axis ax, float pos, const Box& box,
+    surface_area_heuristics(Axis ax, float pos, const Bbox3f& box,
                             size_t num_ltris, size_t num_rtris,
                             size_t num_ptris) const {
-        Box lbox, rbox;
-        std::tie(lbox, rbox) = box.split(ax, pos);
+        Bbox3f lbox, rbox;
+        std::tie(lbox, rbox) = box.split(static_cast<size_t>(ax), pos);
         float area = box.surface_area();
         float larea_ratio = lbox.surface_area() / area;
         float rarea_ratio = rbox.surface_area() / area;
@@ -242,7 +243,7 @@ private:
      */
     std::tuple<float /*cost*/, Axis /* plane axis */, float /* plane pos */,
                TriangleIds /*left*/, TriangleIds /*right*/>
-    find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
+    find_plane_and_classify(const TriangleIds& tris, const Bbox3f& box) const {
         // The box should have some surface, otherwise the surface area
         // heuristics
         // does not make any sense.
@@ -271,21 +272,21 @@ private:
         size_t num_tris = 0;
         for (const auto& id : tris) {
             auto clipped_box = clip_triangle_at_aabb((*triangles_)[id], box);
-            if (clipped_box.is_trivial()) {
+            if (clipped_box.empty()) {
                 continue;
             }
             num_tris += 1;
 
-            for (auto ax : AXES) {
+            for (size_t ax = 0; ax < 3; ++ax) {
                 auto& events = event_lists[static_cast<int>(ax)];
-                if (clipped_box.is_planar(ax)) {
-                    events.emplace_back(Event{id, clipped_box.min[ax],
-                                              clipped_box.min[ax], PLANAR});
+                if (clipped_box.planar(ax)) {
+                    events.emplace_back(Event{id, clipped_box.p_min[ax],
+                                              clipped_box.p_min[ax], PLANAR});
                 } else {
-                    events.emplace_back(Event{id, clipped_box.min[ax],
-                                              clipped_box.max[ax], STARTING});
-                    events.emplace_back(Event{id, clipped_box.max[ax],
-                                              clipped_box.min[ax], ENDING});
+                    events.emplace_back(Event{id, clipped_box.p_min[ax],
+                                              clipped_box.p_max[ax], STARTING});
+                    events.emplace_back(Event{id, clipped_box.p_max[ax],
+                                              clipped_box.p_min[ax], ENDING});
                 }
             }
         }
@@ -480,7 +481,7 @@ KDTree::KDTree(Triangles tris) : tris_(std::move(tris)) {
     // Compute the bounding box of all triangles and fill in vector of all ids.
     box_ = tris_.front().bbox();
     for (size_t i = 1; i < tris_.size(); ++i) {
-        box_ = box_ + tris_[i].bbox();
+        box_ = bbox_union(box_, tris_[i].bbox());
         ids[i] = i;
     }
 
@@ -500,14 +501,14 @@ namespace {
  * @param  ray with direction to fix.
  * @return     new direction.
  */
-Vec fix_direction(const Ray& ray) {
-    Vec dir = ray.dir;
-    for (auto ax : AXES) {
-        if (dir[ax] == 0) {
-            dir[ax] = EPS;
+Vector3f fix_direction(const Ray& ray) {
+    Vector3f d = ray.d;
+    for (size_t ax = 0; ax < 3; ++ax) {
+        if (d[ax] == 0) {
+            d[ax] = EPS;
         }
     }
-    return dir;
+    return d;
 }
 
 } // namespace anonymous
@@ -516,7 +517,9 @@ const KDTreeIntersection::OptionalId
 KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     // A trick to make the traversal robust.
     // Cf. [HH11], p. 5, comment about dir classification and robustness.
-    const Ray fixed_ray(ray.pos, fix_direction(ray));
+    const Ray fixed_ray(ray.o, fix_direction(ray));
+    const Vector3f fixed_ray_d_inv(1 / fixed_ray.d.x, 1 / fixed_ray.d.y,
+                                   1 / fixed_ray.d.z);
 
     float tenter, texit;
     if (!intersect_ray_box(fixed_ray, tree_->box(), tenter, texit)) {
@@ -537,17 +540,17 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
         stack_.pop();
 
         while (node->is_inner()) {
-            int ax = static_cast<int>(node->split_axis());
+            size_t ax = static_cast<size_t>(node->split_axis());
             float split_pos = node->split_pos();
 
             // t at split
-            float t = (split_pos - fixed_ray.pos[ax]) * fixed_ray.invdir[ax];
+            float t = (split_pos - fixed_ray.o[ax]) * fixed_ray_d_inv[ax];
 
             // classify near/far with respect to t:
             // left is near if ray.dir[ax] <= 0, else otherwise
             const auto* near = node + 1;
             const auto* far = root + node->right();
-            if (fixed_ray.dir[ax] <= 0) {
+            if (fixed_ray.d[ax] <= 0) {
                 std::swap(near, far);
             }
 

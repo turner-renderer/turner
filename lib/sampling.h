@@ -1,7 +1,7 @@
 #pragma once
 
+#include "geometry.h"
 #include "triangle.h"
-#include "types.h"
 #include "xorshift.h"
 
 #include <cmath>
@@ -12,23 +12,21 @@ namespace detail {
 static __thread xorshift64star<float> uniform{4};
 } // namespace detail
 
-static constexpr float M_2PI = 2.f * M_PI;
-
 /**
  * Sample a point on a hemisphere.
  */
-inline std::pair<Vec, float> hemisphere() {
+inline std::pair<Point3f, float> hemisphere() {
     // draw coordinates
     float u1 = detail::uniform();
     float u2 = detail::uniform();
 
     // u1 is cos(theta)
-    auto z = u1;
-    auto r = sqrtf(fmax(0.f, 1.f - z * z));
-    auto phi = M_2PI * u2;
-    auto x = r * cosf(phi);
-    auto y = r * sinf(phi);
-    return std::make_pair(Vec{x, y, z}, u1);
+    float z = u1;
+    float r = sqrtf(fmax(0.f, 1.f - z * z));
+    float phi = PI2 * u2;
+    float x = r * cosf(phi);
+    float y = r * sinf(phi);
+    return std::make_pair(Point3f{x, y, z}, u1);
 }
 
 /**
@@ -39,7 +37,8 @@ inline std::pair<Vec, float> hemisphere() {
  * @param  v   a side (different from u) starting at pos
  * @return     point in world space
  */
-inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
+inline Point3f triangle(const Point3f& pos, const Vector3f& u,
+                        const Vector3f& v) {
     while (true) {
         float r1 = detail::uniform();
         float r2 = detail::uniform();
@@ -55,7 +54,7 @@ inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
  *
  * return point in world space.
  */
-inline Vec triangle(const Triangle& tri) {
+inline Point3f triangle(const Triangle& tri) {
     return triangle(tri.vertices[0], tri.u, tri.v);
 }
 } // namespace sampling

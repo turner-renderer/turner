@@ -1,8 +1,8 @@
 #include "../lib/functional.h"
+#include "helper.h"
 
 #include <catch.hpp>
 #include <limits>
-#include <random>
 
 TEST_CASE("Test hash of a pair", "[hash]") {
     std::random_device rd;
@@ -21,19 +21,26 @@ TEST_CASE("Test hash of a pair", "[hash]") {
     REQUIRE(res == std::numeric_limits<size_t>::max());
 }
 
-TEST_CASE("Test hash of a Vec", "[hash]") {
-    std::default_random_engine rd;
-    std::uniform_real_distribution<> dist(std::numeric_limits<float>::lowest(),
-                                          std::numeric_limits<float>::max());
-    std::hash<Vec> hasher;
+TEST_CASE("Test hash of a vector, point and normal", "[hash]") {
+    std::hash<Point3f> point_hasher;
+    std::hash<Vector3f> vector_hasher;
+    std::hash<Normal3f> normal_hasher;
 
-    size_t res = 0;
+    size_t point_res = 0;
+    size_t vector_res = 0;
+    size_t normal_res = 0;
     for (size_t i = 0; i < 32; ++i) {
-        Vec v{dist(rd), dist(rd), dist(rd)};
-        res |= hasher(v);
+        point_res |= point_hasher(random_pt());
+        vector_res |= vector_hasher(random_vec());
+        normal_res |= normal_hasher(random_normal());
     }
 
     // all bits are expected to be set, since a good hash function sets a bit
     // uniformly depending on the input
-    REQUIRE(static_cast<uint32_t>(res) == std::numeric_limits<uint32_t>::max());
+    REQUIRE(static_cast<uint32_t>(point_res) ==
+            std::numeric_limits<uint32_t>::max());
+    REQUIRE(static_cast<uint32_t>(vector_res) ==
+            std::numeric_limits<uint32_t>::max());
+    REQUIRE(static_cast<uint32_t>(normal_res) ==
+            std::numeric_limits<uint32_t>::max());
 }

@@ -11,7 +11,7 @@
  * equation, thefore it is not guaranteed that the calculated color values are
  * less than 1. E.g. an approximation of value 1 may be greater than 1.
  */
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf) {
@@ -24,18 +24,18 @@ Color trace(const Vec& origin, const Vec& dir,
     // intersection
     float dist_to_triangle, s, t;
     auto triangle_id =
-        tree_intersection.intersect(Ray(origin, dir), dist_to_triangle, s, t);
+        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
 
-    auto p = origin + dist_to_triangle * dir;
+    Point3f p = origin + dist_to_triangle * dir;
 
     // interpolate normal
     const auto& triangle = tree_intersection[triangle_id];
-    auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
+    Normal3f normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    auto p2 = p + normal * 0.0001f;
+    Point3f p2 = p + Vector3f(normal) * 0.0001f;
 
     //
     // Direct lightning
@@ -45,8 +45,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     for (auto& light : lights) {
         // light direction
-        auto light_dir = (light.position - p).Normalize();
-        float dist_to_light = (light.position - p2).Length();
+        auto light_dir = normalize(light.position - p);
+        float dist_to_light = (light.position - p2).length();
         float dist_to_next_triangle;
         auto has_shadow = tree_intersection.intersect(
             {p2, light_dir}, dist_to_next_triangle, s, t);
@@ -54,7 +54,8 @@ Color trace(const Vec& origin, const Vec& dir,
         // Do we get direct light?
         if (!has_shadow || dist_to_next_triangle > dist_to_light) {
             // lambertian
-            direct_lightning = std::max(0.f, light_dir * normal) * light.color;
+            direct_lightning =
+                std::max(0.f, dot(light_dir, normal)) * light.color;
         }
     }
 
@@ -67,15 +68,18 @@ Color trace(const Vec& origin, const Vec& dir,
     // Turn hemisphere according normal, i.e. Up(0, 0, 1) is turned so that
     // it lies on normal of the hit point.
     aiMatrix3x3 mTrafo;
-    aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, normal, mTrafo);
+    aiMatrix3x3::FromToMatrix(aiVector3D{0, 0, 1},
+                              {normal.x, normal.y, normal.z}, mTrafo);
 
     for (int run = 0; run < conf.num_monte_carlo_samples; run++) {
         auto dir_theta = sampling::hemisphere();
-        auto dir = mTrafo * dir_theta.first;
-        auto cos_theta = dir_theta.second;
+        auto dir = mTrafo * aiVector3D{dir_theta.first.x, dir_theta.first.y,
+                                       dir_theta.first.z};
+        float cos_theta = dir_theta.second;
 
         const auto indirect_light =
-            trace(p2, dir, tree_intersection, lights, depth + 1, conf);
+            trace(p2, {dir.x, dir.y, dir.z}, tree_intersection, lights,
+                  depth + 1, conf);
 
         // lambertian
         indirect_lightning += cos_theta * indirect_light;

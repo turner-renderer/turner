@@ -4,7 +4,7 @@
 #include "lib/triangle.h"
 #include "trace.h"
 
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Light>& /* lights */, int /* depth */,
             const TracerConfig& conf) {

@@ -5,21 +5,21 @@
 
 SCENARIO("Maximum light", "[light]") {
     GIVEN("A surface normal") {
-        aiVector3D N(0, 0, 1);
+        Normal3f N(0, 0, 1);
 
     GIVEN("A surface color") {
-        aiColor4D surface_color(1, 0, 0, 1);
+        Color surface_color(1, 0, 0, 1);
 
     GIVEN("A light direction") {
-        aiVector3D L(0, 0, 1);
+        Vector3f L(0, 0, 1);
 
     GIVEN("A light intensity") {
-                aiColor4D I(0.7, 0.5, 0.7, 1);
+        Color I(0.7, 0.5, 0.7, 1);
 
     WHEN("retrieving the Lambertian reflectance") {
-        aiColor4D result = lambertian(L, N, surface_color, I);
+        Color result = lambertian(L, N, surface_color, I);
 
     THEN("the reflectance is the maximum") {
-        REQUIRE(result == aiColor4D(0.7, 0, 0, 1));
+        REQUIRE(result == Color(0.7, 0, 0, 1));
     }}}}}}
 }

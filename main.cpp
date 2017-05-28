@@ -48,20 +48,24 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(
-                    Triangle{// vertices
-                             {{T * mesh.mVertices[face.mIndices[0]],
-                               T * mesh.mVertices[face.mIndices[1]],
-                               T * mesh.mVertices[face.mIndices[2]]}},
-                             // normals
-                             {{Tp * mesh.mNormals[face.mIndices[0]],
-                               Tp * mesh.mNormals[face.mIndices[1]],
-                               Tp * mesh.mNormals[face.mIndices[2]]}},
-                             ambient,
-                             diffuse,
-                             emissive,
-                             reflective,
-                             reflectivity});
+                const auto v0 = T * mesh.mVertices[face.mIndices[0]];
+                const auto v1 = T * mesh.mVertices[face.mIndices[1]];
+                const auto v2 = T * mesh.mVertices[face.mIndices[2]];
+
+                const auto n0 = Tp * mesh.mNormals[face.mIndices[0]];
+                const auto n1 = Tp * mesh.mNormals[face.mIndices[1]];
+                const auto n2 = Tp * mesh.mNormals[face.mIndices[2]];
+
+                Triangle triangle( // vertices
+                    {{{v0.x, v0.y, v0.z},
+                      {v1.x, v1.y, v1.z},
+                      {v2.x, v2.y, v2.z}}},
+                    // normals
+                    {{{n0.x, n0.y, n0.z},
+                      {n1.x, n1.y, n1.z},
+                      {n2.x, n2.y, n2.z}}},
+                    ambient, diffuse, emissive, reflective, reflectivity);
+                triangles.emplace_back(triangle);
             }
         }
     }
@@ -115,8 +119,10 @@ int main(int argc, char const* argv[]) {
         auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
         assert(lightNode != nullptr);
         const auto& LT = lightNode->mTransformation;
+        const auto pos = LT * aiVector3D();
+
         lights.push_back(
-            {LT * aiVector3D(),
+            {{pos.x, pos.y, pos.z},
              aiColor4D{rawLight.mColorDiffuse.r, rawLight.mColorDiffuse.g,
                        rawLight.mColorDiffuse.b, 1}});
     }
@@ -173,10 +179,15 @@ int main(int argc, char const* argv[]) {
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
 
+        const Point3f cam_pos{cam.mPosition.x, cam.mPosition.y,
+                              cam.mPosition.z};
+
         for (int y = 0; y < height; ++y) {
             tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
-                                             width, height, y, &conf]() {
-                // TODO: we need only one tree intersection per thread, not task
+                                             width, height, y, &conf,
+                                             &cam_pos]() {
+                // TODO: we need only one tree intersection per thread,
+                // not task
                 KDTreeIntersection tree_intersection(tree);
 
                 float dx, dy;
@@ -187,13 +198,13 @@ int main(int argc, char const* argv[]) {
                         dx = gen();
                         dy = gen();
 
-                        auto cam_dir = cam.raster2cam(
-                            aiVector2D(x + dx, y + dy), width, height);
+                        Vector3f cam_dir = Vector3f(
+                            cam.raster2cam({x + dx, y + dy}, width, height));
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) +=
-                            trace(cam.mPosition, cam_dir, tree_intersection,
-                                  lights, 0, conf);
+                            trace(cam_pos, cam_dir, tree_intersection, lights,
+                                  0, conf);
                     }
                     image(x, y) /= static_cast<float>(conf.num_pixel_samples);
 

@@ -1,7 +1,7 @@
 #pragma once
 
+#include "geometry.h"
 #include "triangle.h"
-#include "types.h"
 
 /**
  * Test segment and plane intersection
@@ -14,10 +14,10 @@
  * Return:
  *   true, if the segment intersects the plane, otherwise false
  */
-inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
-                                    float d, float& t) {
-    auto ab = b - a;
-    t = (d - n * a) / (n * ab);
+inline bool intersect_segment_plane(const Point3f& a, const Point3f& b,
+                                    const Normal3f& n, float d, float& t) {
+    Vector3f ab = b - a;
+    t = (d - dot(n, Vector3f(a))) / dot(n, ab);
     return 0.f <= t && t <= 1.f;
 }
 
@@ -30,20 +30,21 @@ inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
  *
  * Args:
  *   ray: ray to intersect
- *   v0, n: Plane through v0 with normal n
+ *   p, n: Plane through v0 with normal n
  *
  * Return:
  *   true, if the ray intersects the plane, otherwise false
  *
  * Cf. http://geomalgorithms.com/a06-_intersect-2.html
  */
-inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
-    auto denom = n * ray.dir;
+inline float intersect_ray_plane(const Ray& ray, const Point3f& p,
+                                 const Normal3f& n) {
+    float denom = dot(Vector3f(n), ray.d);
     if (denom == 0.f) {
         return std::numeric_limits<float>::lowest();
     }
 
-    auto nom = n * (v0 - ray.pos);
+    float nom = dot(Vector3f(n), p - ray.o);
     return nom / denom;
 }
 
@@ -53,7 +54,7 @@ inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
  * Args:
  *   ray: ray to intersect
  *   tri: triangle to intersect
- *   r: out param defining the intersection point by `ray.pos + ray.dir * r`
+ *   r: out param defining the intersection point by `ray.o + ray.d * r`
  *   s, t: baricentric coordinates on `tri` of the intersection point
  *
  * Return:
@@ -66,13 +67,13 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
         return false;
     }
 
-    auto P_int = ray.pos + r * ray.dir;
-    auto w = P_int - tri.vertices[0];
+    Point3f P_int = ray.o + r * ray.d;
+    Vector3f w = P_int - tri.vertices[0];
 
     // precompute scalar products
     // other values are precomputed in triangle on construction
-    auto wv = w * tri.v;
-    auto wu = w * tri.u;
+    auto wv = dot(w, tri.v);
+    auto wu = dot(w, tri.u);
 
     s = (tri.uv * wv - tri.vv * wu) / tri.denom;
     if (s < 0) {
@@ -101,22 +102,24 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  *
  * Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
  */
-inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
+inline bool intersect_ray_box(const Ray& ray, const Bbox3f& box, float& tmin,
                               float& tmax) {
-    float tx1 = (box.min.x - ray.pos.x) * ray.invdir.x;
-    float tx2 = (box.max.x - ray.pos.x) * ray.invdir.x;
+    Vector3f d_inv{1.f / ray.d.x, 1.f / ray.d.y, 1.f / ray.d.z};
+
+    float tx1 = (box.p_min.x - ray.o.x) * d_inv.x;
+    float tx2 = (box.p_max.x - ray.o.x) * d_inv.x;
 
     tmin = std::fmin(tx1, tx2);
     tmax = std::fmax(tx1, tx2);
 
-    float ty1 = (box.min.y - ray.pos.y) * ray.invdir.y;
-    float ty2 = (box.max.y - ray.pos.y) * ray.invdir.y;
+    float ty1 = (box.p_min.y - ray.o.y) * d_inv.y;
+    float ty2 = (box.p_max.y - ray.o.y) * d_inv.y;
 
     tmin = std::fmax(tmin, std::fmin(ty1, ty2));
     tmax = std::fmin(tmax, std::fmax(ty1, ty2));
 
-    float tz1 = (box.min.z - ray.pos.z) * ray.invdir.z;
-    float tz2 = (box.max.z - ray.pos.z) * ray.invdir.z;
+    float tz1 = (box.p_min.z - ray.o.z) * d_inv.z;
+    float tz2 = (box.p_max.z - ray.o.z) * d_inv.z;
 
     tmin = std::fmax(tmin, std::fmin(tz1, tz2));
     tmax = std::fmin(tmax, std::fmax(tz1, tz2));
@@ -124,7 +127,7 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
     return !(tmax < tmin);
 }
 
-inline bool intersect_ray_box(const Ray& ray, const Box& box) {
+inline bool intersect_ray_box(const Ray& ray, const Bbox3f& box) {
     float tmin, tmax;
     return intersect_ray_box(ray, box, tmin, tmax);
 }
@@ -139,14 +142,14 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
  * Return:
  *   true, if intersection exists, otherwise false
  */
-inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
-    auto center = (box.max + box.min) * 0.5f;
-    auto extents = box.max - center;
+inline bool intersect_plane_box(const Normal3f& n, float d, const Bbox3f& box) {
+    Point3f center = (box.p_max + box.p_min) * 0.5f;
+    Vector3f extents = box.p_max - center;
 
     float r = extents.x * std::abs(n.x) + extents.y * std::abs(n.y) +
               extents.z * std::abs(n.z);
 
-    float dist = n * center - d;
+    float dist = dot(n, Vector3f(center)) - d;
 
     return std::abs(dist) <= r;
 }
@@ -158,22 +161,22 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
  * "Fast 3D Triangle-Box Overlap Testing"
  * by Tomas Akenine-Möller
  */
-inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
+inline bool intersect_triangle_box(const Triangle& tri, const Bbox3f& box) {
     // center and extents of the box
-    auto center = (box.min + box.max) * 0.5f;
-    float e0 = (box.max.x - box.min.x) * 0.5f;
-    float e1 = (box.max.y - box.min.y) * 0.5f;
-    float e2 = (box.max.z - box.min.z) * 0.5f;
+    Point3f center = (box.p_min + box.p_max) * 0.5f;
+    float e0 = (box.p_max.x - box.p_min.x) * 0.5f;
+    float e1 = (box.p_max.y - box.p_min.y) * 0.5f;
+    float e2 = (box.p_max.z - box.p_min.z) * 0.5f;
 
     // translate triangle
-    auto v0 = tri.vertices[0] - center;
-    auto v1 = tri.vertices[1] - center;
-    auto v2 = tri.vertices[2] - center;
+    Vector3f v0 = tri.vertices[0] - center;
+    Vector3f v1 = tri.vertices[1] - center;
+    Vector3f v2 = tri.vertices[2] - center;
 
     // edges of the triangle
-    auto f0 = tri.u; // = v1 - v0;
-    auto f1 = v2 - v1;
-    auto f2 = -tri.v; // = v0 - v2;
+    Vector3f f0 = tri.u; // = v1 - v0;
+    Vector3f f1 = v2 - v1;
+    Vector3f f2 = -tri.v; // = v0 - v2;
 
     //
     // case 3
@@ -283,5 +286,5 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // Case 2
     //
 
-    return intersect_plane_box(tri.normal, tri.normal * v0, box);
+    return intersect_plane_box(tri.normal, dot(tri.normal, v0), box);
 }

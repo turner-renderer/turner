@@ -3,7 +3,7 @@
 #include "lib/stats.h"
 #include "trace.h"
 
-Color trace(const Vec& origin, const Vec& dir,
+Color trace(const Point3f& origin, const Vector3f& dir,
             KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf) {
@@ -25,25 +25,26 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // light direction
     auto p = origin + dist_to_triangle * dir;
-    auto light_dir = (light.position - p).Normalize();
+    Vector3f light_dir = normalize(light.position - p);
 
     // interpolate normal
     const auto& triangle = tree_intersection[triangle_id];
-    auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
+    Normal3f normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
     // direct light
     auto direct_lightning =
         lambertian(light_dir, normal, triangle.diffuse, light.color);
 
     // move slightly in direction of normal
-    auto p2 = p + normal * 0.0001f;
+    auto p2 = p + Vector3f(normal) * 0.0001f;
 
     auto color = direct_lightning;
 
     // reflection
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
-        auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+        Vector3f reflected_ray_dir =
+            dir - Vector3f(2.f * dot(normal, dir) * normal);
         auto reflected_color = trace(p2, reflected_ray_dir, tree_intersection,
                                      lights, depth + 1, conf);
 
@@ -53,8 +54,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // shadow
     float dist_to_next_triangle;
-    light_dir = (light.position - p2).Normalize();
-    float dist_to_light = (light.position - p2).Length();
+    light_dir = normalize(light.position - p2);
+    float dist_to_light = (light.position - p2).length();
 
     auto has_shadow = tree_intersection.intersect({p2, light_dir},
                                                   dist_to_next_triangle, s, t);
