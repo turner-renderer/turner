@@ -1,5 +1,7 @@
 #pragma once
 
+#include "turner.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -21,6 +23,14 @@ template <typename T> class Vector2 {
 public:
     Vector2() = default;
     Vector2(T x, T y) : x{x}, y{y} { assert(!contains_nan()); }
+
+    template <typename U>
+    explicit Vector2(const Vector2<U>& v)
+        : x{static_cast<T>(v.x)}, y{static_cast<T>(v.y)} {
+        assert(!contains_nan());
+    }
+
+    template <typename U> Vector2<U> as() const { return Vector2<U>(*this); }
 
     bool contains_nan() const { return std::isnan(x) || std::isnan(y); }
 
@@ -71,7 +81,7 @@ public:
         return (1 / s) * *this;
     }
 
-    Vector2<T>& operator/=(T s) const {
+    Vector2<T>& operator/=(T s) {
         assert(s != 0);
         return *this *= 1 / s;
     }
@@ -81,6 +91,11 @@ public:
     T length_squared() const { return x * x + y * y; }
     T length() const { return std::sqrt(length_squared()); }
 
+    template <typename U>
+    friend Vector2<U> operator*(U s, const Vector2<U>& v) {
+        return {s * v.x, s * v.y};
+    }
+
 public:
     T x = 0;
     T y = 0;
@@ -88,10 +103,6 @@ public:
 
 using Vector2f = Vector2<float>;
 using Vector2i = Vector2<int>;
-
-template <typename T> Vector2<T> operator*(T s, const Vector2<T>& v) {
-    return {s * v.x, s * v.y};
-}
 
 template <typename T> Vector2<T> abs(const Vector2<T>& v) {
     return {std::abs(v.x), std::abs(v.y)};
@@ -138,6 +149,17 @@ template <typename T> class Vector3 {
 public:
     Vector3() = default;
     Vector3(T x, T y, T z) : x{x}, y{y}, z{z} { assert(!contains_nan()); }
+
+    template <typename U>
+    explicit Vector3(const Vector3<U>& v)
+        : x{static_cast<T>(v.x)}
+        , y{static_cast<T>(v.y)}
+        , z{static_cast<T>(v.z)} {
+        assert(!contains_nan());
+    }
+
+    template <typename U> Vector3<U> as() const { return Vector3<U>(*this); }
+
     Vector3(const Normal3<T>& n) : x(n.x), y(n.y), z(n.z) {
         assert(!contains_nan());
     }
@@ -186,6 +208,11 @@ public:
 
     Vector3<T> operator*(T s) const { return {s * x, s * y, s * z}; }
 
+    template <typename U>
+    friend Vector3<U> operator*(U s, const Vector3<U>& v) {
+        return {s * v.x, s * v.y, s * v.z};
+    }
+
     Vector3<T>& operator*=(T s) {
         x *= s;
         y *= s;
@@ -198,7 +225,7 @@ public:
         return (1 / s) * *this;
     }
 
-    Vector3<T>& operator/=(T s) const {
+    Vector3<T>& operator/=(T s) {
         assert(s != 0);
         return *this *= 1 / s;
     }
@@ -216,10 +243,6 @@ public:
 
 using Vector3f = Vector3<float>;
 using Vector3i = Vector3<int>;
-
-template <typename T> Vector3<T> operator*(T s, const Vector3<T>& v) {
-    return {s * v.x, s * v.y, s * v.z};
-}
 
 template <typename T> Vector3<T> abs(const Vector3<T>& v) {
     return {std::abs(v.x), std::abs(v.y), std::abs(v.z)};
@@ -283,9 +306,11 @@ public:
 
     template <typename U>
     Point2(const Point2<U>& p)
-        : x(static_cast<T>(p.x)), y(static_cast<T>(p.y)) {
+        : x{static_cast<T>(p.x)}, y{static_cast<T>(p.y)} {
         assert(!contains_nan());
     }
+
+    template <typename U> Point2<U> as() const { return Point2<U>(*this); }
 
     template <typename U> explicit operator Vector2<U>() const {
         return {x, y};
@@ -333,6 +358,10 @@ public:
 
     Point2<T> operator*(T s) const { return Point2<T>(s * x, s * y); }
 
+    template <typename U> friend Point2<U> operator*(U s, const Point2<U>& p) {
+        return {s * p.x, s * p.y};
+    }
+
     Point2<T>& operator*=(T s) {
         x *= s;
         y *= s;
@@ -344,7 +373,7 @@ public:
         return (1 / s) * *this;
     }
 
-    Point2<T>& operator/=(T s) const {
+    Point2<T>& operator/=(T s) {
         assert(s != 0);
         return *this *= 1 / s;
     }
@@ -413,11 +442,13 @@ public:
 
     template <typename U>
     explicit Point3(const Point3<U>& p)
-        : x(static_cast<T>(p.x))
-        , y(static_cast<T>(p.y))
-        , z(static_cast<T>(p.z)) {
+        : x{static_cast<T>(p.x)}
+        , y{static_cast<T>(p.y)}
+        , z{static_cast<T>(p.z)} {
         assert(!contains_nan());
     }
+
+    template <typename U> Point3<U> as() const { return Point3<U>(*this); }
 
     template <typename U> explicit operator Vector3<U>() const {
         return {x, y, z};
@@ -471,6 +502,10 @@ public:
 
     Point3<T> operator*(T s) const { return Point3<T>(s * x, s * y, s * z); }
 
+    template <typename U> friend Point3<U> operator*(U s, const Point3<U>& p) {
+        return {s * p.x, s * p.y, s * p.z};
+    }
+
     Point3<T>& operator*=(T s) {
         x *= s;
         y *= s;
@@ -483,7 +518,7 @@ public:
         return (1 / s) * *this;
     }
 
-    Point3<T>& operator/=(T s) const {
+    Point3<T>& operator/=(T s) {
         assert(s != 0);
         return *this *= 1 / s;
     }
@@ -615,6 +650,11 @@ public:
 
     Normal3<T> operator*(T s) const { return Normal3<T>(s * x, s * y, s * z); }
 
+    template <typename U>
+    friend Normal3<U> operator*(U s, const Normal3<U>& n) {
+        return {s * n.x, s * n.y, s * n.z};
+    }
+
     Normal3<T>& operator*=(T s) {
         x *= s;
         y *= s;
@@ -627,7 +667,7 @@ public:
         return (1 / s) * *this;
     }
 
-    Normal3<T>& operator/=(T s) const {
+    Normal3<T>& operator/=(T s) {
         assert(s != 0);
         return *this *= 1 / s;
     }
@@ -682,6 +722,8 @@ public:
     template <typename U>
     explicit Bbox2(const Bbox2<U>& b) : p_min(b.p_min), p_max(b.p_max) {}
 
+    template <typename U> Bbox2<U> as() const { return Bbox2<U>(*this); }
+
     const Point2<T>& operator[](size_t i) const {
         assert(i < 2);
         return i == 0 ? p_min : p_max;
@@ -712,7 +754,8 @@ public:
     }
 
     Point2<T> lerp(const Point2f& t) const {
-        return {lerp(t.x, p_min.x, p_max.x), lerp(t.y, p_min.y, p_max.y)};
+        return {static_cast<T>(turner::lerp(t.x, p_min.x, p_max.x)),
+                static_cast<T>(turner::lerp(t.y, p_min.y, p_max.y))};
     }
 
     std::string to_string() const {
@@ -822,7 +865,9 @@ public:
         : p_min(min(p1, p2)), p_max(max(p1, p2)) {}
 
     template <typename U>
-    explicit Bbox3(const Bbox3<U>& b) : p_min(b.p_min, b.p_max) {}
+    explicit Bbox3(const Bbox3<U>& b) : p_min(b.p_min), p_max(b.p_max) {}
+
+    template <typename U> Bbox3<U> as() const { return Bbox3<U>(*this); }
 
     const Point3<T>& operator[](size_t i) const {
         assert(i < 2);
@@ -839,10 +884,11 @@ public:
                 (*this)[(corner & 4) ? 1 : 0].z};
     }
 
-    bool operator==(const Bbox2<T> other) const {
+    bool operator==(const Bbox3<T> other) const {
         return p_min == other.p_min && p_max == other.p_max;
     }
-    bool operator!=(const Bbox2<T> other) const { return !(*this == other); }
+
+    bool operator!=(const Bbox3<T> other) const { return !(*this == other); }
 
     Vector3<T> diagonal() const { return p_max - p_min; }
 
@@ -857,8 +903,9 @@ public:
     }
 
     Point3<T> lerp(const Point3f& t) const {
-        return {lerp(t.x, p_min.x, p_max.x), lerp(t.y, p_min.y, p_max.y),
-                lerp(t.z, p_min.z, p_max.z)};
+        return {static_cast<T>(turner::lerp(t.x, p_min.x, p_max.x)),
+                static_cast<T>(turner::lerp(t.y, p_min.y, p_max.y)),
+                static_cast<T>(turner::lerp(t.z, p_min.z, p_max.z))};
     }
 
 public:
@@ -895,5 +942,26 @@ template <typename T> bool inside(const Point3<T>& p, const Bbox3<T>& b) {
     return (p.x >= b.p_min.x && p.x <= b.p_max.x && p.y >= b.p_min.y &&
             p.y <= b.p_max.y && p.z >= b.p_min.z && p.z <= b.p_max.z);
 }
+
+//
+// Explicit template initialization
+//
+
+template class Vector2<float>;
+template class Vector2<int>;
+template class Vector3<float>;
+template class Vector3<int>;
+
+template class Point2<float>;
+template class Point2<int>;
+template class Point3<float>;
+template class Point3<int>;
+
+template class Normal3<float>;
+
+template class Bbox2<float>;
+template class Bbox2<int>;
+template class Bbox3<float>;
+template class Bbox3<int>;
 
 } // namespace turner

@@ -128,22 +128,22 @@ public:
         , pixels_(cropped_pixel_bbox.area()) {}
 
     Bbox2i get_sample_bounds() const {
-        Bbox2f float_bbox(floor(Point2f(cropped_pixel_bbox.p_min) +
-                                Vector2f(0.5f, 0.5f) - filter.radius),
-                          ceil(Point2f(cropped_pixel_bbox.p_max) -
-                               Vector2f(0.5f, 0.5f) + filter.radius));
-        return static_cast<Bbox2i>(float_bbox);
+        return {floor(Point2f(cropped_pixel_bbox.p_min) + Vector2f(0.5f, 0.5f) -
+                      filter.radius),
+                ceil(Point2f(cropped_pixel_bbox.p_max) - Vector2f(0.5f, 0.5f) +
+                     filter.radius)};
     }
 
     template <typename Spectrum>
     FilmTile<Filter, Spectrum> get_tile(const Bbox2i& sample_bbox) {
         Vector2f half_pixel(0.5f, 0.5f);
-        auto float_bbox = static_cast<Bbox2f>(sample_bbox);
-        Point2i p0 = ceil(float_bbox.p_min - half_pixel - filter.radius);
-        Point2i p1 = floor(float_bbox.p_max - half_pixel + filter.radius);
+        Point2i p0 =
+            ceil(sample_bbox.p_min.as<float>() - half_pixel - filter.radius);
+        Point2i p1 =
+            floor(sample_bbox.p_max.as<float>() - half_pixel + filter.radius);
         p1 += Vector2i(1, 1);
         auto tile_pixel_bbox = intersect(Bbox2i(p0, p1), cropped_pixel_bbox);
-        return FilmTile<Filter, Spectrum>(tile_pixel_bbox, filter);
+        return {tile_pixel_bbox, filter};
     }
 
     template <typename Spectrum>
