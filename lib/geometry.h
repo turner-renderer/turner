@@ -9,13 +9,6 @@
 
 namespace turner {
 
-// Forward declaration for conversion operators and constructors
-template <typename T> class Vector2;
-template <typename T> class Vector3;
-template <typename T> class Point2;
-template <typename T> class Point3;
-template <typename T> class Normal3;
-
 /**
  * Vector in 2-dimensional space.
  */
@@ -141,6 +134,9 @@ template <typename T>
 Vector2<T> max(const Vector2<T>& p1, const Vector2<T>& p2) {
     return {std::max(p1.x, p2.x), std::max(p1.y, p2.y)};
 }
+
+// Forward declaration for conversion operators and constructors
+template <typename T> class Normal3;
 
 /**
  * Vector in 3-dimensional space.
@@ -403,7 +399,7 @@ float distance_squared(const Point2<T>& p1, const Point2<T>& p2) {
  * Linearly interpolate between two points.
  */
 template <typename T>
-Point3<T> lerp(float t, const Point2<T>& p0, const Point2<T>& p1) {
+Point2<T> lerp(float t, const Point2<T>& p0, const Point2<T>& p1) {
     return (1 - t) * p0 + t * p1;
 }
 
