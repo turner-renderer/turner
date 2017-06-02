@@ -23,7 +23,7 @@ Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
 
     // light direction
     Point3f p = ray.o + dist_to_triangle * ray.d;
-    Vec light_dir = normalize(
+    Vector3f light_dir = normalize(
         Point3f(light.position.x, light.position.y, light.position.z) - p);
 
     // interpolate normal
@@ -35,14 +35,15 @@ Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
         lambertian(light_dir, normal, triangle.diffuse, light.color);
 
     // move slightly in direction of normal
-    Point3f p2 = p + Vec(normal * 0.0001f);
+    Point3f p2 = p + Vector3f(normal * 0.0001f);
 
     auto color = direct_lightning;
 
     // reflection
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
-        auto reflected_ray_dir = ray.d - Vec(2.f * dot(normal, ray.d) * normal);
+        auto reflected_ray_dir =
+            ray.d - Vector3f(2.f * dot(normal, ray.d) * normal);
         auto reflected_color = trace({p2, reflected_ray_dir}, tree_intersection,
                                      lights, depth + 1, conf);
 

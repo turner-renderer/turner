@@ -15,8 +15,8 @@ void hash_combine(size_t& seed, const T& v, Ts... rest) {
 }
 
 namespace std {
-template <> struct hash<Vec> {
-    size_t operator()(const Vec& v) const {
+template <> struct hash<Vector3f> {
+    size_t operator()(const Vector3f& v) const {
         size_t seed = 0;
         hash_combine(seed, v.x, v.y, v.z);
         return seed;

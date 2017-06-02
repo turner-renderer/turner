@@ -46,10 +46,10 @@ inline constexpr float max(float a, float b, float c) {
 
 static constexpr auto PI = turner::PI;
 
-using Vec = turner::Vector3f;
 using Box = turner::Bbox3f;
 using Axis = turner::Axis3;
 
+using turner::Vector3f;
 using turner::Point3f;
 using turner::Normal3f;
 using turner::Ray;
@@ -115,7 +115,7 @@ public:
      * The positioning of the camera is done in its parent's node
      * transformation matrix.
      */
-    Vec raster2cam(const aiVector2D& p, float w, float h) const {
+    Vector3f raster2cam(const aiVector2D& p, float w, float h) const {
         aiVector3D v = trafo_ * aiVector3D(-delta_x_ * (1 - 2 * p.x / w),
                                            delta_y_ * (1 - 2 * p.y / h), -1);
         return {v.x, v.y, v.z};

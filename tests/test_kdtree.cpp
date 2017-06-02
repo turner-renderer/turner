@@ -107,9 +107,9 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
     static std::uniform_real_distribution<float> rnd(-0.3f, 0.3f);
     for (size_t i = 0; i < TRIANGLES_COUNT; ++i) {
         Point3f center = random_point();
-        Point3f p0 = center + (Vec{rnd(gen), rnd(gen), rnd(gen)});
-        Point3f p1 = center + (Vec{rnd(gen), rnd(gen), rnd(gen)});
-        Point3f p2 = center + (Vec{rnd(gen), rnd(gen), rnd(gen)});
+        Point3f p0 = center + (Vector3f{rnd(gen), rnd(gen), rnd(gen)});
+        Point3f p1 = center + (Vector3f{rnd(gen), rnd(gen), rnd(gen)});
+        Point3f p2 = center + (Vector3f{rnd(gen), rnd(gen), rnd(gen)});
         Triangle tri = test_triangle(p0, p1, p2);
         triangles.push_back(tri);
     }
@@ -197,7 +197,7 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]") {
         float r, s, t;
         // intersection with parallel ray
         Point3f ray_orig(1, 1, 1);
-        Vec ray_dir = Vec(random_vec_on_unit_sphere(ax, 0));
+        Vector3f ray_dir = Vector3f(random_vec_on_unit_sphere(ax, 0));
 
         Ray parallel_ray(ray_orig, ray_dir);
         REQUIRE(!tree_intersection.intersect(parallel_ray, r, s, t));

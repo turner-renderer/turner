@@ -311,12 +311,12 @@ private:
         const auto& q_c = mesh_.point(q.vs[2]);
 
         const Point3f p_pos = convert_to_point(p_a);
-        const Vec p_u = convert_to_vec(p_b - p_a);
-        const Vec p_v = convert_to_vec(p_c - p_a);
+        const Vector3f p_u = convert_to_vec(p_b - p_a);
+        const Vector3f p_v = convert_to_vec(p_c - p_a);
         const Normal3f p_normal = Normal3f(normalize(cross(p_u, p_v)));
         const Point3f q_pos = convert_to_point(q_a);
-        const Vec q_u = convert_to_vec(q_b - q_a);
-        const Vec q_v = convert_to_vec(q_c - q_a);
+        const Vector3f q_u = convert_to_vec(q_b - q_a);
+        const Vector3f q_v = convert_to_vec(q_c - q_a);
         const Normal3f q_normal = Normal3f(normalize(cross(q_u, q_v)));
 
         float F_pq =
@@ -521,8 +521,8 @@ private:
 
     // TODO: reconsider design s.t. we can avoid conversion
     // TODO: profile how much time we actually spend here!
-    static Vec convert_to_vec(const RadiosityMesh::Point& pt) {
-        return Vec{pt[0], pt[1], pt[2]};
+    static Vector3f convert_to_vec(const RadiosityMesh::Point& pt) {
+        return Vector3f{pt[0], pt[1], pt[2]};
     };
 
     static Point3f convert_to_point(const RadiosityMesh::Point& pt) {

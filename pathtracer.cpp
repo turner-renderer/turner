@@ -33,7 +33,7 @@ Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
     const auto& triangle = tree_intersection[triangle_id];
     Normal3f normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    Point3f p2 = p + Vec(normal) * 0.0001f;
+    Point3f p2 = p + Vector3f(normal * 0.0001f);
 
     //
     // Direct lightning
@@ -74,7 +74,7 @@ Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
         aiVector3D ai_dir =
             mTrafo *
             aiVector3D(dir_theta.first.x, dir_theta.first.y, dir_theta.first.z);
-        Vec dir(ai_dir.x, ai_dir.y, ai_dir.z);
+        Vector3f dir(ai_dir.x, ai_dir.y, ai_dir.z);
         auto cos_theta = dir_theta.second;
 
         const auto indirect_light =
