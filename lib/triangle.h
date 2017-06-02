@@ -77,10 +77,10 @@ public:
     float area() const { return cross(u, v).length() / 2.f; }
 
     // Check if triangle lies in the plane defined by the normal ax through 0.
-    bool is_planar(Axis ax) const {
-        if (ax == Axis::X) {
+    bool is_planar(Axis3 ax) const {
+        if (ax == Axis3::X) {
             return is_eps_zero(normal.y) && is_eps_zero(normal.z);
-        } else if (ax == Axis::Y) {
+        } else if (ax == Axis3::Y) {
             return is_eps_zero(normal.x) && is_eps_zero(normal.z);
         }
         return is_eps_zero(normal.x) && is_eps_zero(normal.y);
@@ -115,7 +115,7 @@ private:
 
 private:
     // Helper functions for triangle aabb intersection
-    bool axis_intersection(const Axis ax, const Vector3f& box_halfsize) const;
+    bool axis_intersection(const Axis3 ax, const Vector3f& box_halfsize) const;
 };
 
 using Triangles = std::vector<Triangle>;

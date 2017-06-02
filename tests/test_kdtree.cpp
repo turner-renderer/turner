@@ -186,7 +186,7 @@ TEST_CASE("Test cube in kdtree", "[kdtree]") {
 }
 
 TEST_CASE("All triangles are in the same plane", "[kdtree]") {
-    for (Axis ax : AXES) {
+    for (Axis3 ax : AXES3) {
         Triangles tris;
         for (size_t i = 0; i < 1000; ++i) {
             tris.push_back(random_triangle_on_unit_sphere(ax, 0));
@@ -209,7 +209,7 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]") {
 }
 
 TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
-    for (auto ax : AXES) {
+    for (auto ax : AXES3) {
         Triangles tris;
         for (float pos = 0.f; pos < 10.f; pos += 1.f) {
             tris.push_back(random_regular_triangle_on_unit_sphere(ax, pos));
@@ -262,26 +262,26 @@ TEST_CASE("Inner Node is constructed correctly", "[node]") {
     float split_pos = 3.1415;
     uint32_t right_index = 42;
     {
-        detail::FlatNode node(Axis::X, split_pos, right_index);
+        detail::FlatNode node(Axis3::X, split_pos, right_index);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::X);
+        REQUIRE(node.split_axis() == Axis3::X);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == right_index);
     }
     {
-        detail::FlatNode node(Axis::Y, split_pos, right_index);
+        detail::FlatNode node(Axis3::Y, split_pos, right_index);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::Y);
+        REQUIRE(node.split_axis() == Axis3::Y);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == right_index);
     }
     {
-        detail::FlatNode node(Axis::Z, split_pos, right_index);
+        detail::FlatNode node(Axis3::Z, split_pos, right_index);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::Z);
+        REQUIRE(node.split_axis() == Axis3::Z);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == right_index);
     }
@@ -290,29 +290,29 @@ TEST_CASE("Inner Node is constructed correctly", "[node]") {
 TEST_CASE("Set right of inner Node", "[node]") {
     float split_pos = 3.1415;
     {
-        detail::FlatNode node(Axis::X, split_pos, 0);
+        detail::FlatNode node(Axis3::X, split_pos, 0);
         node.set_right(42);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::X);
+        REQUIRE(node.split_axis() == Axis3::X);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
     {
-        detail::FlatNode node(Axis::Y, split_pos, 0);
+        detail::FlatNode node(Axis3::Y, split_pos, 0);
         node.set_right(42);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::Y);
+        REQUIRE(node.split_axis() == Axis3::Y);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
     {
-        detail::FlatNode node(Axis::Z, split_pos, 0);
+        detail::FlatNode node(Axis3::Z, split_pos, 0);
         node.set_right(42);
         REQUIRE(node.is_inner());
         REQUIRE(!node.is_leaf());
-        REQUIRE(node.split_axis() == Axis::Z);
+        REQUIRE(node.split_axis() == Axis3::Z);
         REQUIRE(node.split_pos() == split_pos);
         REQUIRE(node.right() == 42);
     }
