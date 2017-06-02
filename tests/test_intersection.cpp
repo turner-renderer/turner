@@ -13,33 +13,26 @@ TEST_CASE("Segment plane intersection", "[intersection]") {
 
 
 TEST_CASE("Ray AABB intersection", "[intersection]") {
-    REQUIRE(intersect_ray_box(
-        Ray({0, 0, 0}, {1, 1, 1}),
-        Box{{-1, -1, -1}, {1, 1, 1}}));
+    REQUIRE(intersect_ray_box(Ray({0, 0, 0}, {1, 1, 1}),
+                              Bbox3f{{-1, -1, -1}, {1, 1, 1}}));
 
-    REQUIRE(intersect_ray_box(
-        Ray({10, 0, 0}, {-1, 0, 0}),
-        Box{{-1, -1, -1}, {1, 1, 1}}));
+    REQUIRE(intersect_ray_box(Ray({10, 0, 0}, {-1, 0, 0}),
+                              Bbox3f{{-1, -1, -1}, {1, 1, 1}}));
 
-    REQUIRE(intersect_ray_box(
-        Ray({0, 10, 0}, {0, -1, 0}),
-        Box{{-1, -1, -1}, {1, 1, 1}}));
+    REQUIRE(intersect_ray_box(Ray({0, 10, 0}, {0, -1, 0}),
+                              Bbox3f{{-1, -1, -1}, {1, 1, 1}}));
 
-    REQUIRE(intersect_ray_box(
-        Ray({0, 0, 10}, {0, 0, -1}),
-        Box{{-1, -1, -1}, {1, 1, 1}}));
+    REQUIRE(intersect_ray_box(Ray({0, 0, 10}, {0, 0, -1}),
+                              Bbox3f{{-1, -1, -1}, {1, 1, 1}}));
 
-    REQUIRE(!intersect_ray_box(
-        Ray({0, 0, 0}, {1, 0, 0}),
-        Box{{-1, -1, 1}, {1, 1, 1}}));
+    REQUIRE(!intersect_ray_box(Ray({0, 0, 0}, {1, 0, 0}),
+                               Bbox3f{{-1, -1, 1}, {1, 1, 1}}));
 
-    REQUIRE(!intersect_ray_box(
-        Ray({-2, -2, -2}, {-1, 0, 0}),
-        Box{{-1, -1, 1}, {1, 1, 1}}));
+    REQUIRE(!intersect_ray_box(Ray({-2, -2, -2}, {-1, 0, 0}),
+                               Bbox3f{{-1, -1, 1}, {1, 1, 1}}));
 
-    REQUIRE(!intersect_ray_box(
-        Ray({-1, 0, 0}, {-1, 0, 0}),
-        Box{{0, 0, 0}, {1, 1, 1}}));
+    REQUIRE(!intersect_ray_box(Ray({-1, 0, 0}, {-1, 0, 0}),
+                               Bbox3f{{0, 0, 0}, {1, 1, 1}}));
 }
 
 
@@ -54,7 +47,7 @@ TEST_CASE("Test intersect plane with AABB", "[intersection]") {
 
 
 TEST_CASE("Triangle simple aabb intersection", "[intersection]") {
-    Box box{{-10, -10, -10}, {10, 10, 10}};
+    Bbox3f box{{-10, -10, -10}, {10, 10, 10}};
 
     auto tri = test_triangle({0, 0, 0}, {1, 0, 0}, {1, 1, 0});
     REQUIRE(intersect_triangle_box(tri, box));
@@ -68,7 +61,7 @@ TEST_CASE("Triangle simple aabb intersection", "[intersection]") {
 
 
 TEST_CASE("Random triangle aabb intersection", "[intersection]") {
-    Box box{{-10, -10, -10}, {10, 10, 10}};
+    Bbox3f box{{-10, -10, -10}, {10, 10, 10}};
     for (int i = 0; i < 1000; ++i) {
         REQUIRE(intersect_triangle_box(random_triangle(), box));
     }

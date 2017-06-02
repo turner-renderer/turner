@@ -22,7 +22,7 @@ TEST_CASE("Clip polygon at a plane", "[clipping]") {
 }
 
 TEST_CASE("Simple line clipping test", "[clipping]") {
-    Box box{{-1, -1, -1}, {1, 1, 1}};
+    Bbox3f box{{-1, -1, -1}, {1, 1, 1}};
 
     Point3f p0 = {0, 0, -10};
     Point3f p1 = {0, 0, 10};
@@ -54,23 +54,23 @@ TEST_CASE("Simple line clipping test", "[clipping]") {
 }
 
 TEST_CASE("Big triangle clipping at aabb", "[clipping]") {
-    Box box{{-1, -1, -1}, {1, 1, 1}};
+    Bbox3f box{{-1, -1, -1}, {1, 1, 1}};
     auto tri = test_triangle({0, 0, -10}, {10, 0, 10}, {-10, 0, 10});
     auto res = clip_triangle_at_aabb(tri, box);
-    REQUIRE(res == (Box{{-1, 0, -1}, {1, 0, 1}}));
+    REQUIRE(res == (Bbox3f{{-1, 0, -1}, {1, 0, 1}}));
     REQUIRE(res.planar(Axis::Y));
 }
 
 TEST_CASE("Peak triangle clipping at aabb", "[clipping]") {
-    Box box{{0, 0, 0}, {2, 2, 2}};
+    Bbox3f box{{0, 0, 0}, {2, 2, 2}};
     auto tri = test_triangle({-1, -1, 0}, {1, 1, 0}, {1, -1, 0});
     auto res = clip_triangle_at_aabb(tri, box);
-    REQUIRE(res == (Box{{0, 0, 0}, {1, 1, 0}}));
+    REQUIRE(res == (Bbox3f{{0, 0, 0}, {1, 1, 0}}));
     REQUIRE(res.planar(Axis::Z));
 }
 
 TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {
-    Box box{{-1, -1, -1}, {1, 1, 1}};
+    Bbox3f box{{-1, -1, -1}, {1, 1, 1}};
 
     auto tri = test_triangle({-1, -1, -1}, {2, 2, 2}, {2, -1, 2});
     auto res = clip_triangle_at_aabb(tri, box);
@@ -78,11 +78,11 @@ TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {
 
     tri = test_triangle({0, 0, 0}, {0.5, 0.5, 0.5}, {0.5, 0, 0.5});
     res = clip_triangle_at_aabb(tri, box);
-    REQUIRE(res == (Box{{0, 0, 0}, {0.5, 0.5, 0.5}}));
+    REQUIRE(res == (Bbox3f{{0, 0, 0}, {0.5, 0.5, 0.5}}));
 }
 
 TEST_CASE("Random triangle clipping at aabb", "[clipping]") {
-    Box box{{-1, -1, -1}, {1, 1, 1}};
+    Bbox3f box{{-1, -1, -1}, {1, 1, 1}};
     for (int i = 0; i < 10000; ++i) {
         auto tri = random_triangle();
         if (!intersect_triangle_box(tri, box)) {
