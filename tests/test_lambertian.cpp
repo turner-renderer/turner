@@ -3,7 +3,7 @@
 
 SCENARIO("Maximum light", "[light]") {
     GIVEN("A surface normal") {
-        Vec N(0, 0, 1);
+        Normal3f N(0, 0, 1);
 
     GIVEN("A surface color") {
         aiColor4D surface_color(1, 0, 0, 1);

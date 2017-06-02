@@ -199,13 +199,13 @@ Triangles triangles_from_scene(const aiScene* scene) {
                 aiVector3D ain1 = Tp * mesh.mNormals[face.mIndices[1]];
                 aiVector3D ain2 = Tp * mesh.mNormals[face.mIndices[2]];
 
-                Vec v0(aiv0.x, aiv0.y, aiv0.z);
-                Vec v1(aiv1.x, aiv1.y, aiv1.z);
-                Vec v2(aiv2.x, aiv2.y, aiv2.z);
+                Point3f v0(aiv0.x, aiv0.y, aiv0.z);
+                Point3f v1(aiv1.x, aiv1.y, aiv1.z);
+                Point3f v2(aiv2.x, aiv2.y, aiv2.z);
 
-                Vec n0(ain0.x, ain0.y, ain0.z);
-                Vec n1(ain1.x, ain1.y, ain1.z);
-                Vec n2(ain2.x, ain2.y, ain2.z);
+                Normal3f n0(ain0.x, ain0.y, ain0.z);
+                Normal3f n1(ain1.x, ain1.y, ain1.z);
+                Normal3f n2(ain2.x, ain2.y, ain2.z);
 
                 triangles.push_back(Triangle{// vertices
                                              {v0, v1, v2},

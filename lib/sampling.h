@@ -39,7 +39,7 @@ inline std::pair<Vec, float> hemisphere() {
  * @param  v   a side (different from u) starting at pos
  * @return     point in world space
  */
-inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
+inline Point3f triangle(const Point3f& pos, const Vec& u, const Vec& v) {
     while (true) {
         float r1 = detail::uniform();
         float r2 = detail::uniform();
@@ -55,7 +55,7 @@ inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
  *
  * return point in world space.
  */
-inline Vec triangle(const Triangle& tri) {
+inline Point3f triangle(const Triangle& tri) {
     return triangle(tri.vertices[0], tri.u, tri.v);
 }
 } // namespace sampling

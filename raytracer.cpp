@@ -35,14 +35,14 @@ Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
         lambertian(light_dir, normal, triangle.diffuse, light.color);
 
     // move slightly in direction of normal
-    Point3f p2 = p + normal * 0.0001f;
+    Point3f p2 = p + Vec(normal * 0.0001f);
 
     auto color = direct_lightning;
 
     // reflection
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
-        auto reflected_ray_dir = ray.d - 2.f * dot(normal, ray.d) * normal;
+        auto reflected_ray_dir = ray.d - Vec(2.f * dot(normal, ray.d) * normal);
         auto reflected_color = trace({p2, reflected_ray_dir}, tree_intersection,
                                      lights, depth + 1, conf);
 

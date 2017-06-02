@@ -30,20 +30,21 @@ inline bool intersect_segment_plane(const Point3f& a, const Point3f& b,
  *
  * Args:
  *   ray: ray to intersect
- *   v0, n: Plane through v0 with normal n
+ *   p0, n: Plane through p0 with normal n
  *
  * Return:
  *   true, if the ray intersects the plane, otherwise false
  *
  * Cf. http://geomalgorithms.com/a06-_intersect-2.html
  */
-inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
+inline float intersect_ray_plane(const Ray& ray, const Point3f& p0,
+                                 const Normal3f& n) {
     float denom = dot(n, ray.d);
     if (denom == 0.f) {
         return std::numeric_limits<float>::lowest();
     }
 
-    float nom = dot(n, v0 - Vec(ray.o));
+    float nom = dot(n, p0 - ray.o);
     return nom / denom;
 }
 
@@ -66,13 +67,13 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
         return false;
     }
 
-    auto P_int = ray.o + r * ray.d;
-    auto w = P_int - tri.vertices[0];
+    Point3f P_int = ray.o + r * ray.d;
+    Vec w = P_int - tri.vertices[0];
 
     // precompute scalar products
     // other values are precomputed in triangle on construction
-    float wv = dot(Vec(w), tri.v);
-    float wu = dot(Vec(w), tri.u);
+    float wv = dot(w, tri.v);
+    float wu = dot(w, tri.u);
 
     s = (tri.uv * wv - tri.vv * wu) / tri.denom;
     if (s < 0) {
@@ -141,7 +142,7 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
  * Return:
  *   true, if intersection exists, otherwise false
  */
-inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
+inline bool intersect_plane_box(const Normal3f& n, float d, const Box& box) {
     Point3f center = (box.p_max + box.p_min) * 0.5f;
     Vec extents = box.p_max - center;
 
@@ -162,15 +163,15 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
  */
 inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // center and extents of the box
-    auto center = Vec((box.p_min + box.p_max) * 0.5f);
+    Point3f center = (box.p_min + box.p_max) * 0.5f;
     float e0 = (box.p_max.x - box.p_min.x) * 0.5f;
     float e1 = (box.p_max.y - box.p_min.y) * 0.5f;
     float e2 = (box.p_max.z - box.p_min.z) * 0.5f;
 
     // translate triangle
-    auto v0 = tri.vertices[0] - center;
-    auto v1 = tri.vertices[1] - center;
-    auto v2 = tri.vertices[2] - center;
+    Vec v0 = tri.vertices[0] - center;
+    Vec v1 = tri.vertices[1] - center;
+    Vec v2 = tri.vertices[2] - center;
 
     // edges of the triangle
     auto f0 = tri.u; // = v1 - v0;

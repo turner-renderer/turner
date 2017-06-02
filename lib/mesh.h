@@ -92,19 +92,21 @@ auto find_vertex(const RadiosityMesh& mesh, RadiosityMesh::FaceHandle face,
 auto build_mesh(const Triangles& triangles) {
     RadiosityMesh mesh;
     // a vertex is uniquely determined by its coordinates and a normal
-    std::unordered_map<std::pair<Vec, Vec>, RadiosityMesh::VertexHandle> lookup;
+    std::unordered_map<std::pair<Point3f, Normal3f>,
+                       RadiosityMesh::VertexHandle>
+        lookup;
 
     auto corners_prop =
         CornerVerticesProperty::createIfNotExists(mesh, "corner_vertices");
 
     std::array<RadiosityMesh::VertexHandle, 3> vhandles;
     for (const auto& tri : triangles) {
-        const Vec& a = tri.vertices[0];
-        const Vec& b = tri.vertices[1];
-        const Vec& c = tri.vertices[2];
-        const Vec& na = tri.normals[0];
-        const Vec& nb = tri.normals[1];
-        const Vec& nc = tri.normals[2];
+        const Point3f& a = tri.vertices[0];
+        const Point3f& b = tri.vertices[1];
+        const Point3f& c = tri.vertices[2];
+        const Normal3f& na = tri.normals[0];
+        const Normal3f& nb = tri.normals[1];
+        const Normal3f& nc = tri.normals[2];
 
         auto ita = lookup.emplace(std::make_pair(a, na),
                                   RadiosityMesh::VertexHandle());
