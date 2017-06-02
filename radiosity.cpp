@@ -235,27 +235,28 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     Point3f cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
 
     for (size_t y = 0; y < image.height(); ++y) {
-        tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &radiosity, y,
-                                         &conf, &cam_pos]() {
-            // TODO: we need only one tree intersection per thread, not task
-            KDTreeIntersection tree_intersection(tree);
+        tasks.emplace_back(pool.enqueue(
+            [&image, &cam, &tree, &radiosity, y, &conf, &cam_pos]() {
+                // TODO: we need only one tree intersection per thread, not task
+                KDTreeIntersection tree_intersection(tree);
 
-            for (size_t x = 0; x < image.width(); ++x) {
-                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
-                                              image.height());
+                for (size_t x = 0; x < image.width(); ++x) {
+                    auto cam_dir = cam.raster2cam(
+                        {static_cast<float>(x), static_cast<float>(y)},
+                        image.width(), image.height());
 
-                Stats::instance().num_prim_rays += 1;
-                image(x, y) += trace({cam_pos, cam_dir}, tree_intersection,
-                                     radiosity, conf);
+                    Stats::instance().num_prim_rays += 1;
+                    image(x, y) += trace({cam_pos, cam_dir}, tree_intersection,
+                                         radiosity, conf);
 
-                image(x, y) = exposure(image(x, y), conf.exposure);
+                    image(x, y) = exposure(image(x, y), conf.exposure);
 
-                // gamma correction
-                if (conf.gamma_correction_enabled) {
-                    image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    // gamma correction
+                    if (conf.gamma_correction_enabled) {
+                        image(x, y) = gamma(image(x, y), conf.inverse_gamma);
+                    }
                 }
-            }
-        }));
+            }));
     }
 
     long completed = 0;
@@ -297,8 +298,9 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
             KDTreeIntersection tree_intersection(tree);
 
             for (size_t x = 0; x < image.width(); ++x) {
-                auto cam_dir = cam.raster2cam(aiVector2D(x, y), image.width(),
-                                              image.height());
+                auto cam_dir = cam.raster2cam(
+                    {static_cast<float>(x), static_cast<float>(y)},
+                    image.width(), image.height());
 
                 Stats::instance().num_prim_rays += 1;
 
@@ -369,7 +371,7 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 std::unordered_set<KDTreeIntersection::OptionalId> triangle_ids;
 
                 // Shoot center ray.
-                auto cam_dir = cam.raster2cam(aiVector2D(x + 0.5f, y + 0.5f),
+                auto cam_dir = cam.raster2cam({x + 0.5f, y + 0.5f},
                                               image.width(), image.height());
                 auto center_id = tree_intersection.intersect(
                     {cam_pos, cam_dir}, dist_to_triangle, s, t);
@@ -378,9 +380,8 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
                 // Sample disc rays around center.
                 // TODO: Sample disc with Poisson or similar.
                 for (auto offset : offsets) {
-                    cam_dir =
-                        cam.raster2cam(aiVector2D(x + offset.x, y + offset.y),
-                                       image.width(), image.height());
+                    cam_dir = cam.raster2cam({x + offset.x, y + offset.y},
+                                             image.width(), image.height());
                     auto id = tree_intersection.intersect(
                         {cam_pos, cam_dir}, dist_to_triangle, s, t);
                     triangle_ids.insert(id);
