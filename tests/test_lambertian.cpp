@@ -20,5 +20,4 @@ SCENARIO("Maximum light", "[light]") {
 
     THEN("the reflectance is the maximum") {
         REQUIRE(result == aiColor4D(0.7, 0, 0, 1));
-    }}}}}}
-}
+}}}}}}}

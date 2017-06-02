@@ -125,7 +125,7 @@ class KDTreeBuildAlgorithm {
 public:
     KDTreeBuildAlgorithm(const Triangles& triangles) : triangles_(&triangles) {}
 
-    TreeNode* build(TriangleIds tris, const Box& box) {
+    TreeNode* build(TriangleIds tris, const Bbox3f& box) {
         using Node = TreeNode;
 
         if (tris.size() == 0) {
@@ -158,7 +158,7 @@ public:
             return new Node(tris);
         }
 
-        Box lbox, rbox;
+        Bbox3f lbox, rbox;
         std::tie(lbox, rbox) = box.split(plane_ax, plane_pos);
 
         Node* left = build(std::move(ltris), lbox);
@@ -216,10 +216,10 @@ private:
      *         appended to the lhs or rhs of the box.
      */
     std::pair<float /*cost*/, Dir>
-    surface_area_heuristics(Axis ax, float pos, const Box& box,
+    surface_area_heuristics(Axis ax, float pos, const Bbox3f& box,
                             size_t num_ltris, size_t num_rtris,
                             size_t num_ptris) const {
-        Box lbox, rbox;
+        Bbox3f lbox, rbox;
         std::tie(lbox, rbox) = box.split(ax, pos);
         float area = box.surface_area();
         float larea_ratio = lbox.surface_area() / area;
@@ -242,7 +242,7 @@ private:
      */
     std::tuple<float /*cost*/, Axis /* plane axis */, float /* plane pos */,
                TriangleIds /*left*/, TriangleIds /*right*/>
-    find_plane_and_classify(const TriangleIds& tris, const Box& box) const {
+    find_plane_and_classify(const TriangleIds& tris, const Bbox3f& box) const {
         // The box should have some surface, otherwise the surface area
         // heuristics
         // does not make any sense.

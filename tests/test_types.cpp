@@ -20,69 +20,69 @@ TEST_CASE("Test min and max", "[helper]") {
 }
 
 TEST_CASE("Test surface area of box", "[box]") {
-    Box box{{0, 0, 0}, {1, 1, 1}};
+    Bbox3f box{{0, 0, 0}, {1, 1, 1}};
     REQUIRE(box.surface_area() == 6);
 
-    box = Box{{-10, -10, -10}, {10, 10, 10}};
+    box = Bbox3f{{-10, -10, -10}, {10, 10, 10}};
     REQUIRE(box.surface_area() == 2400);
 
-    box = Box{{0, 0, 0}, {1, 1, 0}};
+    box = Bbox3f{{0, 0, 0}, {1, 1, 0}};
     REQUIRE(box.surface_area() == 2);
 
-    box = Box{{0, 0, 0}, {0, 1, 1}};
+    box = Bbox3f{{0, 0, 0}, {0, 1, 1}};
     REQUIRE(box.surface_area() == 2);
 
-    box = Box{{0, 0, 0}, {1, 0, 1}};
+    box = Bbox3f{{0, 0, 0}, {1, 0, 1}};
     REQUIRE(box.surface_area() == 2);
 }
 
-TEST_CASE("Test Box union", "[box]") {
-    Box box{{0, 0, 0}, {1, 1, 1}};
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {0, 0, 0}}) == box);
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 1, 1}}) == box);
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {2, 1, 1}}) ==
-            (Box{{0, 0, 0}, {2, 1, 1}}));
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 2, 1}}) ==
-            (Box{{0, 0, 0}, {1, 2, 1}}));
-    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 1, 2}}) ==
-            (Box{{0, 0, 0}, {1, 1, 2}}));
-    REQUIRE(bbox_union(box, Box{{-1, 0, 0}, {1, 1, 1}}) ==
-            (Box{{-1, 0, 0}, {1, 1, 1}}));
-    REQUIRE(bbox_union(box, Box{{0, -1, 0}, {1, 1, 1}}) ==
-            (Box{{0, -1, 0}, {1, 1, 1}}));
-    REQUIRE(bbox_union(box, Box{{0, 0, -1}, {1, 1, 1}}) ==
-            (Box{{0, 0, -1}, {1, 1, 1}}));
+TEST_CASE("Test Bbox3f union", "[box]") {
+    Bbox3f box{{0, 0, 0}, {1, 1, 1}};
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {0, 0, 0}}) == box);
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {1, 1, 1}}) == box);
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {2, 1, 1}}) ==
+            (Bbox3f{{0, 0, 0}, {2, 1, 1}}));
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {1, 2, 1}}) ==
+            (Bbox3f{{0, 0, 0}, {1, 2, 1}}));
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {1, 1, 2}}) ==
+            (Bbox3f{{0, 0, 0}, {1, 1, 2}}));
+    REQUIRE(bbox_union(box, Bbox3f{{-1, 0, 0}, {1, 1, 1}}) ==
+            (Bbox3f{{-1, 0, 0}, {1, 1, 1}}));
+    REQUIRE(bbox_union(box, Bbox3f{{0, -1, 0}, {1, 1, 1}}) ==
+            (Bbox3f{{0, -1, 0}, {1, 1, 1}}));
+    REQUIRE(bbox_union(box, Bbox3f{{0, 0, -1}, {1, 1, 1}}) ==
+            (Bbox3f{{0, 0, -1}, {1, 1, 1}}));
 }
 
 TEST_CASE("Split box at plane", "[box]") {
-    Box box{{0, 0, 0}, {2, 2, 2}};
+    Bbox3f box{{0, 0, 0}, {2, 2, 2}};
 
-    Box l, r;
+    Bbox3f l, r;
     std::tie(l, r) = box.split(Axis::X, 1);
-    REQUIRE(l == (Box{{0, 0, 0}, {1, 2, 2}}));
-    REQUIRE(r == (Box{{1, 0, 0}, {2, 2, 2}}));
+    REQUIRE(l == (Bbox3f{{0, 0, 0}, {1, 2, 2}}));
+    REQUIRE(r == (Bbox3f{{1, 0, 0}, {2, 2, 2}}));
 
     std::tie(l, r) = box.split(Axis::Y, 1);
-    REQUIRE(l == (Box{{0, 0, 0}, {2, 1, 2}}));
-    REQUIRE(r == (Box{{0, 1, 0}, {2, 2, 2}}));
+    REQUIRE(l == (Bbox3f{{0, 0, 0}, {2, 1, 2}}));
+    REQUIRE(r == (Bbox3f{{0, 1, 0}, {2, 2, 2}}));
 
     std::tie(l, r) = box.split(Axis::Z, 1);
-    REQUIRE(l == (Box{{0, 0, 0}, {2, 2, 1}}));
-    REQUIRE(r == (Box{{0, 0, 1}, {2, 2, 2}}));
+    REQUIRE(l == (Bbox3f{{0, 0, 0}, {2, 2, 1}}));
+    REQUIRE(r == (Bbox3f{{0, 0, 1}, {2, 2, 2}}));
 }
 
 TEST_CASE("Test bbox of triangle", "[triangle]") {
     REQUIRE(test_triangle({0, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox() ==
-            (Box{{0, 0, 0}, {0, 1, 1}}));
+            (Bbox3f{{0, 0, 0}, {0, 1, 1}}));
     REQUIRE(test_triangle({-1, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox() ==
-            (Box{{-1, 0, 0}, {0, 1, 1}}));
+            (Bbox3f{{-1, 0, 0}, {0, 1, 1}}));
     REQUIRE(test_triangle({0, 0, 0}, {0, -1, 1}, {0, 1, 1}).bbox() ==
-            (Box{{0, -1, 0}, {0, 1, 1}}));
+            (Bbox3f{{0, -1, 0}, {0, 1, 1}}));
     REQUIRE(test_triangle({0, 0, 0}, {0, 0, -1}, {0, 1, 1}).bbox() ==
-            (Box{{0, 0, -1}, {0, 1, 1}}));
+            (Bbox3f{{0, 0, -1}, {0, 1, 1}}));
     REQUIRE(test_triangle({0, 0, 0}, {0, 0, 1}, {2, 1, 1}).bbox() ==
-            (Box{{0, 0, 0}, {2, 1, 1}}));
+            (Bbox3f{{0, 0, 0}, {2, 1, 1}}));
 }
 
 TEST_CASE("Test is_planar of triangle", "[triangle]") {

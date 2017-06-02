@@ -102,7 +102,7 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  *
  * Cf. http://people.csail.mit.edu/amy/papers/box-jgt.pdf
  */
-inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
+inline bool intersect_ray_box(const Ray& ray, const Bbox3f& box, float& tmin,
                               float& tmax) {
     Vector3f d_inv(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
 
@@ -127,7 +127,7 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
     return !(tmax < tmin);
 }
 
-inline bool intersect_ray_box(const Ray& ray, const Box& box) {
+inline bool intersect_ray_box(const Ray& ray, const Bbox3f& box) {
     float tmin, tmax;
     return intersect_ray_box(ray, box, tmin, tmax);
 }
@@ -142,7 +142,7 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
  * Return:
  *   true, if intersection exists, otherwise false
  */
-inline bool intersect_plane_box(const Normal3f& n, float d, const Box& box) {
+inline bool intersect_plane_box(const Normal3f& n, float d, const Bbox3f& box) {
     Point3f center = (box.p_max + box.p_min) * 0.5f;
     Vector3f extents = box.p_max - center;
 
@@ -158,10 +158,10 @@ inline bool intersect_plane_box(const Normal3f& n, float d, const Box& box) {
  * Test triangle AABB intersection
  *
  * Implementation from
- * "Fast 3D Triangle-Box Overlap Testing"
+ * "Fast 3D Triangle-Bbox3f Overlap Testing"
  * by Tomas Akenine-Möller
  */
-inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
+inline bool intersect_triangle_box(const Triangle& tri, const Bbox3f& box) {
     // center and extents of the box
     Point3f center = (box.p_min + box.p_max) * 0.5f;
     float e0 = (box.p_max.x - box.p_min.x) * 0.5f;

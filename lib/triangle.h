@@ -58,7 +58,7 @@ public:
     /**
      * Compute the (axes aligned) bounding box of the triangle.
      */
-    Box bbox() const {
+    Bbox3f bbox() const {
         Point3f min = {fmin(vertices[0].x, vertices[1].x, vertices[2].x),
                        fmin(vertices[0].y, vertices[1].y, vertices[2].y),
                        fmin(vertices[0].z, vertices[1].z, vertices[2].z)};

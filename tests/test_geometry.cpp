@@ -60,7 +60,7 @@ TEST_CASE("Test surface area of box", "[bbox3]") {
     REQUIRE(box.surface_area() == 8);
 }
 
-TEST_CASE("Test Box union", "[bbox3]") {
+TEST_CASE("Test Bbox3f union", "[bbox3]") {
     Bbox3f box{{0, 0, 0}, {1, 1, 1}};
     REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {0, 0, 0}}) == box);
     REQUIRE(bbox_union(box, Bbox3f{{0, 0, 0}, {1, 1, 1}}) == box);
