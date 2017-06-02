@@ -25,7 +25,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // light direction
     auto p = origin + dist_to_triangle * dir;
-    auto light_dir = (light.position - p).Normalize();
+    auto light_dir = normalize(
+        Vec{light.position.x, light.position.y, light.position.z} - p);
 
     // interpolate normal
     const auto& triangle = tree_intersection[triangle_id];
@@ -43,7 +44,7 @@ Color trace(const Vec& origin, const Vec& dir,
     // reflection
     if (triangle.reflectivity > 0) {
         // compute reflected ray from incident ray
-        auto reflected_ray_dir = dir - 2.f * (normal * dir) * normal;
+        auto reflected_ray_dir = dir - 2.f * dot(normal, dir) * normal;
         auto reflected_color = trace(p2, reflected_ray_dir, tree_intersection,
                                      lights, depth + 1, conf);
 
@@ -53,8 +54,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // shadow
     float dist_to_next_triangle;
-    light_dir = (light.position - p2).Normalize();
-    float dist_to_light = (light.position - p2).Length();
+    light_dir = normalize(light.position - p2);
+    float dist_to_light = (light.position - p2).length();
 
     auto has_shadow = tree_intersection.intersect({p2, light_dir},
                                                   dist_to_next_triangle, s, t);

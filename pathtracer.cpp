@@ -45,8 +45,8 @@ Color trace(const Vec& origin, const Vec& dir,
 
     for (auto& light : lights) {
         // light direction
-        auto light_dir = (light.position - p).Normalize();
-        float dist_to_light = (light.position - p2).Length();
+        auto light_dir = normalize(light.position - p);
+        float dist_to_light = (light.position - p2).length();
         float dist_to_next_triangle;
         auto has_shadow = tree_intersection.intersect(
             {p2, light_dir}, dist_to_next_triangle, s, t);
@@ -54,7 +54,8 @@ Color trace(const Vec& origin, const Vec& dir,
         // Do we get direct light?
         if (!has_shadow || dist_to_next_triangle > dist_to_light) {
             // lambertian
-            direct_lightning = std::max(0.f, light_dir * normal) * light.color;
+            direct_lightning =
+                std::max(0.f, dot(light_dir, normal)) * light.color;
         }
     }
 
@@ -67,11 +68,15 @@ Color trace(const Vec& origin, const Vec& dir,
     // Turn hemisphere according normal, i.e. Up(0, 0, 1) is turned so that
     // it lies on normal of the hit point.
     aiMatrix3x3 mTrafo;
-    aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, normal, mTrafo);
+    aiMatrix3x3::FromToMatrix(aiVector3D(0, 0, 1),
+                              aiVector3D(normal.x, normal.y, normal.z), mTrafo);
 
     for (int run = 0; run < conf.num_monte_carlo_samples; run++) {
         auto dir_theta = sampling::hemisphere();
-        auto dir = mTrafo * dir_theta.first;
+        aiVector3D ai_dir =
+            mTrafo *
+            aiVector3D(dir_theta.first.x, dir_theta.first.y, dir_theta.first.z);
+        Vec dir(ai_dir.x, ai_dir.y, ai_dir.z);
         auto cos_theta = dir_theta.second;
 
         const auto indirect_light =

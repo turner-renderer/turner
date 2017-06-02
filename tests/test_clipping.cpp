@@ -16,7 +16,7 @@ TEST_CASE("Clip polygon at a plane", "[clipping]") {
     REQUIRE(res == expected);
 
     tri = std::vector<Vec>{{0, 1, 0}, {0, 0, 0}, {1, 0, 0}};
-    auto normal = Vec{-1, 1, 0}.Normalize();
+    auto normal = normalize(Vec{-1, 1, 0});
     res = clip_polygon_at_plane(tri, normal, 0);
     expected = std::vector<Vec>{{0.5f, 0.5f, 0}, {0, 1, 0}, {0, 0, 0}};
     REQUIRE(res == expected);

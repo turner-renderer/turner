@@ -12,6 +12,7 @@ set(TESTS
     test_config
     test_effects
     test_functional
+    test_geometry
     test_intersection
     test_kdtree
     test_lambertian

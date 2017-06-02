@@ -31,10 +31,10 @@ public:
         , reflectivity(reflectivity) // reflectivity factor
         , u(vertices[1] - vertices[0])
         , v(vertices[2] - vertices[0])
-        , normal((u ^ v).Normalize())
-        , uv(u * v)
-        , vv(v * v)
-        , uu(u * u)
+        , normal(normalize(cross(u, v)))
+        , uv(dot(u, v))
+        , vv(dot(v, v))
+        , uu(dot(u, u))
         , denom(uv * uv - uu * vv) {}
 
     // minimal constructor
@@ -50,9 +50,7 @@ public:
      * Requirement: r + s + t == 1
      */
     Vec interpolate_normal(float r, float s, float t) const {
-        auto normal = r * normals[0] + s * normals[1] + t * normals[2];
-        normal.Normalize();
-        return normal;
+        return normalize(r * normals[0] + s * normals[1] + t * normals[2]);
     }
 
     /**
@@ -74,7 +72,7 @@ public:
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
     }
 
-    float area() const { return (u ^ v).Length() / 2.f; }
+    float area() const { return cross(u, v).length() / 2.f; }
 
     // Check if triangle lies in the plane defined by the normal ax through 0.
     bool is_planar(Axis ax) const {

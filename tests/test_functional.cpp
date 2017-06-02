@@ -29,7 +29,8 @@ TEST_CASE("Test hash of a Vec", "[hash]") {
 
     size_t res = 0;
     for (size_t i = 0; i < 32; ++i) {
-        Vec v{dist(rd), dist(rd), dist(rd)};
+        Vec v{static_cast<float>(dist(rd)), static_cast<float>(dist(rd)),
+              static_cast<float>(dist(rd))};
         res |= hasher(v);
     }
 
