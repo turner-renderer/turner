@@ -205,8 +205,8 @@ int main(int argc, char const* argv[]) {
                         dx = gen();
                         dy = gen();
 
-                        auto cam_dir = cam.raster2cam(
-                            aiVector2D(x + dx, y + dy), width, height);
+                        auto cam_dir =
+                            cam.raster2cam({x + dx, y + dy}, width, height);
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) +=

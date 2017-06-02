@@ -52,6 +52,8 @@ using turner::Point3f;
 using turner::Normal3f;
 using turner::Bbox3f;
 using turner::Ray;
+using turner::Vector2f;
+using turner::Vector2i;
 
 static constexpr auto AXES3 = turner::AXES3;
 
@@ -114,7 +116,7 @@ public:
      * The positioning of the camera is done in its parent's node
      * transformation matrix.
      */
-    Vector3f raster2cam(const aiVector2D& p, float w, float h) const {
+    Vector3f raster2cam(const Vector2f& p, float w, float h) const {
         aiVector3D v = trafo_ * aiVector3D(-delta_x_ * (1 - 2 * p.x / w),
                                            delta_y_ * (1 - 2 * p.y / h), -1);
         return {v.x, v.y, v.z};
@@ -123,7 +125,7 @@ public:
     /**
      * Convert 3d world coordinates to raster 2d coordinates.
      */
-    aiVector2t<int> cam2raster(const Point3f& p, float w, float h) const {
+    Vector2i cam2raster(const Point3f& p, float w, float h) const {
         // move to camera position and convert to camera space
         auto v = inverse_trafo_ * (aiVector3D(p.x, p.y, p.z) - mPosition);
         // project on z = 1 in normal camera space
