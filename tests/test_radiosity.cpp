@@ -226,7 +226,7 @@ TEST_CASE("Form factor of triangles with parallel normal", "[form_factor]") {
     REQUIRE(ff == 0);
 }
 
-RadiosityMesh::Point random_point() {
+RadiosityMesh::Point random_mesh_point() {
     static std::default_random_engine gen(0);
     static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
     return {rnd(gen), rnd(gen), rnd(gen)};
@@ -235,10 +235,10 @@ RadiosityMesh::Point random_point() {
 TEST_CASE("Solid angle of a randomized triangles", "[solid_angle]") {
     constexpr size_t NUM_TRIANGLES = 1000;
     for (size_t i = 0; i < NUM_TRIANGLES; ++i) {
-        const auto O = random_point();
-        const auto A = random_point();
-        const auto B = random_point();
-        const auto C = random_point();
+        const auto O = random_mesh_point();
+        const auto A = random_mesh_point();
+        const auto B = random_mesh_point();
+        const auto C = random_mesh_point();
 
         float angle = solid_angle(O, A, B, C);
         float ref_angle_1 = solid_angle_using_dihedral_angles(O, A, B, C);

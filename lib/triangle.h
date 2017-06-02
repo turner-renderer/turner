@@ -19,7 +19,7 @@ class Triangle {
 public:
     Triangle() = default;
 
-    Triangle(std::array<Vec, 3> vs, std::array<Vec, 3> ns,
+    Triangle(std::array<Point3f, 3> vs, std::array<Normal3f, 3> ns,
              const aiColor4D& ambient, const aiColor4D& diffuse,
              const aiColor4D& emissive, const aiColor4D& reflective,
              const float reflectivity)
@@ -39,8 +39,9 @@ public:
         , denom(uv * uv - uu * vv) {}
 
     // minimal constructor
-    explicit Triangle(std::array<Vec, 3> vs)
-        : Triangle(vs, {Vec{}, Vec{}, Vec{}}, {}, {}, {}, {}, 0) {}
+    explicit Triangle(std::array<Point3f, 3> vs)
+        : Triangle(vs, {Normal3f{}, Normal3f{}, Normal3f{}}, {}, {}, {}, {},
+                   0) {}
 
     friend bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
                                        float& r, float& s, float& t);
@@ -50,7 +51,7 @@ public:
      *
      * Requirement: r + s + t == 1
      */
-    Vec interpolate_normal(float r, float s, float t) const {
+    Normal3f interpolate_normal(float r, float s, float t) const {
         return normalize(r * normals[0] + s * normals[1] + t * normals[2]);
     }
 
@@ -69,7 +70,7 @@ public:
         return {min, max};
     }
 
-    Vec midpoint() const {
+    Point3f midpoint() const {
         return (vertices[0] + vertices[1] + vertices[2]) / 3.f;
     }
 
@@ -91,8 +92,8 @@ public:
     }
 
     // members
-    std::array<Vec, 3> vertices;
-    std::array<Vec, 3> normals;
+    std::array<Point3f, 3> vertices;
+    std::array<Normal3f, 3> normals;
     aiColor4D ambient;
     aiColor4D diffuse;
     aiColor4D emissive;
@@ -107,7 +108,7 @@ public:
     // the triangle is not rendered with sharp edges, i.e. if the normals
     // of the vertices are interpolated between all faces containing this
     // vertex.
-    Vec normal;
+    Normal3f normal;
 
 private:
     float uv, vv, uu, denom;

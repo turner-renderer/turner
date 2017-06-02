@@ -53,11 +53,12 @@
  *                     `from` and y is on the triangle `to`.
  * @return             form factor F_ij
  */
-inline float form_factor(KDTreeIntersection& tree, const Vec& from_pos,
+inline float form_factor(KDTreeIntersection& tree, const Point3f& from_pos,
                          const Vec& from_u, const Vec& from_v,
-                         const Vec& from_normal, const Vec& to_pos,
-                         const Vec& to_u, const Vec& to_v, const Vec& to_normal,
-                         const float to_area, const KDTree::TriangleId to_id,
+                         const Normal3f& from_normal, const Point3f& to_pos,
+                         const Vec& to_u, const Vec& to_v,
+                         const Normal3f& to_normal, const float to_area,
+                         const KDTree::TriangleId to_id,
                          const size_t num_samples = 128) {
     float result = 0;
     for (size_t i = 0; i < num_samples; ++i) {
@@ -65,7 +66,7 @@ inline float form_factor(KDTreeIntersection& tree, const Vec& from_pos,
         auto p2 = Point3f(sampling::triangle(to_pos, to_u, to_v));
 
         Vec v = p2 - p1;
-        if (tree.intersect(Ray{p1 + EPS * from_normal, v}) != to_id) {
+        if (tree.intersect(Ray{p1 + Vec(EPS * from_normal), v}) != to_id) {
             continue;
         }
 

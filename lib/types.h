@@ -124,7 +124,7 @@ public:
     /**
      * Convert 3d world coordinates to raster 2d coordinates.
      */
-    aiVector2t<int> cam2raster(const Vec& p, float w, float h) const {
+    aiVector2t<int> cam2raster(const Point3f& p, float w, float h) const {
         // move to camera position and convert to camera space
         auto v = inverse_trafo_ * (aiVector3D(p.x, p.y, p.z) - mPosition);
         // project on z = 1 in normal camera space

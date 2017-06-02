@@ -23,6 +23,22 @@ template <> struct hash<Vec> {
     }
 };
 
+template <> struct hash<Point3f> {
+    size_t operator()(const Point3f& v) const {
+        size_t seed = 0;
+        hash_combine(seed, v.x, v.y, v.z);
+        return seed;
+    }
+};
+
+template <> struct hash<Normal3f> {
+    size_t operator()(const Normal3f& v) const {
+        size_t seed = 0;
+        hash_combine(seed, v.x, v.y, v.z);
+        return seed;
+    }
+};
+
 template <typename X, typename Y> struct hash<std::pair<X, Y>> {
     size_t operator()(const std::pair<X, Y>& val) const {
         size_t seed = 0;

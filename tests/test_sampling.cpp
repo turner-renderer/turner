@@ -45,7 +45,7 @@ TEST_CASE("Test Triangle sampling", "[sampling]") {
     for (int j = 0; j < NUM_SAMPLES; ++j) {
         Triangle triangle = random_triangle();
 
-        Vec sample = sampling::triangle(triangle);
+        Vec sample = Vec(sampling::triangle(triangle));
         float length = sample.length();
 
         // Verify that point is on triangle.
