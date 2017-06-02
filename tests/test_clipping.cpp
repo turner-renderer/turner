@@ -4,53 +4,53 @@
 #include <catch.hpp>
 
 TEST_CASE("Clip polygon at a plane", "[clipping]") {
-    auto tri = std::vector<Vec>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
+    auto tri = std::vector<Point3f>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
     auto res = clip_polygon_at_plane(tri, {1, 0, 0}, 0);
     REQUIRE(res == tri);
 
-    tri = std::vector<Vec>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
+    tri = std::vector<Point3f>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
     res = clip_polygon_at_plane(tri, {1, 0, 0}, 0.5f);
-    auto expected =
-        std::vector<Vec>{{0.5f, 0.5f, 0}, {0.5f, 0, 0}, {1, 0, 0}, {1, 1, 0}};
+    auto expected = std::vector<Point3f>{
+        {0.5f, 0.5f, 0}, {0.5f, 0, 0}, {1, 0, 0}, {1, 1, 0}};
     REQUIRE(res == expected);
 
-    tri = std::vector<Vec>{{0, 1, 0}, {0, 0, 0}, {1, 0, 0}};
-    auto normal = normalize(Vec{-1, 1, 0});
+    tri = std::vector<Point3f>{{0, 1, 0}, {0, 0, 0}, {1, 0, 0}};
+    Normal3f normal = normalize(Normal3f{-1, 1, 0});
     res = clip_polygon_at_plane(tri, normal, 0);
-    expected = std::vector<Vec>{{0.5f, 0.5f, 0}, {0, 1, 0}, {0, 0, 0}};
+    expected = std::vector<Point3f>{{0.5f, 0.5f, 0}, {0, 1, 0}, {0, 0, 0}};
     REQUIRE(res == expected);
 }
 
 TEST_CASE("Simple line clipping test", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
 
-    Vec p0 = {0, 0, -10};
-    Vec p1 = {0, 0, 10};
+    Point3f p0 = {0, 0, -10};
+    Point3f p1 = {0, 0, 10};
 
     REQUIRE(clip_line_aabb(p0, p1, box));
-    REQUIRE(p0 == (Vec{0, 0, -1}));
-    REQUIRE(p1 == (Vec{0, 0, 1}));
+    REQUIRE(p0 == (Point3f{0, 0, -1}));
+    REQUIRE(p1 == (Point3f{0, 0, 1}));
 
     p0 = {0, -10, 0};
     p1 = {0, 10, 0};
 
     REQUIRE(clip_line_aabb(p0, p1, box));
-    REQUIRE(p0 == (Vec{0, -1, 0}));
-    REQUIRE(p1 == (Vec{0, 1, 0}));
+    REQUIRE(p0 == (Point3f{0, -1, 0}));
+    REQUIRE(p1 == (Point3f{0, 1, 0}));
 
     p0 = {-10, 0, 0};
     p1 = {10, 0, 0};
 
     REQUIRE(clip_line_aabb(p0, p1, box));
-    REQUIRE(p0 == (Vec{-1, 0, 0}));
-    REQUIRE(p1 == (Vec{1, 0, 0}));
+    REQUIRE(p0 == (Point3f{-1, 0, 0}));
+    REQUIRE(p1 == (Point3f{1, 0, 0}));
 
     p0 = {-10, 10, 0};
     p1 = {10, 10, 0};
 
     REQUIRE(!clip_line_aabb(p0, p1, box));
-    REQUIRE(p0 == (Vec{-10, 10, 0}));
-    REQUIRE(p1 == (Vec{10, 10, 0}));
+    REQUIRE(p0 == (Point3f{-10, 10, 0}));
+    REQUIRE(p1 == (Point3f{10, 10, 0}));
 }
 
 TEST_CASE("Big triangle clipping at aabb", "[clipping]") {
