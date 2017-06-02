@@ -62,8 +62,7 @@ TEST_CASE("Four separated triangles test", "[kdtree]") {
     REQUIRE(t == 0.5f);
 }
 
-TEST_CASE("Serialize and deserialize", "[kdtree]")
-{
+TEST_CASE("Serialize and deserialize", "[kdtree]") {
     auto a = test_triangle({0, 0, 1}, {0, 1, 1}, {1, 0, 1});
     auto b = test_triangle({2, 0, 1}, {3, 0, 1}, {3, 1, 1});
     auto c = test_triangle({0, 2, 1}, {0, 3, 1}, {1, 3, 1});
@@ -134,7 +133,7 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
     size_t num_hits = 0;
 
     KDTreeIntersection tree_intersection(tree);
-    const Vec origin{0, 0, 1000};
+    const Point3f origin{0, 0, 1000};
     float x = -10.f, y = -10.f;
     const float step_x = 20.f / RAYS_PER_LINE;
     const float step_y = 20.f / RAYS_PER_LINE;
@@ -143,7 +142,7 @@ TEST_CASE("KDTree stress test", "[kdtree]") {
         for (size_t i = 0; i < RAYS_PER_LINE; ++i, x += step_x) {
             for (size_t j = 0; j < RAYS_PER_LINE; ++j, y += step_y) {
                 float r, s, t;
-                Ray ray{origin, (Vec{x, y, 0}) - origin};
+                Ray ray{origin, Point3f(x, y, 0) - origin};
                 if (tree_intersection.intersect(ray, r, s, t)) {
                     num_hits += 1;
                 }
@@ -197,10 +196,10 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]") {
 
         float r, s, t;
         // intersection with parallel ray
-        auto ray_pos = Vec{1, 1, 1};
-        auto ray_dir = random_vec_on_unit_sphere(ax, 0);
+        Point3f ray_orig(1, 1, 1);
+        Vec ray_dir = random_vec_on_unit_sphere(ax, 0);
 
-        Ray parallel_ray(ray_pos, ray_dir);
+        Ray parallel_ray(ray_orig, ray_dir);
         REQUIRE(!tree_intersection.intersect(parallel_ray, r, s, t));
 
         // intersection with ray through zero
@@ -219,14 +218,14 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
         KDTree tree(tris);
         KDTreeIntersection tree_intersection(tree);
 
-        Vec origin, dest;
+        Ray ray;
         KDTreeIntersection::OptionalId triangle_id;
         float r, s, t;
 
         // ray from negative direction to 0
-        origin[ax] = -100;
-        dest[ax] = 1;
-        triangle_id = tree_intersection.intersect(Ray(origin, dest), r, s, t);
+        ray.o[ax] = -100;
+        ray.d[ax] = 1;
+        triangle_id = tree_intersection.intersect(ray, r, s, t);
         REQUIRE(static_cast<bool>(triangle_id));
         REQUIRE(static_cast<size_t>(triangle_id) == 0L);
         REQUIRE(static_cast<int>(r) == 100);
@@ -234,9 +233,9 @@ TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
         REQUIRE(is_eps_zero(t - 1.f / 3));
 
         // ray from positive direction to 0
-        origin[ax] = 100;
-        dest[ax] = -1;
-        triangle_id = tree_intersection.intersect(Ray(origin, dest), r, s, t);
+        ray.o[ax] = 100;
+        ray.d[ax] = -1;
+        triangle_id = tree_intersection.intersect(ray, r, s, t);
         REQUIRE(static_cast<bool>(triangle_id));
         REQUIRE(static_cast<size_t>(triangle_id) == 9L);
         REQUIRE(static_cast<int>(r) == 91);

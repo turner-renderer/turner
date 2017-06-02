@@ -4,14 +4,12 @@
 #include "lib/triangle.h"
 #include "trace.h"
 
-Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection,
+Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
             const std::vector<Light>& /* lights */, int /* depth */,
             const TracerConfig& conf) {
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection.intersect(ray, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }

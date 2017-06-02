@@ -52,6 +52,7 @@ using Axis = turner::Axis3;
 
 using turner::Point3f;
 using turner::Normal3f;
+using turner::Ray;
 
 static constexpr auto AXES = turner::AXES3;
 
@@ -77,18 +78,8 @@ template <class Archive> void serialize(Archive& archive, Color& c) {
  * Light Source
  */
 struct Light {
-    Vec position;
+    Point3f position;
     Color color;
-};
-
-/**
- * Ray with precomputed inverse direction
- */
-struct Ray {
-    Ray(const Vec& pos, const Vec& dir)
-        : pos(pos), dir(dir), invdir(1 / dir.x, 1 / dir.y, 1 / dir.z) {}
-
-    Vec pos, dir, invdir;
 };
 
 /**
