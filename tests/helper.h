@@ -35,7 +35,7 @@ Normal3f random_normal() {
 };
 
 // Construct a random vector lying on the unit sphere in the plane ax = pos.
-Point3f random_vec_on_unit_sphere(Axis ax, float pos) {
+Point3f random_vec_on_unit_sphere(Axis3 ax, float pos) {
     static std::default_random_engine gen(3);
     static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
 
@@ -45,9 +45,9 @@ Point3f random_vec_on_unit_sphere(Axis ax, float pos) {
 
     Point3f p;
     size_t ax_num = static_cast<size_t>(ax);
-    p[AXES[(ax_num + 0) % 3]] = pos;
-    p[AXES[(ax_num + 1) % 3]] = x;
-    p[AXES[(ax_num + 2) % 3]] = y;
+    p[AXES3[(ax_num + 0) % 3]] = pos;
+    p[AXES3[(ax_num + 1) % 3]] = x;
+    p[AXES3[(ax_num + 2) % 3]] = y;
     return p;
 }
 
@@ -57,7 +57,7 @@ Triangle random_triangle() {
 
 // Construct a random triangle with vertices lying on the unit sphere in the
 // plane ax = pos.
-Triangle random_triangle_on_unit_sphere(Axis ax, float pos) {
+Triangle random_triangle_on_unit_sphere(Axis3 ax, float pos) {
     return test_triangle(random_vec_on_unit_sphere(ax, pos),
                          random_vec_on_unit_sphere(ax, pos),
                          random_vec_on_unit_sphere(ax, pos));
@@ -65,7 +65,7 @@ Triangle random_triangle_on_unit_sphere(Axis ax, float pos) {
 
 // Construct a random regular triangle with vertices lying on the unit sphere
 // in the plane ax = pos. In particular, the 0-point lies in the triangle.
-Triangle random_regular_triangle_on_unit_sphere(Axis ax, float pos) {
+Triangle random_regular_triangle_on_unit_sphere(Axis3 ax, float pos) {
     static std::default_random_engine gen(0);
     static std::uniform_real_distribution<float> rnd(0, 2 * M_PI);
 
@@ -76,9 +76,9 @@ Triangle random_regular_triangle_on_unit_sphere(Axis ax, float pos) {
         auto y = sin(phi + 2.f * M_PI / 3 * i);
 
         size_t ax_num = static_cast<size_t>(ax);
-        vertices[i][AXES[ax_num]] = pos;
-        vertices[i][AXES[(ax_num + 1) % 3]] = x;
-        vertices[i][AXES[(ax_num + 2) % 3]] = y;
+        vertices[i][AXES3[ax_num]] = pos;
+        vertices[i][AXES3[(ax_num + 1) % 3]] = x;
+        vertices[i][AXES3[(ax_num + 2) % 3]] = y;
     }
 
     return test_triangle(vertices[0], vertices[1], vertices[2]);

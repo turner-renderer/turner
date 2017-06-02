@@ -46,15 +46,14 @@ inline constexpr float max(float a, float b, float c) {
 
 static constexpr auto PI = turner::PI;
 
-using Axis = turner::Axis3;
-
-using turner::Bbox3f;
+using turner::Axis3;
 using turner::Vector3f;
 using turner::Point3f;
 using turner::Normal3f;
+using turner::Bbox3f;
 using turner::Ray;
 
-static constexpr auto AXES = turner::AXES3;
+static constexpr auto AXES3 = turner::AXES3;
 
 using Color = aiColor4D;
 

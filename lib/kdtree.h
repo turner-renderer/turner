@@ -70,7 +70,7 @@ public:
     FlatNode() = default;
 
     // Inner node containing split axis and pos, and index of the right child
-    FlatNode(Axis split_axis, float split_pos, uint32_t right)
+    FlatNode(Axis3 split_axis, float split_pos, uint32_t right)
         : data_(static_cast<uint64_t>(float_to_uint32(split_pos)) << 32 |
                 right << 2 | static_cast<uint32_t>(split_axis)) {
         // we need two bits to store axis and node type
@@ -94,9 +94,9 @@ public:
 
     // inner node attributes
 
-    Axis split_axis() const {
+    Axis3 split_axis() const {
         assert(is_inner());
-        return static_cast<Axis>(data_ & TYPE_MASK);
+        return static_cast<Axis3>(data_ & TYPE_MASK);
     }
 
     float split_pos() const {

@@ -13,7 +13,7 @@ using TriangleIds = detail::TriangleIds;
  */
 class TreeNode {
 public:
-    TreeNode(Axis split_axis, float split_pos, TreeNode* left, TreeNode* right)
+    TreeNode(Axis3 split_axis, float split_pos, TreeNode* left, TreeNode* right)
         : flags_(static_cast<TriangleId>(split_axis) + FLAG_AXIS_X)
         , split_pos_(split_pos)
         , left_or_triangle_ids_(static_cast<void*>(left))
@@ -44,19 +44,19 @@ public:
 
     bool is_inner() const { return !is_leaf(); }
 
-    Axis split_axis() const {
+    Axis3 split_axis() const {
         assert(is_inner());
 
         if (flags_ == FLAG_AXIS_X) {
-            return Axis::X;
+            return Axis3::X;
         } else if (flags_ == FLAG_AXIS_Y) {
-            return Axis::Y;
+            return Axis3::Y;
         } else if (flags_ == FLAG_AXIS_Z) {
-            return Axis::Z;
+            return Axis3::Z;
         }
 
         assert(false);
-        return Axis::X;
+        return Axis3::X;
     }
 
     float split_pos() const {
@@ -143,7 +143,7 @@ public:
         }
 
         float min_cost;
-        Axis plane_ax;
+        Axis3 plane_ax;
         float plane_pos; // plane
         TriangleIds ltris, rtris;
         std::tie(min_cost, plane_ax, plane_pos, ltris, rtris) =
@@ -216,7 +216,7 @@ private:
      *         appended to the lhs or rhs of the box.
      */
     std::pair<float /*cost*/, Dir>
-    surface_area_heuristics(Axis ax, float pos, const Bbox3f& box,
+    surface_area_heuristics(Axis3 ax, float pos, const Bbox3f& box,
                             size_t num_ltris, size_t num_rtris,
                             size_t num_ptris) const {
         Bbox3f lbox, rbox;
@@ -240,7 +240,7 @@ private:
     /**
      * [WH06], Algorithm 4
      */
-    std::tuple<float /*cost*/, Axis /* plane axis */, float /* plane pos */,
+    std::tuple<float /*cost*/, Axis3 /* plane axis */, float /* plane pos */,
                TriangleIds /*left*/, TriangleIds /*right*/>
     find_plane_and_classify(const TriangleIds& tris, const Bbox3f& box) const {
         // The box should have some surface, otherwise the surface area
@@ -265,7 +265,7 @@ private:
         };
 
         // PERF: move out in front of recursion
-        std::vector<Event> event_lists[AXES.size()];
+        std::vector<Event> event_lists[AXES3.size()];
 
         // generate events
         size_t num_tris = 0;
@@ -276,7 +276,7 @@ private:
             }
             num_tris += 1;
 
-            for (auto ax : AXES) {
+            for (auto ax : AXES3) {
                 auto& events = event_lists[static_cast<int>(ax)];
                 if (clipped_box.planar(ax)) {
                     events.emplace_back(Event{id, clipped_box.p_min[ax],
@@ -292,13 +292,13 @@ private:
 
         // all clipped?
         if (num_tris == 0) {
-            return std::make_tuple(std::numeric_limits<float>::max(), Axis::X,
+            return std::make_tuple(std::numeric_limits<float>::max(), Axis3::X,
                                    0, TriangleIds(), TriangleIds());
         }
 
         // sweep for min_cost
         float min_cost = std::numeric_limits<float>::max();
-        Axis min_plane_ax = Axis::X;
+        Axis3 min_plane_ax = Axis3::X;
         float min_plane_pos = 0;
         Dir min_side = Dir::LEFT;
         // we also store those for asserts below
@@ -307,7 +307,7 @@ private:
         size_t min_ptris = 0;
         UNUSED(min_ptris);
 
-        for (auto ax : AXES) {
+        for (auto ax : AXES3) {
             auto& events = event_lists[static_cast<int>(ax)];
             std::sort(events.begin(), events.end(),
                       [](const Event& e1, const Event& e2) {
@@ -419,7 +419,7 @@ private:
  */
 std::vector<detail::FlatNode> flatten(std::unique_ptr<TreeNode> root) {
     static constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF >> 2;
-    const detail::FlatNode sentinel(Axis::X, 0, 0);
+    const detail::FlatNode sentinel(Axis3::X, 0, 0);
     std::vector<detail::FlatNode> nodes;
 
     // do DFS through nodes
@@ -502,7 +502,7 @@ namespace {
  */
 Vector3f fix_direction(const Ray& ray) {
     Vector3f d = ray.d;
-    for (auto ax : AXES) {
+    for (auto ax : AXES3) {
         if (d[ax] == 0) {
             d[ax] = EPS;
         }
