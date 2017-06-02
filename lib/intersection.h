@@ -14,10 +14,10 @@
  * Return:
  *   true, if the segment intersects the plane, otherwise false
  */
-inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
-                                    float d, float& t) {
-    auto ab = b - a;
-    t = (d - dot(n, a)) / dot(n, ab);
+inline bool intersect_segment_plane(const Point3f& a, const Point3f& b,
+                                    const Normal3f& n, float d, float& t) {
+    Vec ab = b - a;
+    t = (d - dot(n, Vec(a))) / dot(n, ab);
     return 0.f <= t && t <= 1.f;
 }
 

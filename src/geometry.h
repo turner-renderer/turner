@@ -689,6 +689,14 @@ public:
         return std::isnan(x) || std::isnan(y) || std::isnan(z);
     }
 
+    T operator[](Axis3 ax) const {
+        return ax == Axis3::X ? x : (ax == Axis3::Y ? y : z);
+    }
+
+    T& operator[](Axis3 ax) {
+        return ax == Axis3::X ? x : (ax == Axis3::Y ? y : z);
+    }
+
     T operator[](size_t i) const {
         assert(i < 3);
         return i == 0 ? x : i == 1 ? y : z;
