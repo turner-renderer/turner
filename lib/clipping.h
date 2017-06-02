@@ -120,7 +120,7 @@ enum class PointPlanePos { ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE };
  */
 inline PointPlanePos classify_point_to_plane(const Vec& pt, const Vec& n,
                                              float d) {
-    float dist = n * pt - d;
+    float dist = dot(n, pt) - d;
     if (dist > EPS) {
         return PointPlanePos::IN_FRONT_OF_PLANE;
     } else if (dist < -EPS) {
@@ -211,8 +211,12 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     }
 
     // compute min and max coordinates
-    Box res{std::numeric_limits<float>::max(),
-            std::numeric_limits<float>::lowest()};
+    Box res{{std::numeric_limits<float>::max(),
+             std::numeric_limits<float>::max(),
+             std::numeric_limits<float>::max()},
+            {std::numeric_limits<float>::lowest(),
+             std::numeric_limits<float>::lowest(),
+             std::numeric_limits<float>::lowest()}};
     for (auto ax : AXES) {
         for (const auto& pt : points) {
             if (pt[ax] < res.min[ax]) {

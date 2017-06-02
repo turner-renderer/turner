@@ -4,6 +4,7 @@ add_compile_options(-std=c++1y)
 add_compile_options(
     -Wall -Wextra -Werror -Wno-missing-braces
     -Wno-deprecated-declarations
+    -Wno-address-of-packed-member
 )
 
 option(COVERAGE "Generate coverage data" OFF)

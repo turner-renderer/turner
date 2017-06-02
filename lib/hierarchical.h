@@ -313,11 +313,11 @@ private:
         const auto p_pos = convert_to_vec(p_a);
         const auto p_u = convert_to_vec(p_b - p_a);
         const auto p_v = convert_to_vec(p_c - p_a);
-        const auto p_normal = (p_u ^ p_v).Normalize();
+        const auto p_normal = normalize(cross(p_u, p_v));
         const auto q_pos = convert_to_vec(q_a);
         const auto q_u = convert_to_vec(q_b - q_a);
         const auto q_v = convert_to_vec(q_c - q_a);
-        const auto q_normal = (q_u ^ q_v).Normalize();
+        const auto q_normal = normalize(cross(q_u, q_v));
 
         float F_pq =
             form_factor(tree_intersection_, p_pos, p_u, p_v, p_normal, q_pos,

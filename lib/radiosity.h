@@ -69,25 +69,25 @@ inline float form_factor(KDTreeIntersection& tree, const Vec& from_pos,
             continue;
         }
 
-        float square_length = v.SquareLength();
-        if (square_length == 0) {
+        float length_squared = v.length_squared();
+        if (length_squared == 0) {
             continue;
         }
 
-        float length = sqrt(square_length);
+        float length = sqrt(length_squared);
 
-        float cos_theta1 = v * from_normal / length;
+        float cos_theta1 = dot(v, from_normal) / length;
         if (cos_theta1 <= 0) {
             continue;
         }
 
-        float cos_theta2 = (-v) * to_normal / length;
+        float cos_theta2 = dot(-v, to_normal) / length;
         if (cos_theta2 <= 0) {
             continue;
         }
 
         float G = cos_theta1 * cos_theta2 /
-                  (M_PI * square_length + to_area / num_samples);
+                  (PI * length_squared + to_area / num_samples);
         result += G;
     }
 
