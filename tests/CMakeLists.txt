@@ -27,7 +27,7 @@ set(TESTS
 
 foreach (TEST_NAME ${TESTS})
     add_executable(${TEST_NAME} ${TEST_NAME}.cpp
-    	$<TARGET_OBJECTS:catch_main> $<TARGET_OBJECTS:common>
+    	$<TARGET_OBJECTS:catch_main> $<TARGET_OBJECTS:turner>
     )
     add_test(${TEST_NAME} ${TEST_NAME})
 endforeach ()
