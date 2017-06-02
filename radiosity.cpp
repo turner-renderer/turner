@@ -30,15 +30,13 @@
 
 using Point2f = turner::Point2f;
 
-Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection,
+Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
             const std::vector<Color>& radiosity, const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection.intersect(ray, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -46,15 +44,14 @@ Color trace(const Vec& origin, const Vec& dir,
     return radiosity[triangle_id];
 }
 
-Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection, const RadiosityMesh& mesh,
-            const FaceRadiosityHandle& rad, const RadiosityConfig& conf) {
+Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
+            const RadiosityMesh& mesh, const FaceRadiosityHandle& rad,
+            const RadiosityConfig& conf) {
     Stats::instance().num_rays += 1;
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection.intersect(ray, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -63,8 +60,7 @@ Color trace(const Vec& origin, const Vec& dir,
     return mesh.property(rad, face);
 }
 
-Color trace_gouraud(const Vec& origin, const Vec& dir,
-                    KDTreeIntersection& tree_intersection,
+Color trace_gouraud(const Ray& ray, KDTreeIntersection& tree_intersection,
                     const RadiosityMesh& mesh,
                     const VertexRadiosityHandle& vrad,
                     const RadiosityConfig& conf) {
@@ -72,8 +68,7 @@ Color trace_gouraud(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree_intersection.intersect({origin, dir}, dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection.intersect(ray, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
@@ -237,7 +232,7 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> tasks;
 
-    Vec cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
+    Point3f cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
 
     for (size_t y = 0; y < image.height(); ++y) {
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &radiosity, y,
@@ -250,8 +245,8 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
                                               image.height());
 
                 Stats::instance().num_prim_rays += 1;
-                image(x, y) +=
-                    trace(cam_pos, cam_dir, tree_intersection, radiosity, conf);
+                image(x, y) += trace({cam_pos, cam_dir}, tree_intersection,
+                                     radiosity, conf);
 
                 image(x, y) = exposure(image(x, y), conf.exposure);
 
@@ -293,7 +288,7 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
     assert(exists);
     UNUSED(exists);
 
-    Vec cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
+    Point3f cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
 
     for (size_t y = 0; y < image.height(); ++y) {
         tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &mesh, &frad,
@@ -308,11 +303,12 @@ Image raycast(const KDTree& tree, const RadiosityConfig& conf,
                 Stats::instance().num_prim_rays += 1;
 
                 if (!conf.gouraud_enabled) {
-                    image(x, y) += trace(cam_pos, cam_dir, tree_intersection,
+                    image(x, y) += trace({cam_pos, cam_dir}, tree_intersection,
                                          mesh, frad, conf);
                 } else {
-                    image(x, y) += trace_gouraud(
-                        cam_pos, cam_dir, tree_intersection, mesh, vrad, conf);
+                    image(x, y) +=
+                        trace_gouraud({cam_pos, cam_dir}, tree_intersection,
+                                      mesh, vrad, conf);
                 }
 
                 image(x, y) = exposure(image(x, y), conf.exposure);
@@ -360,7 +356,7 @@ Image render_feature_lines(const KDTree& tree, const RadiosityConfig& conf,
     ThreadPool pool(conf.num_threads);
     std::vector<std::future<void>> mesh_tasks;
 
-    Vec cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
+    Point3f cam_pos(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
 
     for (size_t y = 0; y < image.height(); ++y) {
         mesh_tasks.emplace_back(pool.enqueue([&image, offsets, &cam, &tree, y,

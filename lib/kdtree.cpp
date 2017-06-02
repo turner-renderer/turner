@@ -501,13 +501,13 @@ namespace {
  * @return     new direction.
  */
 Vec fix_direction(const Ray& ray) {
-    Vec dir = ray.dir;
+    Vec d = ray.d;
     for (auto ax : AXES) {
-        if (dir[ax] == 0) {
-            dir[ax] = EPS;
+        if (d[ax] == 0) {
+            d[ax] = EPS;
         }
     }
-    return dir;
+    return d;
 }
 
 } // namespace anonymous
@@ -516,7 +516,7 @@ const KDTreeIntersection::OptionalId
 KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     // A trick to make the traversal robust.
     // Cf. [HH11], p. 5, comment about dir classification and robustness.
-    const Ray fixed_ray(ray.pos, fix_direction(ray));
+    const Ray fixed_ray(ray.o, fix_direction(ray));
 
     float tenter, texit;
     if (!intersect_ray_box(fixed_ray, tree_->box(), tenter, texit)) {
@@ -529,6 +529,7 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     const auto* root = tree_->nodes_.data();
     stack_.emplace(root, tenter, texit);
 
+    Vec d_inv(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
     const detail::FlatNode* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();
@@ -541,13 +542,13 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
             float split_pos = node->split_pos();
 
             // t at split
-            float t = (split_pos - fixed_ray.pos[ax]) * fixed_ray.invdir[ax];
+            float t = (split_pos - fixed_ray.o[ax]) * d_inv[ax];
 
             // classify near/far with respect to t:
             // left is near if ray.dir[ax] <= 0, else otherwise
             const auto* near = node + 1;
             const auto* far = root + node->right();
-            if (fixed_ray.dir[ax] <= 0) {
+            if (fixed_ray.d[ax] <= 0) {
                 std::swap(near, far);
             }
 

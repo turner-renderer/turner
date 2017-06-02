@@ -187,7 +187,8 @@ int main(int argc, char const* argv[]) {
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
 
-        Vec cam_pos = Vec(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
+        Point3f cam_pos =
+            Point3f(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
 
         for (int y = 0; y < height; ++y) {
             tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
@@ -209,7 +210,7 @@ int main(int argc, char const* argv[]) {
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) +=
-                            trace(cam_pos, cam_dir, tree_intersection, lights,
+                            trace({cam_pos, cam_dir}, tree_intersection, lights,
                                   0, conf);
                     }
                     image(x, y) /= static_cast<float>(conf.num_pixel_samples);
