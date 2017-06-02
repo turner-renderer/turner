@@ -5,6 +5,7 @@ add_compile_options(
     -Wall -Wextra -Werror -Wno-missing-braces
     -Wno-deprecated-declarations
     -Wno-address-of-packed-member
+    -Wno-unknown-warning-option
 )
 
 option(COVERAGE "Generate coverage data" OFF)

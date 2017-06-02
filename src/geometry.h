@@ -358,6 +358,10 @@ public:
 
     bool contains_nan() const { return std::isnan(x) || std::isnan(y); }
 
+    T operator[](Axis2 ax) const { return ax == Axis2::X ? x : y; }
+
+    T& operator[](Axis2 ax) { return ax == Axis2::X ? x : y; }
+
     T operator[](size_t i) const {
         assert(i < 2);
         return i == 0 ? x : y;
@@ -507,6 +511,14 @@ public:
 
     bool contains_nan() const {
         return std::isnan(x) || std::isnan(y) || std::isnan(z);
+    }
+
+    T operator[](Axis3 ax) const {
+        return ax == Axis3::X ? x : (ax == Axis3::Y ? y : z);
+    }
+
+    T& operator[](Axis3 ax) {
+        return ax == Axis3::X ? x : (ax == Axis3::Y ? y : z);
     }
 
     T operator[](size_t i) const {
@@ -835,6 +847,10 @@ public:
 
     bool empty() const { return p_max.x <= p_min.x && p_max.y <= p_min.y; }
 
+    bool planar(Axis2 plane_ax) const {
+        return std::abs(p_max[plane_ax] - p_min[plane_ax]) > EPS;
+    }
+
     bool planar(size_t plane_ax) const {
         assert(plane_ax < 2);
         return std::abs(p_max[plane_ax] - p_min[plane_ax]) > EPS;
@@ -998,6 +1014,10 @@ public:
         return p_max.x <= p_min.x && p_max.y <= p_min.y && p_max.z <= p_min.z;
     }
 
+    bool planar(Axis3 plane_ax) const {
+        return std::abs(p_max[plane_ax] - p_min[plane_ax]) < EPS;
+    }
+
     bool planar(size_t plane_ax) const {
         assert(plane_ax < 3);
         return std::abs(p_max[plane_ax] - p_min[plane_ax]) < EPS;
@@ -1025,6 +1045,10 @@ public:
         return {static_cast<T>(turner::lerp(t.x, p_min.x, p_max.x)),
                 static_cast<T>(turner::lerp(t.y, p_min.y, p_max.y)),
                 static_cast<T>(turner::lerp(t.z, p_min.z, p_max.z))};
+    }
+
+    std::pair<Bbox3<T>, Bbox3<T>> split(Axis3 plane_ax, float plane_pos) const {
+        return split(static_cast<size_t>(plane_ax), plane_pos);
     }
 
     std::pair<Bbox3<T>, Bbox3<T>> split(size_t plane_ax,

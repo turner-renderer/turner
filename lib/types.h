@@ -47,14 +47,13 @@ inline constexpr float max(float a, float b, float c) {
 static constexpr auto PI = turner::PI;
 
 using Vec = turner::Vector3f;
+using Box = turner::Bbox3f;
 using Axis = turner::Axis3;
-static constexpr auto AXES = turner::AXES3;
 
-namespace cereal {
-template <class Archive> void serialize(Archive& archive, Vec& v) {
-    archive(v.x, v.y, v.z);
-}
-} // namespace sereal
+using turner::Point3f;
+using turner::Normal3f;
+
+static constexpr auto AXES = turner::AXES3;
 
 using Color = aiColor4D;
 
@@ -72,75 +71,6 @@ inline float fmax(float x, float y, float z) {
 
 template <class Archive> void serialize(Archive& archive, Color& c) {
     archive(c.r, c.g, c.b, c.a);
-}
-
-/**
- * Axes aligned bounding box (AABB).
- */
-struct Box {
-    float surface_area() const {
-        auto e0 = max[0] - min[0];
-        auto e1 = max[1] - min[1];
-        auto e2 = max[2] - min[2];
-
-        if (is_eps_zero(e0)) {
-            return e1 * e2;
-        } else if (is_eps_zero(e1)) {
-            return e0 * e2;
-        } else if (is_eps_zero(e2)) {
-            return e0 * e1;
-        }
-
-        return 2.f * (e0 * e1 + e0 * e2 + e1 * e2);
-    }
-
-    /**
-     * Check if the box is planar in the plane: ax = 0.
-     */
-    bool is_planar(Axis ax) const {
-        return !(std::abs((max - min)[static_cast<int>(ax)]) > EPS);
-    }
-
-    bool is_trivial() const {
-        return is_eps_zero(min[0]) && is_eps_zero(min[1]) &&
-               is_eps_zero(min[2]) && is_eps_zero(max[0]) &&
-               is_eps_zero(max[1]) && is_eps_zero(max[2]);
-    }
-
-    /**
-     * Split `box` on the plane defined by: plane_ax = plane_pos.
-     */
-    std::pair<Box, Box> split(Axis plane_ax, float plane_pos) const {
-        size_t ax = static_cast<size_t>(plane_ax);
-        assert(this->min[ax] - EPS <= plane_pos);
-        assert(plane_pos <= this->max[ax] + EPS);
-
-        Vec lmax = this->max;
-        lmax[ax] = plane_pos;
-        Vec rmin = this->min;
-        rmin[ax] = plane_pos;
-
-        return {{this->min, lmax}, {rmin, this->max}};
-    }
-
-    template <class Archive> void serialize(Archive& archive) {
-        archive(min, max);
-    }
-
-    Vec min, max;
-};
-
-/**
- * Compute the minimal AABB containing both `a` and `b`.
- */
-inline Box operator+(const Box& a, const Box& b) {
-    Vec new_min = {std::min(a.min.x, b.min.x), std::min(a.min.y, b.min.y),
-                   std::min(a.min.z, b.min.z)};
-
-    Vec new_max = {std::max(a.max.x, b.max.x), std::max(a.max.y, b.max.y),
-                   std::max(a.max.z, b.max.z)};
-
-    return {new_min, new_max};
 }
 
 /**

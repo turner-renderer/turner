@@ -29,27 +29,33 @@ TEST_CASE("Test surface area of box", "[box]") {
     REQUIRE(box.surface_area() == 2400);
 
     box = Box{{0, 0, 0}, {1, 1, 0}};
-    REQUIRE(box.surface_area() == 1);
+    REQUIRE(box.surface_area() == 2);
 
     box = Box{{0, 0, 0}, {0, 1, 1}};
-    REQUIRE(box.surface_area() == 1);
+    REQUIRE(box.surface_area() == 2);
 
     box = Box{{0, 0, 0}, {1, 0, 1}};
-    REQUIRE(box.surface_area() == 1);
+    REQUIRE(box.surface_area() == 2);
 }
 
 TEST_CASE("Test Box union", "[box]")
 {
     Box box{{0, 0, 0}, {1, 1, 1}};
-    REQUIRE((box + Box{{0, 0, 0}, {0, 0, 0}}) == box);
-    REQUIRE((box + Box{{0, 0, 0}, {1, 1, 1}}) == box);
-    REQUIRE((box + Box{{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
-    REQUIRE((box + Box{{0, 0, 0}, {2, 1, 1}}) == (Box{{0, 0, 0}, {2, 1, 1}}));
-    REQUIRE((box + Box{{0, 0, 0}, {1, 2, 1}}) == (Box{{0, 0, 0}, {1, 2, 1}}));
-    REQUIRE((box + Box{{0, 0, 0}, {1, 1, 2}}) == (Box{{0, 0, 0}, {1, 1, 2}}));
-    REQUIRE((box + Box{{-1, 0, 0},{1, 1, 1}}) == (Box{{-1, 0, 0},{0, 0, 0}}));
-    REQUIRE((box + Box{{0, -1, 0},{1, 1, 1}}) == (Box{{0, -1, 0},{0, 0, 0}}));
-    REQUIRE((box + Box{{0, 0, -1},{1, 1, 1}}) == (Box{{0, 0, -1},{0, 0, 0}}));
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {0, 0, 0}}) == box);
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 1, 1}}) == box);
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {0.5f, 0.5f, 0.5f}}) == box);
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {2, 1, 1}}) ==
+            (Box{{0, 0, 0}, {2, 1, 1}}));
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 2, 1}}) ==
+            (Box{{0, 0, 0}, {1, 2, 1}}));
+    REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 1, 2}}) ==
+            (Box{{0, 0, 0}, {1, 1, 2}}));
+    REQUIRE(bbox_union(box, Box{{-1, 0, 0}, {1, 1, 1}}) ==
+            (Box{{-1, 0, 0}, {1, 1, 1}}));
+    REQUIRE(bbox_union(box, Box{{0, -1, 0}, {1, 1, 1}}) ==
+            (Box{{0, -1, 0}, {1, 1, 1}}));
+    REQUIRE(bbox_union(box, Box{{0, 0, -1}, {1, 1, 1}}) ==
+            (Box{{0, 0, -1}, {1, 1, 1}}));
 }
 
 TEST_CASE("Split box at plane", "[box]") {

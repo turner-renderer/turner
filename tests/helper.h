@@ -70,11 +70,6 @@ Triangle random_regular_triangle_on_unit_sphere(Axis ax, float pos) {
 }
 
 // We need this operator only for tests.
-bool operator==(const Box& b1, const Box& b2) {
-    return b1.min == b2.min && b2.max == b2.max;
-}
-
-// We need this operator only for tests.
 bool operator==(const Triangle& tria, const Triangle& trib) {
     return tria.vertices[0] == trib.vertices[0] &&
            tria.vertices[1] == trib.vertices[1] &&
