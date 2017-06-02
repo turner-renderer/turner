@@ -1,8 +1,7 @@
-#include "helper.h"
 #include "../lib/clipping.h"
 #include "../lib/output.h"
+#include "helper.h"
 #include <catch.hpp>
-
 
 TEST_CASE("Clip polygon at a plane", "[clipping]") {
     auto tri = std::vector<Vec>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
@@ -11,8 +10,8 @@ TEST_CASE("Clip polygon at a plane", "[clipping]") {
 
     tri = std::vector<Vec>{{0, 0, 0}, {1, 0, 0}, {1, 1, 0}};
     res = clip_polygon_at_plane(tri, {1, 0, 0}, 0.5f);
-    auto expected = std::vector<Vec>{
-        {0.5f, 0.5f, 0}, {0.5f, 0, 0}, {1, 0, 0}, {1, 1, 0}};
+    auto expected =
+        std::vector<Vec>{{0.5f, 0.5f, 0}, {0.5f, 0, 0}, {1, 0, 0}, {1, 1, 0}};
     REQUIRE(res == expected);
 
     tri = std::vector<Vec>{{0, 1, 0}, {0, 0, 0}, {1, 0, 0}};
@@ -21,7 +20,6 @@ TEST_CASE("Clip polygon at a plane", "[clipping]") {
     expected = std::vector<Vec>{{0.5f, 0.5f, 0}, {0, 1, 0}, {0, 0, 0}};
     REQUIRE(res == expected);
 }
-
 
 TEST_CASE("Simple line clipping test", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
@@ -55,23 +53,21 @@ TEST_CASE("Simple line clipping test", "[clipping]") {
     REQUIRE(p1 == (Vec{10, 10, 0}));
 }
 
-
 TEST_CASE("Big triangle clipping at aabb", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
     auto tri = test_triangle({0, 0, -10}, {10, 0, 10}, {-10, 0, 10});
     auto res = clip_triangle_at_aabb(tri, box);
     REQUIRE(res == (Box{{-1, 0, -1}, {1, 0, 1}}));
-    REQUIRE(res.is_planar(Axis::Y));
+    REQUIRE(res.planar(Axis::Y));
 }
 
 TEST_CASE("Peak triangle clipping at aabb", "[clipping]") {
     Box box{{0, 0, 0}, {2, 2, 2}};
     auto tri = test_triangle({-1, -1, 0}, {1, 1, 0}, {1, -1, 0});
     auto res = clip_triangle_at_aabb(tri, box);
-    REQUIRE(res == (Box{{0, 0, 0}, {2, 1, 0}}));
-    REQUIRE(res.is_planar(Axis::Z));
+    REQUIRE(res == (Box{{0, 0, 0}, {1, 1, 0}}));
+    REQUIRE(res.planar(Axis::Z));
 }
-
 
 TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {
     Box box{{-1, -1, -1}, {1, 1, 1}};
@@ -95,12 +91,12 @@ TEST_CASE("Random triangle clipping at aabb", "[clipping]") {
 
         auto res = clip_triangle_at_aabb(tri, box);
 
-        REQUIRE(-EPS < res.min.x - box.min.x);
-        REQUIRE(-EPS < res.min.y - box.min.y);
-        REQUIRE(-EPS < res.min.z - box.min.z);
+        REQUIRE(-EPS < res.p_min.x - box.p_min.x);
+        REQUIRE(-EPS < res.p_min.y - box.p_min.y);
+        REQUIRE(-EPS < res.p_min.z - box.p_min.z);
 
-        REQUIRE(-EPS < box.max.x - res.max.x);
-        REQUIRE(-EPS < box.max.y - res.max.y);
-        REQUIRE(-EPS < box.max.z - res.max.z);
+        REQUIRE(-EPS < box.p_max.x - res.p_max.x);
+        REQUIRE(-EPS < box.p_max.y - res.p_max.y);
+        REQUIRE(-EPS < box.p_max.z - res.p_max.z);
     }
 }

@@ -271,21 +271,21 @@ private:
         size_t num_tris = 0;
         for (const auto& id : tris) {
             auto clipped_box = clip_triangle_at_aabb((*triangles_)[id], box);
-            if (clipped_box.is_trivial()) {
+            if (clipped_box.empty()) {
                 continue;
             }
             num_tris += 1;
 
             for (auto ax : AXES) {
                 auto& events = event_lists[static_cast<int>(ax)];
-                if (clipped_box.is_planar(ax)) {
-                    events.emplace_back(Event{id, clipped_box.min[ax],
-                                              clipped_box.min[ax], PLANAR});
+                if (clipped_box.planar(ax)) {
+                    events.emplace_back(Event{id, clipped_box.p_min[ax],
+                                              clipped_box.p_min[ax], PLANAR});
                 } else {
-                    events.emplace_back(Event{id, clipped_box.min[ax],
-                                              clipped_box.max[ax], STARTING});
-                    events.emplace_back(Event{id, clipped_box.max[ax],
-                                              clipped_box.min[ax], ENDING});
+                    events.emplace_back(Event{id, clipped_box.p_min[ax],
+                                              clipped_box.p_max[ax], STARTING});
+                    events.emplace_back(Event{id, clipped_box.p_max[ax],
+                                              clipped_box.p_min[ax], ENDING});
                 }
             }
         }
@@ -480,7 +480,7 @@ KDTree::KDTree(Triangles tris) : tris_(std::move(tris)) {
     // Compute the bounding box of all triangles and fill in vector of all ids.
     box_ = tris_.front().bbox();
     for (size_t i = 1; i < tris_.size(); ++i) {
-        box_ = box_ + tris_[i].bbox();
+        box_ = bbox_union(box_, tris_[i].bbox());
         ids[i] = i;
     }
 
