@@ -102,7 +102,7 @@ public:
 
     // precomputed
     // Edges of the triangle from point 0 to points 1 resp. 2
-    Vec u, v;
+    Vector3f u, v;
     // Normal vector of the triangle
     // Note: normals of the vertices may be different to this vector, if
     // the triangle is not rendered with sharp edges, i.e. if the normals
@@ -115,7 +115,7 @@ private:
 
 private:
     // Helper functions for triangle aabb intersection
-    bool axis_intersection(const Axis ax, const Vec& box_halfsize) const;
+    bool axis_intersection(const Axis ax, const Vector3f& box_halfsize) const;
 };
 
 using Triangles = std::vector<Triangle>;

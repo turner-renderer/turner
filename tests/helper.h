@@ -16,7 +16,7 @@ Triangle test_triangle(Point3f a, Point3f b, Point3f c, Normal3f na,
                     0);
 }
 
-Vec random_vec() {
+Vector3f random_vec() {
     static std::default_random_engine gen(0);
     static std::uniform_real_distribution<float> rnd(-10.f, 10.f);
     return {rnd(gen), rnd(gen), rnd(gen)};

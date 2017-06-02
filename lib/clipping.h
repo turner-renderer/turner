@@ -120,7 +120,7 @@ enum class PointPlanePos { ON_PLANE, BEHIND_PLANE, IN_FRONT_OF_PLANE };
  */
 inline PointPlanePos classify_point_to_plane(const Point3f& p,
                                              const Normal3f& n, float d) {
-    float dist = dot(n, Vec(p)) - d;
+    float dist = dot(n, Vector3f(p)) - d;
     if (dist > EPS) {
         return PointPlanePos::IN_FRONT_OF_PLANE;
     } else if (dist < -EPS) {
