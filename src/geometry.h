@@ -642,7 +642,7 @@ Point3<T> permute(const Point3<T>& p, int x, int y, int z) {
 }
 
 /**
- * Point in 3-dimensional space.
+ * Normal in 3-dimensional space.
  */
 template <typename T> class Normal3 {
 public:
