@@ -23,21 +23,21 @@ static constexpr int BACK = 32;  // 100000
 inline OutCode compute_outcode(const Vec& v, const Box& box) {
     OutCode code = INSIDE;
 
-    if (v.x < box.min.x) {
+    if (v.x < box.p_min.x) {
         code |= LEFT;
-    } else if (box.max.x < v.x) {
+    } else if (box.p_max.x < v.x) {
         code |= RIGHT;
     }
 
-    if (v.y < box.min.y) {
+    if (v.y < box.p_min.y) {
         code |= BOTTOM;
-    } else if (box.max.y < v.y) {
+    } else if (box.p_max.y < v.y) {
         code |= TOP;
     }
 
-    if (v.z < box.min.z) {
+    if (v.z < box.p_min.z) {
         code |= BACK;
-    } else if (box.max.z < v.z) {
+    } else if (box.p_max.z < v.z) {
         code |= FRONT;
     }
 
@@ -66,35 +66,35 @@ inline bool clip_line_aabb(Vec& p0, Vec& p1, const Box& box) {
 
         float x, y, z, t;
         if (outcode_out & detail::TOP) {
-            t = (box.max.y - p0.y) / (p1.y - p0.y);
+            t = (box.p_max.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
-            y = box.max.y;
+            y = box.p_max.y;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::BOTTOM) {
-            t = (box.min.y - p0.y) / (p1.y - p0.y);
+            t = (box.p_min.y - p0.y) / (p1.y - p0.y);
             x = p0.x + (p1.x - p0.x) * t;
-            y = box.min.y;
+            y = box.p_min.y;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::RIGHT) {
-            t = (box.max.x - p0.x) / (p1.x - p0.x);
-            x = box.max.x;
+            t = (box.p_max.x - p0.x) / (p1.x - p0.x);
+            x = box.p_max.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::LEFT) {
-            t = (box.min.x - p0.x) / (p1.x - p0.x);
-            x = box.min.x;
+            t = (box.p_min.x - p0.x) / (p1.x - p0.x);
+            x = box.p_min.x;
             y = p0.y + (p1.y - p0.y) * t;
             z = p0.z + (p1.z - p0.z) * t;
         } else if (outcode_out & detail::FRONT) {
-            t = (box.max.z - p0.z) / (p1.z - p0.z);
+            t = (box.p_max.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
-            z = box.max.z;
+            z = box.p_max.z;
         } else { // outcode_out & detail::BACK
-            t = (box.min.z - p0.z) / (p1.z - p0.z);
+            t = (box.p_min.z - p0.z) / (p1.z - p0.z);
             x = p0.x + (p1.x - p0.x) * t;
             y = p0.y + (p1.y - p0.y) * t;
-            z = box.min.z;
+            z = box.p_min.z;
         }
 
         if (outcode_out == outcode_p0) {
@@ -201,7 +201,7 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
         for (int side = 0; side < 2; ++side) {
             Vec normal;
             normal[ax] = side == 0 ? 1 : -1;
-            float dist = side == 0 ? box.min[ax] : -box.max[ax];
+            float dist = side == 0 ? box.p_min[ax] : -box.p_max[ax];
 
             points = clip_polygon_at_plane(points, normal, dist);
             if (points.size() < 2) {
@@ -211,22 +211,22 @@ inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
     }
 
     // compute min and max coordinates
-    Box res{{std::numeric_limits<float>::max(),
-             std::numeric_limits<float>::max(),
-             std::numeric_limits<float>::max()},
-            {std::numeric_limits<float>::lowest(),
-             std::numeric_limits<float>::lowest(),
-             std::numeric_limits<float>::lowest()}};
+    Point3f p_min(std::numeric_limits<float>::max(),
+                  std::numeric_limits<float>::max(),
+                  std::numeric_limits<float>::max());
+    Point3f p_max(std::numeric_limits<float>::lowest(),
+                  std::numeric_limits<float>::lowest(),
+                  std::numeric_limits<float>::lowest());
     for (auto ax : AXES) {
         for (const auto& pt : points) {
-            if (pt[ax] < res.min[ax]) {
-                res.min[ax] = pt[ax];
+            if (pt[ax] < p_min[ax]) {
+                p_min[ax] = pt[ax];
             }
-            if (res.max[ax] < pt[ax]) {
-                res.max[ax] = pt[ax];
+            if (p_max[ax] < pt[ax]) {
+                p_max[ax] = pt[ax];
             }
         }
     }
 
-    return res;
+    return {p_min, p_max};
 }

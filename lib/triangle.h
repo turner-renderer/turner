@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../src/serialize.h"
 #include "types.h"
 
 #include <cereal/types/array.hpp>
@@ -57,13 +58,13 @@ public:
      * Compute the (axes aligned) bounding box of the triangle.
      */
     Box bbox() const {
-        Vec min = {fmin(vertices[0].x, vertices[1].x, vertices[2].x),
-                   fmin(vertices[0].y, vertices[1].y, vertices[2].y),
-                   fmin(vertices[0].z, vertices[1].z, vertices[2].z)};
+        Point3f min = {fmin(vertices[0].x, vertices[1].x, vertices[2].x),
+                       fmin(vertices[0].y, vertices[1].y, vertices[2].y),
+                       fmin(vertices[0].z, vertices[1].z, vertices[2].z)};
 
-        Vec max = {fmax(vertices[0].x, vertices[1].x, vertices[2].x),
-                   fmax(vertices[0].y, vertices[1].y, vertices[2].y),
-                   fmax(vertices[0].z, vertices[1].z, vertices[2].z)};
+        Point3f max = {fmax(vertices[0].x, vertices[1].x, vertices[2].x),
+                       fmax(vertices[0].y, vertices[1].y, vertices[2].y),
+                       fmax(vertices[0].z, vertices[1].z, vertices[2].z)};
 
         return {min, max};
     }

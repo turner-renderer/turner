@@ -103,20 +103,20 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  */
 inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
                               float& tmax) {
-    float tx1 = (box.min.x - ray.pos.x) * ray.invdir.x;
-    float tx2 = (box.max.x - ray.pos.x) * ray.invdir.x;
+    float tx1 = (box.p_min.x - ray.pos.x) * ray.invdir.x;
+    float tx2 = (box.p_max.x - ray.pos.x) * ray.invdir.x;
 
     tmin = std::fmin(tx1, tx2);
     tmax = std::fmax(tx1, tx2);
 
-    float ty1 = (box.min.y - ray.pos.y) * ray.invdir.y;
-    float ty2 = (box.max.y - ray.pos.y) * ray.invdir.y;
+    float ty1 = (box.p_min.y - ray.pos.y) * ray.invdir.y;
+    float ty2 = (box.p_max.y - ray.pos.y) * ray.invdir.y;
 
     tmin = std::fmax(tmin, std::fmin(ty1, ty2));
     tmax = std::fmin(tmax, std::fmax(ty1, ty2));
 
-    float tz1 = (box.min.z - ray.pos.z) * ray.invdir.z;
-    float tz2 = (box.max.z - ray.pos.z) * ray.invdir.z;
+    float tz1 = (box.p_min.z - ray.pos.z) * ray.invdir.z;
+    float tz2 = (box.p_max.z - ray.pos.z) * ray.invdir.z;
 
     tmin = std::fmax(tmin, std::fmin(tz1, tz2));
     tmax = std::fmin(tmax, std::fmax(tz1, tz2));
@@ -140,13 +140,13 @@ inline bool intersect_ray_box(const Ray& ray, const Box& box) {
  *   true, if intersection exists, otherwise false
  */
 inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
-    auto center = (box.max + box.min) * 0.5f;
-    auto extents = box.max - center;
+    Point3f center = (box.p_max + box.p_min) * 0.5f;
+    Vec extents = box.p_max - center;
 
     float r = extents.x * std::abs(n.x) + extents.y * std::abs(n.y) +
               extents.z * std::abs(n.z);
 
-    float dist = dot(n, center) - d;
+    float dist = dot(n, Vec(center)) - d;
 
     return std::abs(dist) <= r;
 }
@@ -160,10 +160,10 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
  */
 inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // center and extents of the box
-    auto center = (box.min + box.max) * 0.5f;
-    float e0 = (box.max.x - box.min.x) * 0.5f;
-    float e1 = (box.max.y - box.min.y) * 0.5f;
-    float e2 = (box.max.z - box.min.z) * 0.5f;
+    auto center = Vec((box.p_min + box.p_max) * 0.5f);
+    float e0 = (box.p_max.x - box.p_min.x) * 0.5f;
+    float e1 = (box.p_max.y - box.p_min.y) * 0.5f;
+    float e2 = (box.p_max.z - box.p_min.z) * 0.5f;
 
     // translate triangle
     auto v0 = tri.vertices[0] - center;
