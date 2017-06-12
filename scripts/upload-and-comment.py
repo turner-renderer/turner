@@ -41,7 +41,10 @@ def comment(b2_api, file_ids, pr, commit):
     payload = {'body': body, 'event': 'COMMENT'}
     headers = {'Accept': 'application/vnd.github.black-cat-preview+json'}
     auth = (os.getenv('GITHUB_USER'), os.getenv('GITHUB_TOKEN'))
-    requests.post(url, data=json.dumps(payload), headers=headers, auth=auth)
+    response = requests.post(url, data=json.dumps(payload),
+                             headers=headers, auth=auth)
+    if response.ok is not True:
+        print "WARNING: Could not comment on PR: {}".format(response.reason)
 
 
 def upload_and_comment(commit, pr, folder, bucket_name="turner"):
