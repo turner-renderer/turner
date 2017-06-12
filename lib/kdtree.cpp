@@ -529,7 +529,7 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     const auto* root = tree_->nodes_.data();
     stack_.emplace(root, tenter, texit);
 
-    Vec d_inv(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
+    Vec d_inv(1 / fixed_ray.d.x, 1 / fixed_ray.d.y, 1 / fixed_ray.d.z);
     const detail::FlatNode* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();
