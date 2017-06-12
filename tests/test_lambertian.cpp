@@ -1,6 +1,7 @@
 #include "../lib/lambertian.h"
 #include <catch.hpp>
 
+// clang-format off
 SCENARIO("Maximum light", "[light]") {
     GIVEN("A surface normal") {
         Normal3f N(0, 0, 1);
@@ -11,14 +12,13 @@ SCENARIO("Maximum light", "[light]") {
     GIVEN("A light direction") {
         Vector3f L(0, 0, 1);
 
-        GIVEN("A light intensity") {
-            aiColor4D I(0.7, 0.5, 0.7, 1);
+    GIVEN("A light intensity") {
+        aiColor4D I(0.7, 0.5, 0.7, 1);
 
-            WHEN("retrieving the Lambertian reflectance") {
-                aiColor4D result = lambertian(L, N, surface_color, I);
+    WHEN("retrieving the Lambertian reflectance") {
+        aiColor4D result = lambertian(L, N, surface_color, I);
 
-                THEN("the reflectance is the maximum") {
-                    REQUIRE(result == aiColor4D(0.7, 0, 0, 1));
-                }
-            }}}}}
+    THEN("the reflectance is the maximum") {
+        REQUIRE(result == aiColor4D(0.7, 0, 0, 1));
+    }}}}}}
 }
