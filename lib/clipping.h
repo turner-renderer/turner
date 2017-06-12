@@ -20,7 +20,7 @@ static constexpr int TOP = 8;    // 001000
 static constexpr int FRONT = 16; // 010000
 static constexpr int BACK = 32;  // 100000
 
-inline OutCode compute_outcode(const Point3f& p, const Box& box) {
+inline OutCode compute_outcode(const Point3f& p, const Bbox3f& box) {
     OutCode code = INSIDE;
 
     if (p.x < box.p_min.x) {
@@ -53,7 +53,7 @@ inline OutCode compute_outcode(const Point3f& p, const Box& box) {
  *   false, if the line is outside of the box, otherwise return true. In
  *   that case p0 and p1 are updated, and describe the clipped line.
  */
-inline bool clip_line_aabb(Point3f& p0, Point3f& p1, const Box& box) {
+inline bool clip_line_aabb(Point3f& p0, Point3f& p1, const Bbox3f& box) {
     auto outcode_p0 = detail::compute_outcode(p0, box);
     auto outcode_p1 = detail::compute_outcode(p1, box);
 
@@ -196,7 +196,7 @@ clip_polygon_at_plane(const std::vector<Point3f>& poly, const Normal3f& n,
  *
  * TODO: Do not allocate std::vector inside of this function.
  */
-inline Box clip_triangle_at_aabb(const Triangle& tri, const Box& box) {
+inline Bbox3f clip_triangle_at_aabb(const Triangle& tri, const Bbox3f& box) {
     std::vector<Point3f> points(tri.vertices.begin(), tri.vertices.end());
 
     // clip at 6 planes defined by box
