@@ -200,7 +200,7 @@ inline Bbox3f clip_triangle_at_aabb(const Triangle& tri, const Bbox3f& box) {
     std::vector<Point3f> points(tri.vertices.begin(), tri.vertices.end());
 
     // clip at 6 planes defined by box
-    for (auto ax : AXES) {
+    for (auto ax : AXES3) {
         for (int side = 0; side < 2; ++side) {
             Normal3f normal;
             normal[ax] = side == 0 ? 1 : -1;
@@ -220,7 +220,7 @@ inline Bbox3f clip_triangle_at_aabb(const Triangle& tri, const Bbox3f& box) {
     Point3f p_max(std::numeric_limits<float>::lowest(),
                   std::numeric_limits<float>::lowest(),
                   std::numeric_limits<float>::lowest());
-    for (auto ax : AXES) {
+    for (auto ax : AXES3) {
         for (const auto& pt : points) {
             if (pt[ax] < p_min[ax]) {
                 p_min[ax] = pt[ax];

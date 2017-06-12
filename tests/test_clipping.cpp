@@ -58,7 +58,7 @@ TEST_CASE("Big triangle clipping at aabb", "[clipping]") {
     auto tri = test_triangle({0, 0, -10}, {10, 0, 10}, {-10, 0, 10});
     auto res = clip_triangle_at_aabb(tri, box);
     REQUIRE(res == (Bbox3f{{-1, 0, -1}, {1, 0, 1}}));
-    REQUIRE(res.planar(Axis::Y));
+    REQUIRE(res.planar(Axis3::Y));
 }
 
 TEST_CASE("Peak triangle clipping at aabb", "[clipping]") {
@@ -66,7 +66,7 @@ TEST_CASE("Peak triangle clipping at aabb", "[clipping]") {
     auto tri = test_triangle({-1, -1, 0}, {1, 1, 0}, {1, -1, 0});
     auto res = clip_triangle_at_aabb(tri, box);
     REQUIRE(res == (Bbox3f{{0, 0, 0}, {1, 1, 0}}));
-    REQUIRE(res.planar(Axis::Z));
+    REQUIRE(res.planar(Axis3::Z));
 }
 
 TEST_CASE("Simple triangle clipping at aabb", "[clipping]") {

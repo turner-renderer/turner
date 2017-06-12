@@ -59,15 +59,15 @@ TEST_CASE("Split box at plane", "[box]") {
     Bbox3f box{{0, 0, 0}, {2, 2, 2}};
 
     Bbox3f l, r;
-    std::tie(l, r) = box.split(Axis::X, 1);
+    std::tie(l, r) = box.split(Axis3::X, 1);
     REQUIRE(l == (Bbox3f{{0, 0, 0}, {1, 2, 2}}));
     REQUIRE(r == (Bbox3f{{1, 0, 0}, {2, 2, 2}}));
 
-    std::tie(l, r) = box.split(Axis::Y, 1);
+    std::tie(l, r) = box.split(Axis3::Y, 1);
     REQUIRE(l == (Bbox3f{{0, 0, 0}, {2, 1, 2}}));
     REQUIRE(r == (Bbox3f{{0, 1, 0}, {2, 2, 2}}));
 
-    std::tie(l, r) = box.split(Axis::Z, 1);
+    std::tie(l, r) = box.split(Axis3::Z, 1);
     REQUIRE(l == (Bbox3f{{0, 0, 0}, {2, 2, 1}}));
     REQUIRE(r == (Bbox3f{{0, 0, 1}, {2, 2, 2}}));
 }
@@ -86,7 +86,7 @@ TEST_CASE("Test bbox of triangle", "[triangle]") {
 }
 
 TEST_CASE("Test is_planar of triangle", "[triangle]") {
-    for (auto ax : AXES) {
+    for (auto ax : AXES3) {
         Point3f pts[3] = {random_point(), random_point(), random_point()};
         for (int i = 0; i < 3; ++i) {
             pts[i][ax] = 0.f;
