@@ -209,18 +209,6 @@ TEST_CASE("All triangles are in the same plane", "[kdtree]") {
     }
 }
 
-TEST_CASE("Degenerated triangles test", "[KDTree]") {
-    Triangles tris;
-    // min 4 triangles to trigger kdtree's bbox splitting
-    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
-    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
-    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
-    tris.push_back(test_triangle({0, 0, 0}, {1, 0, 0}, {2, 0, 0}));
-
-    KDTree tree(tris);
-    REQUIRE(3 <= tree.num_nodes());
-}
-
 TEST_CASE("Intersect coplanar triangles", "[KDTree]") {
     for (auto ax : AXES) {
         Triangles tris;

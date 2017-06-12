@@ -17,7 +17,7 @@
 inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
                                     float d, float& t) {
     auto ab = b - a;
-    t = (d - n * a) / (n * ab);
+    t = (d - dot(n, a)) / dot(n, ab);
     return 0.f <= t && t <= 1.f;
 }
 
@@ -38,12 +38,12 @@ inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
  * Cf. http://geomalgorithms.com/a06-_intersect-2.html
  */
 inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
-    auto denom = n * ray.dir;
+    float denom = dot(n, ray.dir);
     if (denom == 0.f) {
         return std::numeric_limits<float>::lowest();
     }
 
-    auto nom = n * (v0 - ray.pos);
+    float nom = dot(n, v0 - ray.pos);
     return nom / denom;
 }
 
@@ -71,8 +71,8 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
 
     // precompute scalar products
     // other values are precomputed in triangle on construction
-    auto wv = w * tri.v;
-    auto wu = w * tri.u;
+    float wv = dot(w, tri.v);
+    float wu = dot(w, tri.u);
 
     s = (tri.uv * wv - tri.vv * wu) / tri.denom;
     if (s < 0) {
@@ -146,7 +146,7 @@ inline bool intersect_plane_box(const Vec& n, float d, const Box& box) {
     float r = extents.x * std::abs(n.x) + extents.y * std::abs(n.y) +
               extents.z * std::abs(n.z);
 
-    float dist = n * center - d;
+    float dist = dot(n, center) - d;
 
     return std::abs(dist) <= r;
 }
@@ -283,5 +283,5 @@ inline bool intersect_triangle_box(const Triangle& tri, const Box& box) {
     // Case 2
     //
 
-    return intersect_plane_box(tri.normal, tri.normal * v0, box);
+    return intersect_plane_box(tri.normal, dot(tri.normal, v0), box);
 }

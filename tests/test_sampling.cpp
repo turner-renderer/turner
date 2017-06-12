@@ -18,17 +18,19 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]")
     aiMatrix3x3 trafo;
 
     for (int i = 0; i < NUM_VECS; ++i) {
-        vec = random_vec().Normalize();
-        aiMatrix3x3::FromToMatrix(Vec{0, 0, 1}, vec, trafo);
+        vec = normalize(random_vec());
+        aiMatrix3x3::FromToMatrix(aiVector3D{0, 0, 1}, {vec.x, vec.y, vec.z}, trafo);
 
         for (int j = 0; j < NUM_SAMPLES; ++j) {
             auto res = sampling::hemisphere();
-            auto sampled_vec = trafo * res.first;
-            auto cos_vec = sampled_vec * vec;
+            aiVector3D ai_res = {res.first.x, res.first.y, res.first.z};
+            aiVector3D ai_sampled_vec = trafo * ai_res;
+            Vec sampled_vec(ai_sampled_vec.x, ai_sampled_vec.y, ai_sampled_vec.z);
+            float cos_vec = dot(sampled_vec, vec);
 
             REQUIRE(cos_vec == Approx(res.second).epsilon(TOLERANCE));
 
-            REQUIRE(sampled_vec.Length() == Approx(1.f).epsilon(TOLERANCE));
+            REQUIRE(sampled_vec.length() == Approx(1.f).epsilon(TOLERANCE));
             REQUIRE(0.f <= cos_vec);
             REQUIRE(cos_vec <= 1.f);
         }
@@ -44,11 +46,11 @@ TEST_CASE("Test Triangle sampling", "[sampling]")
         Triangle triangle = random_triangle();
 
         Vec sample = sampling::triangle(triangle);
-        float length = sample.Length();
+        float length = sample.length();
 
         // Verify that point is on triangle.
         bool intersect = intersect_ray_triangle(
-            Ray{Vec{0, 0, 0}, sample.Normalize()}, triangle, r, s, t);
+            Ray{Vec{0, 0, 0}, normalize(sample)}, triangle, r, s, t);
         REQUIRE(intersect);
         REQUIRE(length == Approx(r).epsilon(TOLERANCE));
     }

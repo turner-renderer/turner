@@ -48,20 +48,33 @@ Triangles triangles_from_scene(const aiScene* scene) {
 
             for (aiFace face : make_range(mesh.mFaces, mesh.mNumFaces)) {
                 assert(face.mNumIndices == 3);
-                triangles.push_back(
-                    Triangle{// vertices
-                             {{T * mesh.mVertices[face.mIndices[0]],
-                               T * mesh.mVertices[face.mIndices[1]],
-                               T * mesh.mVertices[face.mIndices[2]]}},
-                             // normals
-                             {{Tp * mesh.mNormals[face.mIndices[0]],
-                               Tp * mesh.mNormals[face.mIndices[1]],
-                               Tp * mesh.mNormals[face.mIndices[2]]}},
-                             ambient,
-                             diffuse,
-                             emissive,
-                             reflective,
-                             reflectivity});
+
+                // convert to our internal Vec = Vector3f type
+                aiVector3D aiv0 = T * mesh.mVertices[face.mIndices[0]];
+                aiVector3D aiv1 = T * mesh.mVertices[face.mIndices[1]];
+                aiVector3D aiv2 = T * mesh.mVertices[face.mIndices[2]];
+
+                aiVector3D ain0 = Tp * mesh.mNormals[face.mIndices[0]];
+                aiVector3D ain1 = Tp * mesh.mNormals[face.mIndices[1]];
+                aiVector3D ain2 = Tp * mesh.mNormals[face.mIndices[2]];
+
+                Vec v0(aiv0.x, aiv0.y, aiv0.z);
+                Vec v1(aiv1.x, aiv1.y, aiv1.z);
+                Vec v2(aiv2.x, aiv2.y, aiv2.z);
+
+                Vec n0(ain0.x, ain0.y, ain0.z);
+                Vec n1(ain1.x, ain1.y, ain1.z);
+                Vec n2(ain2.x, ain2.y, ain2.z);
+
+                triangles.push_back(Triangle{// vertices
+                                             {v0, v1, v2},
+                                             // normals
+                                             {n0, n1, n2},
+                                             ambient,
+                                             diffuse,
+                                             emissive,
+                                             reflective,
+                                             reflectivity});
             }
         }
     }
@@ -115,8 +128,9 @@ int main(int argc, char const* argv[]) {
         auto* lightNode = scene->mRootNode->FindNode(rawLight.mName);
         assert(lightNode != nullptr);
         const auto& LT = lightNode->mTransformation;
+        const auto& v = LT * aiVector3D();
         lights.push_back(
-            {LT * aiVector3D(),
+            {{v.x, v.y, v.z},
              aiColor4D{rawLight.mColorDiffuse.r, rawLight.mColorDiffuse.g,
                        rawLight.mColorDiffuse.b, 1}});
     }
@@ -173,9 +187,12 @@ int main(int argc, char const* argv[]) {
         ThreadPool pool(conf.num_threads);
         std::vector<std::future<void>> tasks;
 
+        Vec cam_pos = Vec(cam.mPosition.x, cam.mPosition.y, cam.mPosition.z);
+
         for (int y = 0; y < height; ++y) {
             tasks.emplace_back(pool.enqueue([&image, &cam, &tree, &lights,
-                                             width, height, y, &conf]() {
+                                             width, height, y, &conf,
+                                             &cam_pos]() {
                 // TODO: we need only one tree intersection per thread, not task
                 KDTreeIntersection tree_intersection(tree);
 
@@ -192,8 +209,8 @@ int main(int argc, char const* argv[]) {
 
                         Stats::instance().num_prim_rays += 1;
                         image(x, y) +=
-                            trace(cam.mPosition, cam_dir, tree_intersection,
-                                  lights, 0, conf);
+                            trace(cam_pos, cam_dir, tree_intersection, lights,
+                                  0, conf);
                     }
                     image(x, y) /= static_cast<float>(conf.num_pixel_samples);
 

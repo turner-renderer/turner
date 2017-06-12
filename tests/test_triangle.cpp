@@ -13,12 +13,12 @@ TEST_CASE("Test Triangle normal", "[triangle]") {
         Vec normal = triangle.normal;
 
         // Verify unit length of normal.
-        float length = normal.Length();
+        float length = normal.length();
         REQUIRE(length == Approx(1.f));
 
         // Verify normal is perpendicular to edges of triangle.
-        float cos_u = normal * triangle.u.Normalize();
-        float cos_v = normal * triangle.v.Normalize();
+        float cos_u = dot(normal, normalize(triangle.u));
+        float cos_v = dot(normal, normalize(triangle.v));
         REQUIRE(cos_u == Approx(0.f));
         REQUIRE(cos_v == Approx(0.f));
     }
@@ -30,8 +30,8 @@ TEST_CASE("Test interpolate triangle normal", "[triangle]") {
 
     for (int j = 0; j < NUM_SAMPLES; ++j) {
         Triangle triangle = test_triangle(
-            random_vec(), random_vec(), random_vec(), random_vec().Normalize(),
-            random_vec().Normalize(), random_vec().Normalize());
+            random_vec(), random_vec(), random_vec(), normalize(random_vec()),
+            normalize(random_vec()), normalize(random_vec()));
 
         float r = uniform();
         float s = uniform();
@@ -44,7 +44,7 @@ TEST_CASE("Test interpolate triangle normal", "[triangle]") {
         Vec normal = triangle.interpolate_normal(r, s, t);
 
         // Verify unit length of normal.
-        float length = normal.Length();
+        float length = normal.length();
         REQUIRE(length == Approx(1.f));
     }
 }
@@ -53,7 +53,7 @@ TEST_CASE("Test interpolate triangle normal with trivial case", "[triangle]") {
     static constexpr int NUM_SAMPLES = 100;
     static xorshift64star<float> uniform{4};
 
-    auto normal = random_vec().Normalize();
+    auto normal = normalize(random_vec());
     Triangle triangle = test_triangle(random_vec(), random_vec(), random_vec(),
                                       normal, normal, normal);
     for (int j = 0; j < NUM_SAMPLES; ++j) {
@@ -69,7 +69,7 @@ TEST_CASE("Test interpolate triangle normal with trivial case", "[triangle]") {
         Vec interpolated_normal = triangle.interpolate_normal(r, s, t);
 
         // Verify unit length of normal.
-        float length = interpolated_normal.Length();
+        float length = interpolated_normal.length();
         REQUIRE(length == Approx(1.f));
 
         // Verify that interpolated normal is equal to actual normal

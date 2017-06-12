@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../src/geometry.h"
+
 #include <assimp/camera.h>
 #include <assimp/types.h>
 
@@ -42,45 +44,17 @@ inline constexpr float max(float a, float b, float c) {
     return a > b ? (a > c ? a : c) : (b > c ? b : c);
 }
 
-enum class Axis : char { X = 0, Y = 1, Z = 2 };
-static constexpr std::array<Axis, 3> AXES = {{Axis::X, Axis::Y, Axis::Z}};
+static constexpr auto PI = turner::PI;
 
-/**
- * Extend vector by [] operator to access axis coordinate.
- */
-class Vec : public aiVector3D {
-public:
-    template <typename... Args> Vec(Args... args) : aiVector3D(args...) {}
+using Vec = turner::Vector3f;
+using Axis = turner::Axis3;
+static constexpr auto AXES = turner::AXES3;
 
-    using aiVector3D::operator[];
-
-    float operator[](const Axis ax) const {
-        return *(this->v + static_cast<int>(ax));
-    }
-
-    float& operator[](const Axis ax) {
-        return *(this->v + static_cast<int>(ax));
-    }
-
-    bool operator<(const Vec& v) const { return x < v.x && y < v.y && z < v.z; }
-
-    bool operator<=(const Vec& v) const {
-        return x <= v.x && y <= v.y && z <= v.z;
-    }
-
-    template <class Archive> void serialize(Archive& archive) {
-        archive(x, y, z);
-    }
-};
-
-inline Vec operator/(int a, const Vec& v) {
-    return {static_cast<float>(a) / v.x, static_cast<float>(a) / v.y,
-            static_cast<float>(a) / v.z};
+namespace cereal {
+template <class Archive> void serialize(Archive& archive, Vec& v) {
+    archive(v.x, v.y, v.z);
 }
-
-struct Vec2 {
-    float x, y;
-};
+} // namespace sereal
 
 using Color = aiColor4D;
 
@@ -105,9 +79,9 @@ template <class Archive> void serialize(Archive& archive, Color& c) {
  */
 struct Box {
     float surface_area() const {
-        auto e0 = max[Axis::X] - min[Axis::X];
-        auto e1 = max[Axis::Y] - min[Axis::Y];
-        auto e2 = max[Axis::Z] - min[Axis::Z];
+        auto e0 = max[0] - min[0];
+        auto e1 = max[1] - min[1];
+        auto e2 = max[2] - min[2];
 
         if (is_eps_zero(e0)) {
             return e1 * e2;
@@ -128,22 +102,23 @@ struct Box {
     }
 
     bool is_trivial() const {
-        return is_eps_zero(min[Axis::X]) && is_eps_zero(min[Axis::Y]) &&
-               is_eps_zero(min[Axis::Z]) && is_eps_zero(max[Axis::X]) &&
-               is_eps_zero(max[Axis::Y]) && is_eps_zero(max[Axis::Z]);
+        return is_eps_zero(min[0]) && is_eps_zero(min[1]) &&
+               is_eps_zero(min[2]) && is_eps_zero(max[0]) &&
+               is_eps_zero(max[1]) && is_eps_zero(max[2]);
     }
 
     /**
      * Split `box` on the plane defined by: plane_ax = plane_pos.
      */
     std::pair<Box, Box> split(Axis plane_ax, float plane_pos) const {
-        assert(this->min[plane_ax] - EPS <= plane_pos);
-        assert(plane_pos <= this->max[plane_ax] + EPS);
+        size_t ax = static_cast<size_t>(plane_ax);
+        assert(this->min[ax] - EPS <= plane_pos);
+        assert(plane_pos <= this->max[ax] + EPS);
 
         Vec lmax = this->max;
-        lmax[plane_ax] = plane_pos;
+        lmax[ax] = plane_pos;
         Vec rmin = this->min;
-        rmin[plane_ax] = plane_pos;
+        rmin[ax] = plane_pos;
 
         return {{this->min, lmax}, {rmin, this->max}};
     }
@@ -180,7 +155,8 @@ struct Light {
  * Ray with precomputed inverse direction
  */
 struct Ray {
-    Ray(const Vec& pos, const Vec& dir) : pos(pos), dir(dir), invdir(1 / dir) {}
+    Ray(const Vec& pos, const Vec& dir)
+        : pos(pos), dir(dir), invdir(1 / dir.x, 1 / dir.y, 1 / dir.z) {}
 
     Vec pos, dir, invdir;
 };
@@ -195,9 +171,9 @@ public:
         : aiCamera{args...}
         , trafo_(trafo) // discard translation in trafo
         , inverse_trafo_(trafo_) {
-        assert(mPosition == Vec());
-        assert(mUp == Vec(0, 1, 0));
-        assert(mLookAt == Vec(0, 0, -1));
+        assert(mPosition == aiVector3D());
+        assert(mUp == aiVector3D(0, 1, 0));
+        assert(mLookAt == aiVector3D(0, 0, -1));
         assert(mAspect != 0);
 
         mPosition = trafo * mPosition;
@@ -219,8 +195,9 @@ public:
      * transformation matrix.
      */
     Vec raster2cam(const aiVector2D& p, float w, float h) const {
-        return trafo_ * Vec(-delta_x_ * (1 - 2 * p.x / w),
-                            delta_y_ * (1 - 2 * p.y / h), -1);
+        aiVector3D v = trafo_ * aiVector3D(-delta_x_ * (1 - 2 * p.x / w),
+                                           delta_y_ * (1 - 2 * p.y / h), -1);
+        return {v.x, v.y, v.z};
     }
 
     /**
@@ -228,7 +205,7 @@ public:
      */
     aiVector2t<int> cam2raster(const Vec& p, float w, float h) const {
         // move to camera position and convert to camera space
-        auto v = inverse_trafo_ * (p - mPosition);
+        auto v = inverse_trafo_ * (aiVector3D(p.x, p.y, p.z) - mPosition);
         // project on z = 1 in normal camera space
         v.x /= v.z * -delta_x_;
         v.y /= v.z * -delta_y_;

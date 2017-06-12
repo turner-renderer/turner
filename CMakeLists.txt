@@ -30,15 +30,15 @@ include_directories(
 	${openmesh_INCLUDE_DIR}
 )
 
-# Common sources and executables
+# Turner sources and executables
 
-file(GLOB LIB_SRCS
+file(GLOB TURNER_SRCS
 	lib/*.cpp
 	lib/*.h
 )
 
-add_library(common OBJECT ${LIB_SRCS})
-add_dependencies(common assimp cereal zlibstatic)
+add_library(turner OBJECT ${TURNER_SRCS})
+add_dependencies(turner assimp cereal zlibstatic)
 
 add_library(main OBJECT main.cpp)
 add_dependencies(main assimp zlibstatic cereal docopt threadpool)
@@ -46,27 +46,27 @@ add_dependencies(main assimp zlibstatic cereal docopt threadpool)
 find_package(Threads REQUIRED)
 
 add_executable(raycaster
-	raycaster.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:common>
+	raycaster.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:turner>
 )
 target_link_libraries(raycaster
 	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
 )
 
 add_executable(raytracer
-	raytracer.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:common>
+	raytracer.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:turner>
 )
 target_link_libraries(raytracer
 	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
 )
 
 add_executable(pathtracer
-	pathtracer.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:common>
+	pathtracer.cpp $<TARGET_OBJECTS:main> $<TARGET_OBJECTS:turner>
 )
 target_link_libraries(pathtracer
 	${assimp_LIBRARIES} ${docopt_LIBRARIES} Threads::Threads
 )
 
-add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:common>)
+add_executable(radiosity radiosity.cpp $<TARGET_OBJECTS:turner>)
 add_dependencies(radiosity cereal docopt openmesh threadpool)
 target_link_libraries(radiosity
 	Threads::Threads
