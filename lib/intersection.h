@@ -23,7 +23,7 @@ inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
 
 /*
  * Return min infinity if there is no intersection, otherwise return r s.t. the
- * intersection point is `ray.pos + ray.dir * r`.
+ * intersection point is `ray.o + ray.d * r`.
  *
  * If n is normalized, then r is exactly the Euclidean distance from the ray to
  * the plane. Note: r may be negative.
@@ -38,12 +38,12 @@ inline bool intersect_segment_plane(const Vec& a, const Vec& b, const Vec& n,
  * Cf. http://geomalgorithms.com/a06-_intersect-2.html
  */
 inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
-    float denom = dot(n, ray.dir);
+    float denom = dot(n, ray.d);
     if (denom == 0.f) {
         return std::numeric_limits<float>::lowest();
     }
 
-    float nom = dot(n, v0 - ray.pos);
+    float nom = dot(n, v0 - Vec(ray.o));
     return nom / denom;
 }
 
@@ -53,7 +53,7 @@ inline float intersect_ray_plane(const Ray& ray, const Vec& v0, const Vec& n) {
  * Args:
  *   ray: ray to intersect
  *   tri: triangle to intersect
- *   r: out param defining the intersection point by `ray.pos + ray.dir * r`
+ *   r: out param defining the intersection point by `ray.o + ray.d * r`
  *   s, t: baricentric coordinates on `tri` of the intersection point
  *
  * Return:
@@ -66,13 +66,13 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
         return false;
     }
 
-    auto P_int = ray.pos + r * ray.dir;
+    auto P_int = ray.o + r * ray.d;
     auto w = P_int - tri.vertices[0];
 
     // precompute scalar products
     // other values are precomputed in triangle on construction
-    float wv = dot(w, tri.v);
-    float wu = dot(w, tri.u);
+    float wv = dot(Vec(w), tri.v);
+    float wu = dot(Vec(w), tri.u);
 
     s = (tri.uv * wv - tri.vv * wu) / tri.denom;
     if (s < 0) {
@@ -94,7 +94,7 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  *   ray: ray to intersect
  *   box: aabb to intersect
  *   tmin, tmax: out params defining the enter resp. exit intersection of the
- *     halbray with the box by the equation `ray.pos + ray.dir * t`.
+ *               ray with the box by the equation `ray.o + ray.d * t`.
  *
  * Return:
  *   true, if the ray intersects the box, otherwise false
@@ -103,20 +103,22 @@ inline bool intersect_ray_triangle(const Ray& ray, const Triangle& tri,
  */
 inline bool intersect_ray_box(const Ray& ray, const Box& box, float& tmin,
                               float& tmax) {
-    float tx1 = (box.p_min.x - ray.pos.x) * ray.invdir.x;
-    float tx2 = (box.p_max.x - ray.pos.x) * ray.invdir.x;
+    Vec d_inv(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
+
+    float tx1 = (box.p_min.x - ray.o.x) * d_inv.x;
+    float tx2 = (box.p_max.x - ray.o.x) * d_inv.x;
 
     tmin = std::fmin(tx1, tx2);
     tmax = std::fmax(tx1, tx2);
 
-    float ty1 = (box.p_min.y - ray.pos.y) * ray.invdir.y;
-    float ty2 = (box.p_max.y - ray.pos.y) * ray.invdir.y;
+    float ty1 = (box.p_min.y - ray.o.y) * d_inv.y;
+    float ty2 = (box.p_max.y - ray.o.y) * d_inv.y;
 
     tmin = std::fmax(tmin, std::fmin(ty1, ty2));
     tmax = std::fmin(tmax, std::fmax(ty1, ty2));
 
-    float tz1 = (box.p_min.z - ray.pos.z) * ray.invdir.z;
-    float tz2 = (box.p_max.z - ray.pos.z) * ray.invdir.z;
+    float tz1 = (box.p_min.z - ray.o.z) * d_inv.z;
+    float tz2 = (box.p_max.z - ray.o.z) * d_inv.z;
 
     tmin = std::fmax(tmin, std::fmin(tz1, tz2));
     tmax = std::fmin(tmax, std::fmax(tz1, tz2));

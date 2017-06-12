@@ -11,8 +11,7 @@
  * equation, thefore it is not guaranteed that the calculated color values are
  * less than 1. E.g. an approximation of value 1 may be greater than 1.
  */
-Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection,
+Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf) {
     if (depth > conf.max_recursion_depth) {
@@ -23,19 +22,18 @@ Color trace(const Vec& origin, const Vec& dir,
 
     // intersection
     float dist_to_triangle, s, t;
-    auto triangle_id =
-        tree_intersection.intersect(Ray(origin, dir), dist_to_triangle, s, t);
+    auto triangle_id = tree_intersection.intersect(ray, dist_to_triangle, s, t);
     if (!triangle_id) {
         return conf.bg_color;
     }
 
-    auto p = origin + dist_to_triangle * dir;
+    Point3f p = ray.o + dist_to_triangle * ray.d;
 
     // interpolate normal
     const auto& triangle = tree_intersection[triangle_id];
     auto normal = triangle.interpolate_normal(1.f - s - t, s, t);
 
-    auto p2 = p + normal * 0.0001f;
+    Point3f p2 = p + normal * 0.0001f;
 
     //
     // Direct lightning
@@ -80,7 +78,7 @@ Color trace(const Vec& origin, const Vec& dir,
         auto cos_theta = dir_theta.second;
 
         const auto indirect_light =
-            trace(p2, dir, tree_intersection, lights, depth + 1, conf);
+            trace({p2, dir}, tree_intersection, lights, depth + 1, conf);
 
         // lambertian
         indirect_lightning += cos_theta * indirect_light;

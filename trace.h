@@ -20,7 +20,6 @@
  * @param  conf              configuration
  * @return                   Color hit by the ray
  */
-Color trace(const Vec& origin, const Vec& dir,
-            KDTreeIntersection& tree_intersection,
+Color trace(const Ray& ray, KDTreeIntersection& tree_intersection,
             const std::vector<Light>& lights, int depth,
             const TracerConfig& conf);
