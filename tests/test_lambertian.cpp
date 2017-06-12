@@ -1,15 +1,16 @@
 #include "../lib/lambertian.h"
 #include <catch.hpp>
 
+// clang-format off
 SCENARIO("Maximum light", "[light]") {
     GIVEN("A surface normal") {
-        Vec N(0, 0, 1);
+        Normal3f N(0, 0, 1);
 
     GIVEN("A surface color") {
         aiColor4D surface_color(1, 0, 0, 1);
 
     GIVEN("A light direction") {
-        Vec L(0, 0, 1);
+        Vector3f L(0, 0, 1);
 
     GIVEN("A light intensity") {
         aiColor4D I(0.7, 0.5, 0.7, 1);

@@ -13,7 +13,7 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]") {
     static constexpr int NUM_VECS = 100;
     static constexpr int NUM_SAMPLES = 100;
 
-    Vec vec;
+    Vector3f vec;
     aiMatrix3x3 trafo;
 
     for (int i = 0; i < NUM_VECS; ++i) {
@@ -25,8 +25,8 @@ TEST_CASE("Test Hemisphere sampling", "[sampling]") {
             auto res = sampling::hemisphere();
             aiVector3D ai_res = {res.first.x, res.first.y, res.first.z};
             aiVector3D ai_sampled_vec = trafo * ai_res;
-            Vec sampled_vec(ai_sampled_vec.x, ai_sampled_vec.y,
-                            ai_sampled_vec.z);
+            Vector3f sampled_vec(ai_sampled_vec.x, ai_sampled_vec.y,
+                                 ai_sampled_vec.z);
             float cos_vec = dot(sampled_vec, vec);
 
             REQUIRE(cos_vec == Approx(res.second).epsilon(TOLERANCE));
@@ -45,7 +45,7 @@ TEST_CASE("Test Triangle sampling", "[sampling]") {
     for (int j = 0; j < NUM_SAMPLES; ++j) {
         Triangle triangle = random_triangle();
 
-        Vec sample = sampling::triangle(triangle);
+        Vector3f sample = Vector3f(sampling::triangle(triangle));
         float length = sample.length();
 
         // Verify that point is on triangle.

@@ -500,8 +500,8 @@ namespace {
  * @param  ray with direction to fix.
  * @return     new direction.
  */
-Vec fix_direction(const Ray& ray) {
-    Vec d = ray.d;
+Vector3f fix_direction(const Ray& ray) {
+    Vector3f d = ray.d;
     for (auto ax : AXES) {
         if (d[ax] == 0) {
             d[ax] = EPS;
@@ -529,7 +529,7 @@ KDTreeIntersection::intersect(const Ray& ray, float& r, float& a, float& b) {
     const auto* root = tree_->nodes_.data();
     stack_.emplace(root, tenter, texit);
 
-    Vec d_inv(1 / fixed_ray.d.x, 1 / fixed_ray.d.y, 1 / fixed_ray.d.z);
+    Vector3f d_inv(1 / fixed_ray.d.x, 1 / fixed_ray.d.y, 1 / fixed_ray.d.z);
     const detail::FlatNode* node;
     OptionalId res;
     r = std::numeric_limits<float>::max();

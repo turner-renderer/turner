@@ -17,7 +17,7 @@ static constexpr float M_2PI = 2.f * M_PI;
 /**
  * Sample a point on a hemisphere.
  */
-inline std::pair<Vec, float> hemisphere() {
+inline std::pair<Vector3f, float> hemisphere() {
     // draw coordinates
     float u1 = detail::uniform();
     float u2 = detail::uniform();
@@ -28,7 +28,7 @@ inline std::pair<Vec, float> hemisphere() {
     auto phi = M_2PI * u2;
     auto x = r * cosf(phi);
     auto y = r * sinf(phi);
-    return std::make_pair(Vec{x, y, z}, u1);
+    return {{x, y, z}, u1};
 }
 
 /**
@@ -39,7 +39,8 @@ inline std::pair<Vec, float> hemisphere() {
  * @param  v   a side (different from u) starting at pos
  * @return     point in world space
  */
-inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
+inline Point3f triangle(const Point3f& pos, const Vector3f& u,
+                        const Vector3f& v) {
     while (true) {
         float r1 = detail::uniform();
         float r2 = detail::uniform();
@@ -55,7 +56,7 @@ inline Vec triangle(const Vec& pos, const Vec& u, const Vec& v) {
  *
  * return point in world space.
  */
-inline Vec triangle(const Triangle& tri) {
+inline Point3f triangle(const Triangle& tri) {
     return triangle(tri.vertices[0], tri.u, tri.v);
 }
 } // namespace sampling

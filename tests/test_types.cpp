@@ -1,11 +1,10 @@
-#include "helper.h"
-#include "../lib/types.h"
-#include "../lib/triangle.h"
 #include "../lib/output.h"
 #include "../lib/runtime.h"
+#include "../lib/triangle.h"
+#include "../lib/types.h"
+#include "helper.h"
 #include <catch.hpp>
 #include <cereal/archives/portable_binary.hpp>
-
 
 TEST_CASE("Test min and max", "[helper]") {
     REQUIRE(min(1, 2, 3) == 1);
@@ -19,7 +18,6 @@ TEST_CASE("Test min and max", "[helper]") {
     REQUIRE(min(1, 1, 1) == 1);
     REQUIRE(max(1, 1, 1) == 1);
 }
-
 
 TEST_CASE("Test surface area of box", "[box]") {
     Box box{{0, 0, 0}, {1, 1, 1}};
@@ -38,8 +36,7 @@ TEST_CASE("Test surface area of box", "[box]") {
     REQUIRE(box.surface_area() == 2);
 }
 
-TEST_CASE("Test Box union", "[box]")
-{
+TEST_CASE("Test Box union", "[box]") {
     Box box{{0, 0, 0}, {1, 1, 1}};
     REQUIRE(bbox_union(box, Box{{0, 0, 0}, {0, 0, 0}}) == box);
     REQUIRE(bbox_union(box, Box{{0, 0, 0}, {1, 1, 1}}) == box);
@@ -75,43 +72,33 @@ TEST_CASE("Split box at plane", "[box]") {
     REQUIRE(r == (Box{{0, 0, 1}, {2, 2, 2}}));
 }
 
-
-TEST_CASE("Test bbox of triangle", "[triangle]")
-{
-    REQUIRE(
-        test_triangle({0, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox()
-        == (Box{{0, 0, 0}, {0, 1, 1}}));
-    REQUIRE(
-        test_triangle({-1, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox()
-        == (Box{{-1, 0, 0}, {0, 1, 1}}));
-    REQUIRE(
-        test_triangle({0, 0, 0}, {0, -1, 1}, {0, 1, 1}).bbox()
-        == (Box{{0, -1, 0}, {0, 1, 1}}));
-    REQUIRE(
-        test_triangle({0, 0, 0}, {0, 0, -1}, {0, 1, 1}).bbox()
-        == (Box{{0, 0, -1}, {0, 1, 1}}));
-    REQUIRE(
-        test_triangle({0, 0, 0}, {0, 0, 1}, {2, 1, 1}).bbox()
-        == (Box{{0, 0, 0}, {2, 1, 1}}));
+TEST_CASE("Test bbox of triangle", "[triangle]") {
+    REQUIRE(test_triangle({0, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox() ==
+            (Box{{0, 0, 0}, {0, 1, 1}}));
+    REQUIRE(test_triangle({-1, 0, 0}, {0, 0, 1}, {0, 1, 1}).bbox() ==
+            (Box{{-1, 0, 0}, {0, 1, 1}}));
+    REQUIRE(test_triangle({0, 0, 0}, {0, -1, 1}, {0, 1, 1}).bbox() ==
+            (Box{{0, -1, 0}, {0, 1, 1}}));
+    REQUIRE(test_triangle({0, 0, 0}, {0, 0, -1}, {0, 1, 1}).bbox() ==
+            (Box{{0, 0, -1}, {0, 1, 1}}));
+    REQUIRE(test_triangle({0, 0, 0}, {0, 0, 1}, {2, 1, 1}).bbox() ==
+            (Box{{0, 0, 0}, {2, 1, 1}}));
 }
 
-
-TEST_CASE("Test is_planar of triangle", "[triangle]")
-{
+TEST_CASE("Test is_planar of triangle", "[triangle]") {
     for (auto ax : AXES) {
-        Vec vs[3] = {random_vec(), random_vec(), random_vec()};
+        Point3f pts[3] = {random_point(), random_point(), random_point()};
         for (int i = 0; i < 3; ++i) {
-            vs[i][ax] = 0.f;
+            pts[i][ax] = 0.f;
         }
 
-        Triangle triangle = test_triangle(vs[0], vs[1], vs[2]);
+        Triangle triangle = test_triangle(pts[0], pts[1], pts[2]);
         REQUIRE(triangle.is_planar(ax));
     }
 }
 
-TEST_CASE("Test serialization of triangle", "[triangle]")
-{
-    Triangle tri_out = test_triangle(random_vec(), random_vec(), random_vec());
+TEST_CASE("Test serialization of triangle", "[triangle]") {
+    Triangle tri_out = random_triangle();
 
     // Serialize triangle
     std::ostringstream os;
@@ -133,8 +120,7 @@ TEST_CASE("Test serialization of triangle", "[triangle]")
     REQUIRE(tri_in.vertices[2] == tri_out.vertices[2]);
 }
 
-TEST_CASE("Test clamping", "[clamping]")
-{
+TEST_CASE("Test clamping", "[clamping]") {
     REQUIRE(clamp(-1, 0, 2) == 0);
     REQUIRE(clamp(0, 0, 2) == 0);
     REQUIRE(clamp(1, 0, 2) == 1);

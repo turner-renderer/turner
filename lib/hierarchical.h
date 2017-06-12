@@ -88,11 +88,11 @@ public:
 
                 if (!p.gathering_from.empty()) {
                     auto p_midpoint =
-                        convert_to_vec(triangle_midpoint(mesh_, p.vs));
+                        convert_to_point(triangle_midpoint(mesh_, p.vs));
                     auto to = cam.cam2raster(p_midpoint, image.width(),
                                              image.height());
                     for (const auto& link : p.gathering_from) {
-                        auto q_midpoint = convert_to_vec(
+                        auto q_midpoint = convert_to_point(
                             triangle_midpoint(mesh_, link.q->vs));
                         auto from = cam.cam2raster(q_midpoint, image.width(),
                                                    image.height());
@@ -171,9 +171,9 @@ public:
             const auto& vs = triangle_vertices(mesh_, face);
             // copy triangle with minimal information
             triangles.emplace_back(
-                std::array<Vec, 3>{convert_to_vec(mesh_.point(vs[0])),
-                                   convert_to_vec(mesh_.point(vs[1])),
-                                   convert_to_vec(mesh_.point(vs[2]))});
+                std::array<Point3f, 3>{convert_to_point(mesh_.point(vs[0])),
+                                       convert_to_point(mesh_.point(vs[1])),
+                                       convert_to_point(mesh_.point(vs[2]))});
         }
         return triangles;
     }
@@ -310,14 +310,14 @@ private:
         const auto& q_b = mesh_.point(q.vs[1]);
         const auto& q_c = mesh_.point(q.vs[2]);
 
-        const auto p_pos = convert_to_vec(p_a);
-        const auto p_u = convert_to_vec(p_b - p_a);
-        const auto p_v = convert_to_vec(p_c - p_a);
-        const auto p_normal = normalize(cross(p_u, p_v));
-        const auto q_pos = convert_to_vec(q_a);
-        const auto q_u = convert_to_vec(q_b - q_a);
-        const auto q_v = convert_to_vec(q_c - q_a);
-        const auto q_normal = normalize(cross(q_u, q_v));
+        const Point3f p_pos = convert_to_point(p_a);
+        const Vector3f p_u = convert_to_vec(p_b - p_a);
+        const Vector3f p_v = convert_to_vec(p_c - p_a);
+        const Normal3f p_normal = Normal3f(normalize(cross(p_u, p_v)));
+        const Point3f q_pos = convert_to_point(q_a);
+        const Vector3f q_u = convert_to_vec(q_b - q_a);
+        const Vector3f q_v = convert_to_vec(q_c - q_a);
+        const Normal3f q_normal = Normal3f(normalize(cross(q_u, q_v)));
 
         float F_pq =
             form_factor(tree_intersection_, p_pos, p_u, p_v, p_normal, q_pos,
@@ -521,8 +521,16 @@ private:
 
     // TODO: reconsider design s.t. we can avoid conversion
     // TODO: profile how much time we actually spend here!
-    static Vec convert_to_vec(const RadiosityMesh::Point& pt) {
-        return Vec{pt[0], pt[1], pt[2]};
+    static Vector3f convert_to_vec(const RadiosityMesh::Point& pt) {
+        return Vector3f{pt[0], pt[1], pt[2]};
+    };
+
+    static Point3f convert_to_point(const RadiosityMesh::Point& pt) {
+        return Point3f{pt[0], pt[1], pt[2]};
+    };
+
+    static Normal3f convert_to_normal(const RadiosityMesh::Point& pt) {
+        return Normal3f{pt[0], pt[1], pt[2]};
     };
 
 private:

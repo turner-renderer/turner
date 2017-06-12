@@ -21,16 +21,16 @@ TEST_CASE("Test hash of a pair", "[hash]") {
     REQUIRE(res == std::numeric_limits<size_t>::max());
 }
 
-TEST_CASE("Test hash of a Vec", "[hash]") {
+TEST_CASE("Test hash of a Vector3f", "[hash]") {
     std::default_random_engine rd;
     std::uniform_real_distribution<> dist(std::numeric_limits<float>::lowest(),
                                           std::numeric_limits<float>::max());
-    std::hash<Vec> hasher;
+    std::hash<Vector3f> hasher;
 
     size_t res = 0;
     for (size_t i = 0; i < 32; ++i) {
-        Vec v{static_cast<float>(dist(rd)), static_cast<float>(dist(rd)),
-              static_cast<float>(dist(rd))};
+        Vector3f v{static_cast<float>(dist(rd)), static_cast<float>(dist(rd)),
+                   static_cast<float>(dist(rd))};
         res |= hasher(v);
     }
 
