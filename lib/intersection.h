@@ -158,7 +158,7 @@ inline bool intersect_plane_box(const Normal3f& n, float d, const Bbox3f& box) {
  * Test triangle AABB intersection
  *
  * Implementation from
- * "Fast 3D Triangle-Bbox3f Overlap Testing"
+ * "Fast 3D Triangle-Box Overlap Testing"
  * by Tomas Akenine-Möller
  */
 inline bool intersect_triangle_box(const Triangle& tri, const Bbox3f& box) {
