@@ -17,7 +17,7 @@ ExternalProject_Add(
         -DASSIMP_BUILD_SAMPLES=OFF
         -DASSIMP_BUILD_TESTS=OFF
     GIT_REPOSITORY https://github.com/assimp/assimp
-    GIT_TAG 1d8dba1
+    GIT_TAG a5a53433042ae9f9f7d2f9d25312b46fd09702a4
     LOG_DOWNLOAD ON
     UPDATE_COMMAND ""
 )
