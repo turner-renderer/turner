@@ -4,6 +4,68 @@
 
 using namespace turner;
 
+TEST_CASE("Point2 default constructor", "[point2]") {
+    Point2f p;
+    REQUIRE(p.x == 0);
+    REQUIRE(p.y == 0);
+}
+
+TEST_CASE("Point2 constructor", "[point2]") {
+    Point2f p(-1, 1);
+    REQUIRE(p.x == -1);
+    REQUIRE(p.y == 1);
+}
+
+TEST_CASE("Point2 addition operators", "[point2]") {
+
+    Point2f p1(-1, 1);
+    p1 += Point2f(2, 1);
+    REQUIRE(p1 == Point2f(1, 2));
+
+    p1 = Point2f(-1, 1);
+    p1 += Vector2f(2, 1);
+    REQUIRE(p1 == Point2f(1, 2));
+
+    Point2f p3 = p1 + Point2f(2, 1);
+    REQUIRE(p3 == Point2f(3, 3));
+    REQUIRE(p1 == Point2f(1, 2));
+
+    Point2f p4 = p1 + Vector2f(1, 2);
+    REQUIRE(p4 == Point2f(2, 4));
+    REQUIRE(p1 == Point2f(1, 2));
+}
+
+TEST_CASE("Point2 subtraction operators", "[point2]") {
+
+    Point2f p1(-1, 1);
+    p1 -= Vector2f(2, 1);
+    REQUIRE(p1 == Point2f(-3, 0));
+
+    Point2f p2 = p1 - Vector2f(1, 2);
+    REQUIRE(p2 == Point2f(-4, -2));
+    REQUIRE(p1 == Point2f(-3, 0));
+}
+
+TEST_CASE("Point2 multiplication operators", "[point2]") {
+    Point2f p1(-1, 1.6);
+    Point2f p2 = p1 * 0.5;
+    REQUIRE(p2 == Point2f(-0.5, 0.8));
+
+    p2 *= 0.2;
+    REQUIRE(p2.x == Approx(-0.1));
+    REQUIRE(p2.y == Approx(0.16));
+}
+
+TEST_CASE("Point2 division operators", "[point2]") {
+    Point2f p1(-1, 1.6);
+    Point2f p2 = p1 / 2;
+    REQUIRE(p2 == Point2f(-0.5, 0.8));
+
+    p2 /= 5;
+    REQUIRE(p2.x == Approx(-0.1));
+    REQUIRE(p2.y == Approx(0.16));
+}
+
 TEST_CASE("Vector3 default contructor", "[vector3]") {
     Vector3f v;
     REQUIRE(v.x == 0);
